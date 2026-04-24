@@ -36,6 +36,7 @@ import { crmQueryKeys } from "@/lib/queryKeys";
 import { upsertTaskSignalDescription } from "@/lib/categoryUtils";
 import { useSearchParams } from "react-router-dom";
 import { DesignLabEntitySheet } from "@/components/designlab/DesignLabEntitySheet";
+import { DesignLabStaticTag } from "@/components/designlab/controls";
 
 type StatusFilter = "aktive" | "utgatte" | "alle";
 type TypeFilter = "Alle" | "DIR" | "VIA";
@@ -48,6 +49,20 @@ const STATUS_CHIPS: { value: StatusFilter; label: string }[] = [
 const CHIP_BASE = "h-7 px-2.5 text-[0.75rem] rounded-[6px] border transition-colors cursor-pointer select-none font-medium";
 const CHIP_OFF = `${CHIP_BASE} border-border text-muted-foreground hover:bg-secondary`;
 const CHIP_ON = `${CHIP_BASE} bg-[#E8ECF5] text-[#1A1C1F] border-[#C5CBE8] font-semibold`;
+const REQUEST_TYPE_TAG_COLORS = {
+  direct: { background: "#F1F5F9", color: "#334155", border: "1px solid #CBD5E1", fontWeight: 600 },
+  via: { background: "#FEF3C7", color: "#B45309", border: "1px solid #FCD34D", fontWeight: 600 },
+  broker: { background: "#F5F3FF", color: "#6D28D9", border: "1px solid #DDD6FE", fontWeight: 600 },
+  muted: { background: "#F7F8FA", color: "#8C929C", border: "1px solid #E3E6EB", fontWeight: 500 },
+} as const;
+const REQUEST_STATUS_TAG_COLORS = {
+  sendt_cv: { background: "#FBF3E6", color: "#7D4E00", border: "1px solid #E8D0A0", fontWeight: 600 },
+  intervju: { background: "#EAF0F9", color: "#1A4FA0", border: "1px solid #B3C8E8", fontWeight: 600 },
+  vunnet: { background: "#EBF3EE", color: "#2D6A4F", border: "1px solid #C0DEC8", fontWeight: 600 },
+  avslag: { background: "#FAEBEC", color: "#8B1D20", border: "1px solid #E8B8BA", fontWeight: 600 },
+  bortfalt: { background: "#F0F2F6", color: "#3A3F4A", border: "1px solid #C8CDD6", fontWeight: 500 },
+  ny: { background: "#F7F8FA", color: "#8C929C", border: "1px solid #E3E6EB", fontWeight: 500 },
+} as const;
 
 const SUGGESTED_TAGS = ["C++", "C", "Embedded", "Yocto", "Linux", "Qt", "FPGA", "Python", "SPI/I2C", "MCU", "Embedded Linux", "Sikkerhet"];
 
@@ -86,32 +101,20 @@ const URGENCY_COLOR: Record<Urgency, string> = {
 
 /* ─── Type badge helper ─── */
 
-function TypeBadge({ type, partnerName }: { type: string | null; partnerName?: string | null }) {
-  if (type === "DIR" || type === "direktekunde") return (
-    <span className="inline-flex items-center rounded-full bg-blue-100 text-blue-700 px-2.5 py-0.5 text-[0.6875rem] font-semibold">Direkte</span>
-  );
-  if (type === "VIA" || type === "via_partner") return (
-    <span className="inline-flex items-center gap-1.5 min-w-0">
-      <span className="inline-flex items-center rounded-full bg-amber-100 text-amber-700 px-2.5 py-0.5 text-[0.6875rem] font-semibold">Partner</span>
-      {partnerName ? (
-        <span className="truncate text-[0.75rem] text-muted-foreground">{partnerName}</span>
-      ) : null}
-    </span>
-  );
-  if (type === "via_megler") return (
-    <span className="inline-flex items-center rounded-full bg-violet-100 text-violet-700 px-2.5 py-0.5 text-[0.6875rem] font-semibold">Megler</span>
-  );
+function TypeBadge({ type }: { type: string | null }) {
+  if (type === "DIR" || type === "direktekunde") {
+    return <DesignLabStaticTag colors={REQUEST_TYPE_TAG_COLORS.direct}>Direkte</DesignLabStaticTag>;
+  }
+  if (type === "VIA" || type === "via_partner") {
+    return <DesignLabStaticTag colors={REQUEST_TYPE_TAG_COLORS.via}>Via</DesignLabStaticTag>;
+  }
+  if (type === "via_megler") {
+    return <DesignLabStaticTag colors={REQUEST_TYPE_TAG_COLORS.broker}>Megler</DesignLabStaticTag>;
+  }
   return <span className="text-[0.8125rem] text-muted-foreground">—</span>;
 }
 
 function RequestStatusBadge({ status }: { status: string | null | undefined }) {
-  const cfg: Record<string, string> = {
-    sendt_cv: "bg-[#FBF3E6] text-[#7D4E00] border-[#E8D0A0]",
-    intervju: "bg-violet-50 text-violet-700 border-violet-200",
-    vunnet: "bg-emerald-100 text-emerald-800 border-emerald-200",
-    avslag: "bg-red-50 text-red-700 border-red-200",
-    bortfalt: "bg-gray-100 text-gray-500 border-gray-200",
-  };
   const labelMap: Record<string, string> = {
     sendt_cv: "Sendt CV",
     intervju: "Intervju",
@@ -120,21 +123,10 @@ function RequestStatusBadge({ status }: { status: string | null | undefined }) {
     bortfalt: "Bortfalt",
   };
 
-  if (!status) {
-    return (
-      <span className="inline-flex items-center rounded-full border border-dashed border-border px-2 py-0.5 text-[0.625rem] font-semibold text-muted-foreground">
-        Ny
-      </span>
-    );
-  }
-
-  const color = cfg[status] || "bg-gray-100 text-gray-500 border-gray-200";
-  const label = labelMap[status] || status;
-
   return (
-    <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[0.625rem] font-semibold ${color}`}>
-      {label}
-    </span>
+    <DesignLabStaticTag colors={REQUEST_STATUS_TAG_COLORS[status || "ny"] || REQUEST_STATUS_TAG_COLORS.ny}>
+      {labelMap[status || ""] || "Ny"}
+    </DesignLabStaticTag>
   );
 }
 
@@ -1057,7 +1049,7 @@ export default function Foresporsler() {
           <div className="flex flex-wrap items-center gap-1.5">
             {(["Alle", "DIR", "VIA"] as TypeFilter[]).map(f => (
               <button key={f} className={typeFilter === f ? CHIP_ON : CHIP_OFF} onClick={() => setTypeFilter(f)}>
-                {f === "Alle" ? "Alle" : f === "DIR" ? "Direkte" : "Partner"}
+                {f === "Alle" ? "Alle" : f === "DIR" ? "Direkte" : "Via"}
               </button>
             ))}
           </div>
@@ -1099,7 +1091,7 @@ export default function Foresporsler() {
                         </TooltipTrigger>
                         <TooltipContent>{fullDate(row.mottatt_dato)}</TooltipContent>
                       </Tooltip>
-                      <TypeBadge type={row.type} partnerName={row.type === "VIA" || row.type === "via_partner" ? row.selskap_navn : null} />
+                      <TypeBadge type={row.type} />
                     </div>
                   </div>
 
@@ -1127,31 +1119,10 @@ export default function Foresporsler() {
                         const navn = (
                           k.konsulent_type === "intern" ? k.stacq_ansatte?.navn : k.external_consultants?.navn
                         )?.split(" ")[0] || "Ukjent";
-                        const ks = k.status;
-                        const cfg: Record<string, string> = {
-                          sendt_cv: "bg-blue-50 text-blue-700 border-blue-200",
-                          intervju: "bg-violet-50 text-violet-700 border-violet-200",
-                          vunnet: "bg-emerald-100 text-emerald-800 border-emerald-200",
-                          avslag: "bg-red-50 text-red-700 border-red-200",
-                          bortfalt: "bg-gray-100 text-gray-500 border-gray-200",
-                        };
-                        const labelMap: Record<string, string> = {
-                          sendt_cv: "Sendt CV",
-                          intervju: "Intervju",
-                          vunnet: "Vunnet",
-                          avslag: "Avslag",
-                          bortfalt: "Bortfalt",
-                        };
-                        const color = ks && cfg[ks] ? cfg[ks] : "";
-                        const label = labelMap[ks] || ks;
                         return (
                           <div key={k.id} className="flex items-center justify-between gap-2">
                             <span className="text-[0.8125rem] font-medium text-foreground">{navn}</span>
-                            {color ? (
-                              <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[0.625rem] font-semibold ${color}`}>{label}</span>
-                            ) : (
-                              <span className="text-[0.625rem] text-muted-foreground border border-dashed border-border rounded-full px-2 py-0.5">Ny</span>
-                            )}
+                            <RequestStatusBadge status={k.status} />
                           </div>
                         );
                       })
@@ -1204,7 +1175,7 @@ export default function Foresporsler() {
                       ? `${row.contacts.first_name} ${row.contacts.last_name}`.trim()
                       : <span className="text-muted-foreground">—</span>}
                   </span>
-                  <TypeBadge type={row.type} partnerName={row.type === "VIA" || row.type === "via_partner" ? row.selskap_navn : null} />
+                  <TypeBadge type={row.type} />
                   <div className="flex items-center gap-1 flex-wrap">
                     {(row.teknologier || []).slice(0, 3).map((t: string) => (
                       <span key={t} className="inline-flex items-center rounded-full border border-border bg-muted px-2 py-0.5 text-[0.6875rem] font-medium text-foreground">

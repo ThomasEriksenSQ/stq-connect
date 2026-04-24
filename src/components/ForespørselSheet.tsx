@@ -137,9 +137,66 @@ function getLaterReviewName(entry: LaterReviewEntry): string {
   return entry.consultant_name || "Ukjent";
 }
 
+type ExternalConsultantCompanyMeta = {
+  companies?: { name?: string | null } | null;
+  selskap_tekst?: string | null;
+  type?: string | null;
+};
+
+function isPartnerExternalConsultantType(type: string | null | undefined): boolean {
+  return type === "partner" || type === "konsulenthus" || type === "via_partner";
+}
+
 function getExternalConsultantTypeLabel(type: string | null | undefined): string {
-  if (type === "partner" || type === "konsulenthus" || type === "via_partner") return "Partner";
+  if (isPartnerExternalConsultantType(type)) return "Partner";
   return "Freelance";
+}
+
+function getExternalConsultantPartnerCompanyName(
+  consultant: ExternalConsultantCompanyMeta | null | undefined,
+): string | null {
+  if (!consultant || !isPartnerExternalConsultantType(consultant.type)) return null;
+  const companyName = consultant.companies?.name?.trim() || consultant.selskap_tekst?.trim();
+  return companyName || null;
+}
+
+function formatReceivedDateLabel(dateValue: string | null | undefined): string {
+  if (!dateValue) return "—";
+
+  try {
+    return `${relativeDate(dateValue)} (${format(parseISO(dateValue), "dd.MM.yyyy")})`;
+  } catch {
+    return relativeDate(dateValue);
+  }
+}
+
+function ExternalConsultantOriginBadge({
+  type,
+  partnerCompanyName,
+}: {
+  type: string | null | undefined;
+  partnerCompanyName?: string | null;
+}) {
+  if (!type && !partnerCompanyName) return null;
+
+  if (isPartnerExternalConsultantType(type) || partnerCompanyName) {
+    return (
+      <span className="inline-flex min-w-0 items-center gap-1.5">
+        <span className="inline-flex items-center rounded-full border border-amber-200 bg-amber-100 px-2 py-0.5 text-[0.6875rem] font-semibold text-amber-700">
+          Partner
+        </span>
+        {partnerCompanyName ? (
+          <span className="truncate text-[0.75rem] text-muted-foreground">{partnerCompanyName}</span>
+        ) : null}
+      </span>
+    );
+  }
+
+  return (
+    <span className="inline-flex items-center rounded-full border border-blue-200 bg-blue-100 px-2 py-0.5 text-[0.6875rem] font-semibold text-blue-700">
+      {getExternalConsultantTypeLabel(type)}
+    </span>
+  );
 }
 
 function buildLaterReviewHolderTitle(
@@ -451,6 +508,46 @@ export function ForespørselSheet({
         .filter((entry): entry is LaterReviewEntry => Boolean(entry) && entry.foresporsler_id === row.id);
     },
   });
+
+  const externalConsultantIds = useMemo(() => {
+    const ids = new Set<string>();
+
+    linkedKonsulenter.forEach((entry: any) => {
+      if (entry.konsulent_type === "ekstern" && entry.ekstern_id) {
+        ids.add(entry.ekstern_id);
+      }
+    });
+
+    laterReviewKonsulenter.forEach((entry) => {
+      if (entry.konsulent_type === "ekstern" && entry.ekstern_id) {
+        ids.add(entry.ekstern_id);
+      }
+    });
+
+    return Array.from(ids).sort();
+  }, [linkedKonsulenter, laterReviewKonsulenter]);
+
+  const { data: externalConsultantMeta = [] } = useQuery({
+    queryKey: ["foresporsler-external-consultant-meta", row?.id, externalConsultantIds.join(",")],
+    enabled: externalConsultantIds.length > 0,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("external_consultants")
+        .select("id, type, selskap_tekst, companies(name)")
+        .in("id", externalConsultantIds);
+      return data || [];
+    },
+  });
+
+  const externalConsultantMetaById = useMemo(() => {
+    const map = new Map<string, any>();
+    (externalConsultantMeta as any[]).forEach((consultant) => {
+      if (consultant.id) {
+        map.set(consultant.id, consultant);
+      }
+    });
+    return map;
+  }, [externalConsultantMeta]);
 
   // Contacts for selected company
   const { data: companyContacts = [] } = useQuery({
@@ -1260,11 +1357,11 @@ export function ForespørselSheet({
           />
         ) : (
           /* ─── VIEW MODE ─── */
-          <div className={cn("h-full", showMatch ? "flex flex-col sm:flex-row" : "")}>
+          <div className={cn("h-full min-h-0", showMatch ? "flex flex-col sm:flex-row" : "")}>
             {/* LEFT COLUMN */}
             <div className={cn(
-              "overflow-y-auto py-5 px-6",
-              showMatch ? "w-full sm:w-[320px] flex-shrink-0" : "flex-1"
+              "min-h-0 overflow-y-auto py-5 px-6",
+              showMatch ? "w-full sm:h-full sm:w-[320px] flex-shrink-0" : "h-full"
             )}>
               <div className="space-y-5">
                 {/* Missing contact warning */}
@@ -1279,7 +1376,7 @@ export function ForespørselSheet({
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <p className="text-[0.875rem] text-foreground mt-1 cursor-default">
-                          {row.mottatt_dato ? relativeDate(row.mottatt_dato) : "—"}
+                          {formatReceivedDateLabel(row.mottatt_dato)}
                         </p>
                       </TooltipTrigger>
                       {row.mottatt_dato && <TooltipContent>{fullDate(row.mottatt_dato)}</TooltipContent>}
@@ -1294,7 +1391,7 @@ export function ForespørselSheet({
                         style={{ height: 32, fontSize: 12 }}
                       >
                         <Target className="h-3.5 w-3.5" />
-                        Finn match
+                        Finn konsulent match
                       </DesignLabActionButton>
                     </div>
                   )}
@@ -1342,6 +1439,10 @@ export function ForespørselSheet({
                       const isIntern = k.konsulent_type === "intern";
                       const navn = isIntern ? k.stacq_ansatte?.navn : k.external_consultants?.navn;
                       const status = k.status || "sendt_cv";
+                      const externalMeta = !isIntern && k.external_consultants?.id
+                        ? externalConsultantMetaById.get(k.external_consultants.id)
+                        : null;
+                      const externalPartnerCompanyName = getExternalConsultantPartnerCompanyName(externalMeta);
                       const PIPELINE = [
                         { key: "sendt_cv", label: "Sendt CV", color: "bg-[#FBF3E6] text-[#7D4E00] border-[#E8D0A0]" },
                         { key: "intervju", label: "Intervju", color: "bg-[#EAF0F9] text-[#1A4FA0] border-[#B3C8E8]" },
@@ -1367,6 +1468,12 @@ export function ForespørselSheet({
                               )}>
                                 {isIntern ? "Ansatt" : "Ekstern"}
                               </span>
+                              {!isIntern && (
+                                <ExternalConsultantOriginBadge
+                                  type={externalMeta?.type || k.external_consultants?.type}
+                                  partnerCompanyName={externalPartnerCompanyName}
+                                />
+                              )}
                             </div>
                             <button onClick={() => handleRemoveKonsulent(k.id)} className="text-muted-foreground hover:text-destructive transition-colors">
                               <X className="h-3.5 w-3.5" />
@@ -1430,6 +1537,10 @@ export function ForespørselSheet({
                       const isIntern = entry.konsulent_type === "intern";
                       const name = getLaterReviewName(entry);
                       const isBusy = laterReviewActionId === entry.id;
+                      const externalMeta = !isIntern && entry.ekstern_id
+                        ? externalConsultantMetaById.get(entry.ekstern_id)
+                        : null;
+                      const externalPartnerCompanyName = getExternalConsultantPartnerCompanyName(externalMeta);
                       const pipelineNotificationReady = Boolean(entry.pipeline_notification_task_id);
                       const hasNotifications = entry.notify_on_pipeline_exit || Boolean(entry.notify_email_date);
 
@@ -1479,9 +1590,10 @@ export function ForespørselSheet({
                                   {isIntern ? "Ansatt" : "Ekstern"}
                                 </span>
                                 {!isIntern && (
-                                  <span className="inline-flex items-center rounded-full border border-border bg-muted px-2 py-0.5 text-[0.6875rem] font-medium text-muted-foreground">
-                                    {getExternalConsultantTypeLabel(entry.external_type)}
-                                  </span>
+                                  <ExternalConsultantOriginBadge
+                                    type={externalMeta?.type || entry.external_type}
+                                    partnerCompanyName={externalPartnerCompanyName}
+                                  />
                                 )}
                               </div>
 
@@ -1584,7 +1696,7 @@ export function ForespørselSheet({
 
             {/* RIGHT COLUMN — Match results */}
             {showMatch && (
-              <div className="flex-1 border-t sm:border-t-0 sm:border-l border-border overflow-y-auto py-5 px-5 max-h-[calc(100vh-200px)]">
+              <div className="min-h-0 flex-1 overflow-y-auto border-t border-border py-5 px-5 sm:border-t-0 sm:border-l">
                 <div className="flex items-center justify-between gap-2 mb-4">
                   <div className="flex items-center gap-2">
                     <Target className="h-4 w-4 text-primary" />
@@ -2164,7 +2276,7 @@ function AddKonsulentCombobox({
     queryFn: async () => {
       const { data } = await supabase
         .from("external_consultants")
-        .select("id, navn, teknologier, type, status")
+        .select("id, navn, teknologier, type, status, selskap_tekst, companies(name)")
         .order("created_at", { ascending: true });
       // Deduplicate by navn
       const unique = (data || []).filter((c: any, i: number, arr: any[]) =>
@@ -2318,12 +2430,10 @@ function AddKonsulentCombobox({
                     {addingKey === `ekstern-${e.id}` && (
                       <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
                     )}
-                    <span className={cn(
-                      "inline-flex items-center rounded-full px-1.5 py-0.5 text-[0.625rem] font-semibold",
-                      e.type === "via_partner" || e.type === "partner" ? "bg-amber-100 text-amber-700" : "bg-blue-100 text-blue-700"
-                    )}>
-                      {e.type === "via_partner" || e.type === "partner" ? "Partner" : "Freelance"}
-                    </span>
+                    <ExternalConsultantOriginBadge
+                      type={e.type}
+                      partnerCompanyName={getExternalConsultantPartnerCompanyName(e)}
+                    />
                   </div>
                   {e.teknologier?.length > 0 && (
                     <div className="flex flex-wrap gap-1 mt-1 ml-8">
@@ -2394,7 +2504,7 @@ function AddLaterReviewCombobox({
     queryFn: async () => {
       const { data } = await supabase
         .from("external_consultants")
-        .select("id, navn, teknologier, type, status")
+        .select("id, navn, teknologier, type, status, selskap_tekst, companies(name)")
         .order("created_at", { ascending: true });
       const unique = (data || []).filter((c: any, i: number, arr: any[]) =>
         arr.findIndex((x: any) => x.navn === c.navn) === i
@@ -2620,12 +2730,10 @@ function AddLaterReviewCombobox({
                         {addingKey === `ekstern-${e.id}` && (
                           <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
                         )}
-                        <span className={cn(
-                          "inline-flex items-center rounded-full px-1.5 py-0.5 text-[0.625rem] font-semibold",
-                          e.type === "via_partner" || e.type === "partner" ? "bg-amber-100 text-amber-700" : "bg-blue-100 text-blue-700"
-                        )}>
-                          {e.type === "via_partner" || e.type === "partner" ? "Partner" : "Freelance"}
-                        </span>
+                        <ExternalConsultantOriginBadge
+                          type={e.type}
+                          partnerCompanyName={getExternalConsultantPartnerCompanyName(e)}
+                        />
                       </div>
                       {e.teknologier?.length > 0 && (
                         <div className="flex flex-wrap gap-1 mt-1 ml-8">
