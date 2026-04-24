@@ -273,7 +273,7 @@ export default function DesignLabStacqPrisen() {
               {isLoading ? (
                 <div style={{ textAlign: "center", padding: "48px 0", color: C.textFaint, fontSize: 13 }}>Laster…</div>
               ) : (
-                <div style={{ border: `1px solid ${C.border}`, borderRadius: 8, overflow: "hidden", background: C.surface }}>
+                <div style={{ border: `1px solid ${C.border}`, borderRadius: 8, overflow: "hidden", background: C.panel }}>
                   <div
                     className="grid items-center"
                     style={{
@@ -366,11 +366,11 @@ export default function DesignLabStacqPrisen() {
             </div>
 
             <aside className="w-full h-full">
-              <div
-                style={{
-                  border: `1px solid ${C.border}`,
-                  borderRadius: 8,
-                  background: C.surface,
+                <div
+                  style={{
+                    border: `1px solid ${C.border}`,
+                    borderRadius: 8,
+                  background: C.panel,
                   padding: 24,
                   height: "100%",
                   display: "flex",

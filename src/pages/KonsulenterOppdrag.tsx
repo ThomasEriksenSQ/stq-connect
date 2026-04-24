@@ -418,7 +418,10 @@ export default function KonsulenterOppdrag({
                 <ResizablePanelGroup direction="horizontal" className="flex-1">
                   <ResizablePanel defaultSize={46} minSize={28}>
                     <div className="h-full pr-2">
-                      <div className="h-full border border-border rounded-lg overflow-hidden bg-card shadow-[0_1px_3px_rgba(0,0,0,0.07)]">
+                      <div
+                        className="h-full border border-border rounded-lg overflow-hidden"
+                        style={{ background: C.panel }}
+                      >
                       <div
                         className="grid gap-3 px-4 border-b border-border sticky top-0 z-10"
                         style={{ gridTemplateColumns: OPPDRAG_GRID_TEMPLATE, background: C.surfaceAlt, height: 32, alignItems: "center" }}
@@ -448,9 +451,18 @@ export default function KonsulenterOppdrag({
                               className={cn(
                                 "grid gap-3 items-center px-4 min-h-[38px] py-1 transition-colors cursor-pointer",
                                 isInaktiv && "opacity-60",
-                                isSelected ? "bg-muted/60" : "hover:bg-muted/40",
                               )}
-                              style={{ gridTemplateColumns: OPPDRAG_GRID_TEMPLATE }}
+                              style={{
+                                gridTemplateColumns: OPPDRAG_GRID_TEMPLATE,
+                                background: isSelected ? C.selected : "transparent",
+                              }}
+                              onMouseEnter={(event) => {
+                                event.currentTarget.style.background = isSelected ? C.selected : C.hoverSubtle;
+                              }}
+                              onMouseLeave={(event) => {
+                                event.currentTarget.style.background = isSelected ? C.selected : "transparent";
+                              }}
+                              aria-selected={isSelected}
                             >
                             <div className="flex items-center gap-2 min-w-0">
                               {(() => {
@@ -591,10 +603,13 @@ export default function KonsulenterOppdrag({
             </>
           ) : (
             <>
-              <div className="hidden md:block border border-border rounded-lg overflow-hidden bg-card shadow-[0_1px_3px_rgba(0,0,0,0.07)]">
+              <div
+                className="hidden md:block border border-border rounded-lg overflow-hidden"
+                style={{ background: C.panel }}
+              >
                 <div
-                  className="grid gap-3 px-4 py-2.5 border-b border-border bg-background"
-                  style={{ gridTemplateColumns: OPPDRAG_GRID_TEMPLATE }}
+                  className="grid gap-3 px-4 py-2.5 border-b border-border"
+                  style={{ gridTemplateColumns: OPPDRAG_GRID_TEMPLATE, background: C.surfaceAlt }}
                 >
                   {["Konsulent", "Sluttkunde", "Via partner", "Type", "Utpris", "Margin", "Ekstra", "Margin %", "Forny", "Status"].map((h) => (
                     <span
@@ -608,16 +623,27 @@ export default function KonsulenterOppdrag({
                 <div className="divide-y divide-border">
                   {filtered.map((o: any) => {
                     const isInaktiv = o.status === "Inaktiv";
+                    const isSelected = selectedRowId === o.id;
 
                     return (
                       <div
                         key={o.id}
                         onClick={() => setSelectedRowId(o.id)}
                         className={cn(
-                          "grid gap-3 items-center px-4 min-h-[44px] py-2 hover:bg-muted/40 transition-colors cursor-pointer",
+                          "grid gap-3 items-center px-4 min-h-[44px] py-2 transition-colors cursor-pointer",
                           isInaktiv && "opacity-60",
                         )}
-                        style={{ gridTemplateColumns: OPPDRAG_GRID_TEMPLATE }}
+                        style={{
+                          gridTemplateColumns: OPPDRAG_GRID_TEMPLATE,
+                          background: isSelected ? C.selected : "transparent",
+                        }}
+                        onMouseEnter={(event) => {
+                          event.currentTarget.style.background = isSelected ? C.selected : C.hoverSubtle;
+                        }}
+                        onMouseLeave={(event) => {
+                          event.currentTarget.style.background = isSelected ? C.selected : "transparent";
+                        }}
+                        aria-selected={isSelected}
                       >
                         <div className="flex items-center gap-2 min-w-0">
                           {(() => {
