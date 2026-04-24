@@ -11,6 +11,7 @@ import { C } from "@/components/designlab/theme";
 import { useNewsDailyDigest } from "@/hooks/useNewsDailyDigest";
 import { useCrmNavigation } from "@/lib/crmNavigation";
 import {
+  dedupeTranslatedNewsItems,
   newsRelative,
   sortNewsItemsNewestFirst,
   withUtm,
@@ -466,7 +467,7 @@ export default function DesignLabNews() {
   const todayLabel = formatTodayLabel();
   const [tab, setTab] = useState<NewsTab>("news");
   const { row, items, isLoadingNews, query } = useNewsDailyDigest();
-  const sortedItems = sortNewsItemsNewestFirst(items);
+  const sortedItems = dedupeTranslatedNewsItems(sortNewsItemsNewestFirst(items));
   const stories = sortedItems.filter((i): i is RenderableNewsStory => i.variant !== "brief");
   const lead = stories[0] ?? null;
   const features = stories.slice(1);
