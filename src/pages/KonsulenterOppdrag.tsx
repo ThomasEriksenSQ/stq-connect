@@ -246,37 +246,37 @@ export default function KonsulenterOppdrag({
       {/* Stat cards */}
           {/* Stat cards */}
           <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4 mb-3">
-            <div className="bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-100 rounded-xl px-5 py-4 shadow-sm">
-              <Briefcase className="h-4 w-4 text-emerald-600 mb-1" />
-              <p className="text-2xl font-bold text-emerald-600">{stats.aktive}</p>
+            <div className="rounded-xl px-5 py-4 shadow-sm" style={{ background: C.surface, border: `1px solid ${C.borderLight}`, boxShadow: C.shadow }}>
+              <Briefcase className="h-4 w-4 mb-1" style={{ color: C.accent }} />
+              <p className="text-2xl font-bold" style={{ color: C.text }}>{stats.aktive}</p>
               <p className="text-[0.8125rem] text-muted-foreground">Aktive oppdrag</p>
             </div>
-            <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-100 rounded-xl px-5 py-4 shadow-sm">
-              <CalendarCheck className="h-4 w-4 text-amber-600 mb-1" />
-              <p className="text-2xl font-bold text-amber-600">{stats.oppstart}</p>
+            <div className="rounded-xl px-5 py-4 shadow-sm" style={{ background: C.surface, border: `1px solid ${C.borderLight}`, boxShadow: C.shadow }}>
+              <CalendarCheck className="h-4 w-4 mb-1" style={{ color: C.warning }} />
+              <p className="text-2xl font-bold" style={{ color: C.text }}>{stats.oppstart}</p>
               <p className="text-[0.8125rem] text-muted-foreground">I oppstart</p>
             </div>
-            <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-100 rounded-xl px-5 py-4 shadow-sm">
-              <Hourglass className="h-4 w-4 text-amber-600 mb-1" />
-              <p className="text-2xl font-bold text-amber-600">{stats.avsluttes60}</p>
+            <div className="rounded-xl px-5 py-4 shadow-sm" style={{ background: C.surface, border: `1px solid ${C.borderLight}`, boxShadow: C.shadow }}>
+              <Hourglass className="h-4 w-4 mb-1" style={{ color: C.warning }} />
+              <p className="text-2xl font-bold" style={{ color: C.text }}>{stats.avsluttes60}</p>
               <p className="text-[0.8125rem] text-muted-foreground">Avsluttes under 60 dager</p>
               <p className="text-xs text-muted-foreground">Sluttdato satt</p>
             </div>
-            <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-100 rounded-xl px-5 py-4 shadow-sm">
-              <BarChart2 className="h-4 w-4 text-amber-600 mb-1" />
-              <p className="text-2xl font-bold text-amber-600">{stats.fornyelser30}</p>
+            <div className="rounded-xl px-5 py-4 shadow-sm" style={{ background: C.surface, border: `1px solid ${C.borderLight}`, boxShadow: C.shadow }}>
+              <BarChart2 className="h-4 w-4 mb-1" style={{ color: C.warning }} />
+              <p className="text-2xl font-bold" style={{ color: C.text }}>{stats.fornyelser30}</p>
               <p className="text-[0.8125rem] text-muted-foreground">Fornyelser under 30 dager</p>
               <p className="text-xs text-muted-foreground">Krever oppfølging</p>
             </div>
-            <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-100 rounded-xl px-5 py-4 shadow-sm">
-              <BarChart2 className="h-4 w-4 text-amber-600 mb-1" />
-              <p className="text-2xl font-bold text-amber-600">{stats.fornyelser60}</p>
+            <div className="rounded-xl px-5 py-4 shadow-sm" style={{ background: C.surface, border: `1px solid ${C.borderLight}`, boxShadow: C.shadow }}>
+              <BarChart2 className="h-4 w-4 mb-1" style={{ color: C.warning }} />
+              <p className="text-2xl font-bold" style={{ color: C.text }}>{stats.fornyelser60}</p>
               <p className="text-[0.8125rem] text-muted-foreground">Fornyelser under 60 dager</p>
               <p className="text-xs text-muted-foreground">Krever oppfølging</p>
             </div>
-            <div className="bg-sky-50 dark:bg-sky-950/20 border border-sky-100 rounded-xl px-5 py-4 shadow-sm">
-              <BarChart2 className="h-4 w-4 text-sky-600 mb-1" />
-              <p className="text-2xl font-bold text-sky-600">
+            <div className="rounded-xl px-5 py-4 shadow-sm" style={{ background: C.surface, border: `1px solid ${C.borderLight}`, boxShadow: C.shadow }}>
+              <BarChart2 className="h-4 w-4 mb-1" style={{ color: C.info }} />
+              <p className="text-2xl font-bold" style={{ color: C.text }}>
                 {stats.avgUtprisAktiveAnsatte === null ? "–" : `kr ${formatNOK(stats.avgUtprisAktiveAnsatte)}/t`}
               </p>
               <p className="text-[0.8125rem] text-muted-foreground">Snitt UTPRIS</p>
@@ -328,7 +328,6 @@ export default function KonsulenterOppdrag({
           <div className="space-y-3 md:hidden">
             {filtered.map((o: any) => {
               const isInaktiv = o.status === "Inaktiv";
-              const kundeType = o.deal_type === "VIA" ? "Via partner" : "Direkte";
 
               return (
                 <button
@@ -373,9 +372,7 @@ export default function KonsulenterOppdrag({
                   </div>
 
                   <div className="mt-3 flex flex-wrap items-center gap-2">
-                    <span className="inline-flex items-center rounded-full bg-muted px-2.5 py-0.5 text-[0.6875rem] font-medium text-foreground">
-                      {kundeType}
-                    </span>
+                    <OppdragTypeTag dealType={o.deal_type} />
                     <span className="text-[0.8125rem] font-medium text-foreground">kr {formatNOK(Number(o.utpris) || 0)}/t</span>
                   </div>
 
@@ -485,15 +482,7 @@ export default function KonsulenterOppdrag({
                               {o.deal_type === "VIA" && o.partner_navn ? o.partner_navn : "—"}
                             </span>
                             <div>
-                              {o.deal_type === "VIA" ? (
-                                <span className="inline-flex items-center rounded-full bg-amber-100 text-amber-700 border border-amber-200 px-2.5 py-0.5 text-[0.6875rem] font-semibold">
-                                  Via partner
-                                </span>
-                              ) : (
-                                <span className="inline-flex items-center rounded-full bg-slate-100 text-slate-700 border border-slate-200 px-2.5 py-0.5 text-[0.6875rem] font-semibold">
-                                  Direkte
-                                </span>
-                              )}
+                              <OppdragTypeTag dealType={o.deal_type} />
                             </div>
                             <span className="text-[0.8125rem] font-medium text-foreground">
                               kr {formatNOK(Number(o.utpris) || 0)}/t
@@ -660,15 +649,7 @@ export default function KonsulenterOppdrag({
                           {o.deal_type === "VIA" && o.partner_navn ? o.partner_navn : "—"}
                         </span>
                         <div>
-                          {o.deal_type === "VIA" ? (
-                            <span className="inline-flex items-center rounded-full bg-amber-100 text-amber-700 border border-amber-200 px-2.5 py-0.5 text-[0.6875rem] font-semibold">
-                              Via partner
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center rounded-full bg-slate-100 text-slate-700 border border-slate-200 px-2.5 py-0.5 text-[0.6875rem] font-semibold">
-                              Direkte
-                            </span>
-                          )}
+                          <OppdragTypeTag dealType={o.deal_type} />
                         </div>
                         <span className="text-[0.8125rem] font-medium text-foreground">
                           kr {formatNOK(Number(o.utpris) || 0)}/t
@@ -824,10 +805,19 @@ function OppdragSummaryCard({
 function OppdragStatusTag({ status }: { status: string }) {
   const colors =
     status === "Aktiv"
-      ? { background: "#EAF7EF", color: "#197A52", border: "1px solid rgba(25,122,82,0.16)", fontWeight: 600 }
+      ? DESIGN_LAB_NEUTRAL_TAG_ACTIVE_COLORS
       : status === "Oppstart"
-        ? { background: "#F6EFE2", color: "#9A7A2A", border: "1px solid rgba(154,122,42,0.16)", fontWeight: 600 }
-        : { background: "#F7F8FA", color: "#8C929C", border: "1px solid #E3E6EB", fontWeight: 500 };
+        ? { background: C.warningBg, color: C.warning, border: `1px solid ${C.statusNeutralBorder}`, fontWeight: 600 }
+        : DESIGN_LAB_NEUTRAL_TAG_INACTIVE_COLORS;
 
   return <DesignLabStaticTag colors={colors}>{status}</DesignLabStaticTag>;
+}
+
+function OppdragTypeTag({ dealType }: { dealType: string | null | undefined }) {
+  const isVia = dealType === "VIA";
+  return (
+    <DesignLabStaticTag colors={isVia ? DESIGN_LAB_NEUTRAL_TAG_INACTIVE_COLORS : DESIGN_LAB_NEUTRAL_TAG_ACTIVE_COLORS}>
+      {isVia ? "Via partner" : "Direkte"}
+    </DesignLabStaticTag>
+  );
 }

@@ -1309,7 +1309,7 @@ const DailyBrief = ({ designLabMode = false }: DailyBriefProps) => {
                                   designLabMode
                                     ? {
                                         fontSize: 12,
-                                        background: isCustomSelected ? C.filterActiveBg : "#FFFFFF",
+                                        background: isCustomSelected ? C.filterActiveBg : C.surface,
                                         color: isCustomSelected ? C.textPrimary : C.textSecondary,
                                         border: isCustomSelected
                                           ? `1px solid ${C.filterActiveBorder}`
@@ -1875,7 +1875,7 @@ const DailyBrief = ({ designLabMode = false }: DailyBriefProps) => {
                             paddingInline: 10,
                             borderRadius: 6,
                             fontSize: 12,
-                            background: nudgeDate === "custom" ? C.filterActiveBg : "#FFFFFF",
+                            background: nudgeDate === "custom" ? C.filterActiveBg : C.surface,
                             color: nudgeDate === "custom" ? C.textPrimary : C.textSecondary,
                             border: nudgeDate === "custom"
                               ? `1px solid ${C.filterActiveBorder}`

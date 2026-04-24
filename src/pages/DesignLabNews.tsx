@@ -574,9 +574,9 @@ export default function DesignLabNews() {
           border: 1px solid ${C.borderLight};
           border-radius: 24px;
           background:
-            radial-gradient(circle at top left, rgba(94, 106, 210, 0.08), transparent 34%),
-            linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(250,251,252,0.96) 100%);
-          box-shadow: 0 18px 52px rgba(17, 24, 39, 0.05);
+            radial-gradient(circle at top left, ${C.accentMuted}, transparent 34%),
+            linear-gradient(180deg, ${C.surface} 0%, ${C.surfaceAlt} 100%);
+          box-shadow: ${C.shadowLg};
         }
         .news-masthead-kicker {
           font-size: 10px;
@@ -606,7 +606,7 @@ export default function DesignLabNews() {
           padding: 14px 16px;
           border: 1px solid ${C.borderLight};
           border-radius: 18px;
-          background: rgba(255,255,255,0.84);
+          background: ${C.panel};
         }
         .news-masthead-stat-label {
           font-size: 10px;
@@ -628,8 +628,8 @@ export default function DesignLabNews() {
           margin-bottom: 36px;
           border: 1px solid ${C.borderLight};
           border-radius: 999px;
-          background: rgba(255,255,255,0.9);
-          box-shadow: 0 8px 24px rgba(17, 24, 39, 0.04);
+          background: ${C.surface};
+          box-shadow: ${C.shadowMd};
         }
         .news-tab-button {
           background: transparent;
@@ -644,15 +644,15 @@ export default function DesignLabNews() {
         }
         .news-tab-button.is-active {
           color: ${C.text};
-          background: ${C.surface};
+          background: ${C.panel};
           box-shadow: inset 0 0 0 1px ${C.borderLight};
         }
         .news-surface {
           border: 1px solid ${C.borderLight};
           border-radius: 22px;
           background:
-            linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(250,251,252,0.96) 100%);
-          box-shadow: 0 16px 42px rgba(17, 24, 39, 0.05);
+            linear-gradient(180deg, ${C.surface} 0%, ${C.surfaceAlt} 100%);
+          box-shadow: ${C.shadowLg};
         }
         .news-surface-lead {
           padding: clamp(16px, 2vw, 22px);
@@ -682,11 +682,11 @@ export default function DesignLabNews() {
           .news-feature-card:hover {
             transform: translateY(-2px);
             border-color: ${C.border};
-            box-shadow: 0 20px 50px rgba(17, 24, 39, 0.08);
+            box-shadow: ${C.shadowLg};
           }
           .news-tab-button:hover {
             color: ${C.text};
-            background: rgba(255,255,255,0.72);
+            background: ${C.hoverSubtle};
           }
         }
         @media (min-width: 860px) {

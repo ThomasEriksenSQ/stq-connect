@@ -41,10 +41,10 @@ const DropdownMenuSub = DropdownMenuPrimitive.Sub;
 const DropdownMenuRadioGroup = DropdownMenuPrimitive.RadioGroup;
 
 const menuPanelClassName =
-  "z-50 min-w-[8rem] overflow-hidden rounded-lg border border-[#E8EAEE] bg-white text-[#1A1C1F] shadow-[0_10px_30px_rgba(15,23,42,0.08)] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2";
+  "z-50 min-w-[8rem] overflow-hidden rounded-lg border border-[color:var(--dl-border-light)] bg-[color:var(--dl-surface)] text-[color:var(--dl-text)] shadow-[0_18px_48px_rgba(0,0,0,0.24)] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2";
 
 const menuItemClassName =
-  "relative flex cursor-default select-none items-center rounded-md font-medium text-[#1A1C1F] outline-none transition-colors gap-[var(--dl-menu-item-gap)] h-[var(--dl-menu-item-height)] px-[var(--dl-menu-item-padding-x)] text-[length:var(--dl-menu-font-size)] [&_svg]:shrink-0 [&_svg]:text-[#5C636E] [&_svg]:h-[var(--dl-menu-icon-size)] [&_svg]:w-[var(--dl-menu-icon-size)] data-[disabled]:pointer-events-none data-[disabled]:opacity-50 focus:bg-[#F8F9FB] focus:text-[#1A1C1F] data-[highlighted]:bg-[#F8F9FB] data-[highlighted]:text-[#1A1C1F]";
+  "relative flex cursor-default select-none items-center rounded-md font-medium text-[color:var(--dl-text)] outline-none transition-colors gap-[var(--dl-menu-item-gap)] h-[var(--dl-menu-item-height)] px-[var(--dl-menu-item-padding-x)] text-[length:var(--dl-menu-font-size)] [&_svg]:shrink-0 [&_svg]:text-[color:var(--dl-text-muted)] [&_svg]:h-[var(--dl-menu-icon-size)] [&_svg]:w-[var(--dl-menu-icon-size)] data-[disabled]:pointer-events-none data-[disabled]:opacity-50 focus:bg-[color:var(--dl-hover-subtle)] focus:text-[color:var(--dl-text)] data-[highlighted]:bg-[color:var(--dl-hover-subtle)] data-[highlighted]:text-[color:var(--dl-text)]";
 
 const DropdownMenuSubTrigger = React.forwardRef<
   React.ElementRef<typeof DropdownMenuPrimitive.SubTrigger>,
@@ -59,7 +59,7 @@ const DropdownMenuSubTrigger = React.forwardRef<
       ref={ref}
       className={cn(
         menuItemClassName,
-        "data-[state=open]:bg-[#F8F9FB]",
+        "data-[state=open]:bg-[color:var(--dl-hover-subtle)]",
         inset && "pl-[var(--dl-menu-item-leading-padding)]",
         className,
       )}
@@ -218,7 +218,7 @@ const DropdownMenuLabel = React.forwardRef<
     <DropdownMenuPrimitive.Label
       ref={ref}
       className={cn(
-        "font-semibold text-[#5C636E] px-[var(--dl-menu-item-padding-x)] py-[var(--dl-menu-label-padding-y)] text-[length:var(--dl-menu-label-font-size)]",
+        "font-semibold text-[color:var(--dl-text-faint)] px-[var(--dl-menu-item-padding-x)] py-[var(--dl-menu-label-padding-y)] text-[length:var(--dl-menu-label-font-size)]",
         inset && "pl-[var(--dl-menu-item-leading-padding)]",
         className,
       )}
@@ -236,7 +236,11 @@ const DropdownMenuSeparator = React.forwardRef<
   React.ElementRef<typeof DropdownMenuPrimitive.Separator>,
   React.ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.Separator>
 >(({ className, ...props }, ref) => (
-  <DropdownMenuPrimitive.Separator ref={ref} className={cn("-mx-1 my-1 h-px bg-muted", className)} {...props} />
+  <DropdownMenuPrimitive.Separator
+    ref={ref}
+    className={cn("-mx-1 my-1 h-px bg-[color:var(--dl-border-light)]", className)}
+    {...props}
+  />
 ));
 DropdownMenuSeparator.displayName = DropdownMenuPrimitive.Separator.displayName;
 
@@ -245,7 +249,10 @@ const DropdownMenuShortcut = ({ className, style, ...props }: React.HTMLAttribut
 
   return (
     <span
-      className={cn("ml-auto tracking-[0.08em] text-[#8C929C] text-[length:var(--dl-menu-shortcut-font-size)]", className)}
+      className={cn(
+        "ml-auto tracking-[0.08em] text-[color:var(--dl-text-faint)] text-[length:var(--dl-menu-shortcut-font-size)]",
+        className,
+      )}
       style={{
         ...getMenuScaleVars(textSize),
         ...style,

@@ -526,6 +526,14 @@ html {
   color: var(--dl-text);
 }
 
+.dl-v8-theme input[type="date"] {
+  color-scheme: light;
+}
+
+.dark .dl-v8-theme input[type="date"] {
+  color-scheme: dark;
+}
+
 /* V8 tag styling */
 .dl-v8-theme [class*="tag-bg"] {
   --tag-bg: 228 10% 93%;

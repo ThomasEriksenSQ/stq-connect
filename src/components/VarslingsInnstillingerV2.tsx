@@ -348,10 +348,11 @@ export function VarslingsInnstillingerV2() {
               style={{
                 height: 32,
                 borderRadius: 6,
-                borderColor: "#DDE0E7",
-                background: "#FFFFFF",
+                borderColor: C.borderDefault,
+                background: C.surface,
                 fontSize: 13,
                 color: C.text,
+                boxShadow: "none",
               }}
             >
               <SelectValue />

@@ -1594,14 +1594,14 @@ export function ContactCardContent({
                 <DropdownMenuContent
                   align="end"
                   sideOffset={8}
-                  className="rounded-[14px] border-[#E3E7EF] bg-[rgba(255,255,255,0.98)] shadow-[0_18px_48px_rgba(15,23,42,0.12)] backdrop-blur-[10px]"
+                  className="rounded-[14px] border-[color:var(--dl-border-light)] bg-[color:var(--dl-surface)] shadow-[0_18px_48px_rgba(0,0,0,0.24)] backdrop-blur-[10px]"
                   style={{
                     minWidth: contactActionMenuMetrics.menuMinWidth,
                     padding: contactActionMenuMetrics.menuPadding,
                   }}
                 >
                   <DropdownMenuLabel
-                    className="font-semibold uppercase tracking-[0.12em] text-[#8C929C]"
+                    className="font-semibold uppercase tracking-[0.12em] text-[color:var(--dl-text-faint)]"
                     style={{
                       fontSize: contactActionMenuMetrics.labelFontSize,
                       paddingLeft: contactActionMenuMetrics.labelPaddingX,
@@ -1628,7 +1628,7 @@ export function ContactCardContent({
                     }}
                   >
                     <span
-                      className="mt-0.5 flex shrink-0 items-center justify-center rounded-[8px] border border-[#E3E7EF] bg-[#F8F9FB] text-[#5C636E]"
+                      className="mt-0.5 flex shrink-0 items-center justify-center rounded-[8px] border border-[color:var(--dl-border-light)] bg-[color:var(--dl-surface-alt)] text-[color:var(--dl-text-muted)]"
                       style={{
                         width: contactActionMenuMetrics.itemIconBoxSize,
                         height: contactActionMenuMetrics.itemIconBoxSize,
@@ -1643,13 +1643,13 @@ export function ContactCardContent({
                     </span>
                     <span className="min-w-0 flex-1">
                       <span
-                        className="block truncate font-semibold text-[#1A1C1F]"
+                        className="block truncate font-semibold text-[color:var(--dl-text)]"
                         style={{ fontSize: contactActionMenuMetrics.itemTitleFontSize }}
                       >
                         {!useProfileEditSheet && profileEditMode ? "Avslutt redigering" : "Rediger profil"}
                       </span>
                       <span
-                        className="mt-0.5 block text-[#7A818C]"
+                        className="mt-0.5 block text-[color:var(--dl-text-muted)]"
                         style={{
                           fontSize: contactActionMenuMetrics.itemDescriptionFontSize,
                           lineHeight: 1.35,
@@ -1679,7 +1679,7 @@ export function ContactCardContent({
                     }}
                   >
                     <span
-                      className="mt-0.5 flex shrink-0 items-center justify-center rounded-[8px] border border-[#E3E7EF] bg-[#F8F9FB] text-[#5C636E]"
+                      className="mt-0.5 flex shrink-0 items-center justify-center rounded-[8px] border border-[color:var(--dl-border-light)] bg-[color:var(--dl-surface-alt)] text-[color:var(--dl-text-muted)]"
                       style={{
                         width: contactActionMenuMetrics.itemIconBoxSize,
                         height: contactActionMenuMetrics.itemIconBoxSize,
@@ -1694,13 +1694,13 @@ export function ContactCardContent({
                     </span>
                     <span className="min-w-0 flex-1">
                       <span
-                        className="block truncate font-semibold text-[#1A1C1F]"
+                        className="block truncate font-semibold text-[color:var(--dl-text)]"
                         style={{ fontSize: contactActionMenuMetrics.itemTitleFontSize }}
                       >
                         Opprett forespørsel
                       </span>
                       <span
-                        className="mt-0.5 block text-[#7A818C]"
+                        className="mt-0.5 block text-[color:var(--dl-text-muted)]"
                         style={{
                           fontSize: contactActionMenuMetrics.itemDescriptionFontSize,
                           lineHeight: 1.35,
@@ -1714,9 +1714,9 @@ export function ContactCardContent({
                   </DropdownMenuItem>
                   {defaultHidden && (
                     <>
-                      <DropdownMenuSeparator className="my-2 bg-[#EEF1F5]" />
+                      <DropdownMenuSeparator className="my-2 bg-[color:var(--dl-border-light)]" />
                       <DropdownMenuLabel
-                        className="font-semibold uppercase tracking-[0.12em] text-[#8C929C]"
+                        className="font-semibold uppercase tracking-[0.12em] text-[color:var(--dl-text-faint)]"
                         style={{
                           fontSize: contactActionMenuMetrics.labelFontSize,
                           paddingLeft: contactActionMenuMetrics.labelPaddingX,
@@ -1742,7 +1742,7 @@ export function ContactCardContent({
                         }}
                       >
                         <span
-                          className="mt-0.5 flex shrink-0 items-center justify-center rounded-[8px] border border-[#E3E7EF] bg-[#F8F9FB] text-[#5C636E]"
+                          className="mt-0.5 flex shrink-0 items-center justify-center rounded-[8px] border border-[color:var(--dl-border-light)] bg-[color:var(--dl-surface-alt)] text-[color:var(--dl-text-muted)]"
                           style={{
                             width: contactActionMenuMetrics.itemIconBoxSize,
                             height: contactActionMenuMetrics.itemIconBoxSize,
@@ -1757,13 +1757,13 @@ export function ContactCardContent({
                         </span>
                         <span className="min-w-0 flex-1">
                           <span
-                            className="block truncate font-semibold text-[#1A1C1F]"
+                            className="block truncate font-semibold text-[color:var(--dl-text)]"
                             style={{ fontSize: contactActionMenuMetrics.itemTitleFontSize }}
                           >
                             Finn konsulent match
                           </span>
                           <span
-                            className="mt-0.5 block text-[#7A818C]"
+                            className="mt-0.5 block text-[color:var(--dl-text-muted)]"
                             style={{
                               fontSize: contactActionMenuMetrics.itemDescriptionFontSize,
                               lineHeight: 1.35,
@@ -1789,7 +1789,7 @@ export function ContactCardContent({
                         }}
                       >
                         <span
-                          className="mt-0.5 flex shrink-0 items-center justify-center rounded-[8px] border border-[#E3E7EF] bg-[#F8F9FB] text-[#5C636E]"
+                          className="mt-0.5 flex shrink-0 items-center justify-center rounded-[8px] border border-[color:var(--dl-border-light)] bg-[color:var(--dl-surface-alt)] text-[color:var(--dl-text-muted)]"
                           style={{
                             width: contactActionMenuMetrics.itemIconBoxSize,
                             height: contactActionMenuMetrics.itemIconBoxSize,
@@ -1804,13 +1804,13 @@ export function ContactCardContent({
                         </span>
                         <span className="min-w-0 flex-1">
                           <span
-                            className="block truncate font-semibold text-[#1A1C1F]"
+                            className="block truncate font-semibold text-[color:var(--dl-text)]"
                             style={{ fontSize: contactActionMenuMetrics.itemTitleFontSize }}
                           >
                             {showRequests ? "Skjul forespørsler" : "Vis forespørsler"}
                           </span>
                           <span
-                            className="mt-0.5 block text-[#7A818C]"
+                            className="mt-0.5 block text-[color:var(--dl-text-muted)]"
                             style={{
                               fontSize: contactActionMenuMetrics.itemDescriptionFontSize,
                               lineHeight: 1.35,
@@ -1841,7 +1841,7 @@ export function ContactCardContent({
                         }}
                       >
                         <span
-                          className="mt-0.5 flex shrink-0 items-center justify-center rounded-[8px] border border-[#E3E7EF] bg-[#F8F9FB] text-[#5C636E]"
+                          className="mt-0.5 flex shrink-0 items-center justify-center rounded-[8px] border border-[color:var(--dl-border-light)] bg-[color:var(--dl-surface-alt)] text-[color:var(--dl-text-muted)]"
                           style={{
                             width: contactActionMenuMetrics.itemIconBoxSize,
                             height: contactActionMenuMetrics.itemIconBoxSize,
@@ -1856,13 +1856,13 @@ export function ContactCardContent({
                         </span>
                         <span className="min-w-0 flex-1">
                           <span
-                            className="block truncate font-semibold text-[#1A1C1F]"
+                            className="block truncate font-semibold text-[color:var(--dl-text)]"
                             style={{ fontSize: contactActionMenuMetrics.itemTitleFontSize }}
                           >
                             {showNotes ? "Skjul notat" : contact.notes ? "Vis notat" : "Legg til notat"}
                           </span>
                           <span
-                            className="mt-0.5 block text-[#7A818C]"
+                            className="mt-0.5 block text-[color:var(--dl-text-muted)]"
                             style={{
                               fontSize: contactActionMenuMetrics.itemDescriptionFontSize,
                               lineHeight: 1.35,
@@ -1887,7 +1887,7 @@ export function ContactCardContent({
                         onClick={() => setShowTechDna((prev) => !prev)}
                       >
                         <span
-                          className="mt-0.5 flex shrink-0 items-center justify-center rounded-[8px] border border-[#E3E7EF] bg-[#F8F9FB] text-[#5C636E]"
+                          className="mt-0.5 flex shrink-0 items-center justify-center rounded-[8px] border border-[color:var(--dl-border-light)] bg-[color:var(--dl-surface-alt)] text-[color:var(--dl-text-muted)]"
                           style={{
                             width: contactActionMenuMetrics.itemIconBoxSize,
                             height: contactActionMenuMetrics.itemIconBoxSize,
@@ -1911,13 +1911,13 @@ export function ContactCardContent({
                         </span>
                         <span className="min-w-0 flex-1">
                           <span
-                            className="block truncate font-semibold text-[#1A1C1F]"
+                            className="block truncate font-semibold text-[color:var(--dl-text)]"
                             style={{ fontSize: contactActionMenuMetrics.itemTitleFontSize }}
                           >
                             {showTechDna ? "Skjul tech stack" : "Vis tech stack"}
                           </span>
                           <span
-                            className="mt-0.5 block text-[#7A818C]"
+                            className="mt-0.5 block text-[color:var(--dl-text-muted)]"
                             style={{
                               fontSize: contactActionMenuMetrics.itemDescriptionFontSize,
                               lineHeight: 1.35,

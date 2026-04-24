@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/tooltip";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { C } from "@/theme";
 
 const MONTHS_SHORT = ["Jan", "Feb", "Mar", "Apr", "Mai", "Jun", "Jul", "Aug", "Sep", "Okt", "Nov", "Des"];
 
@@ -120,13 +121,13 @@ export function FornyelsesTimeline({ enriched }: { enriched: any[] }) {
                 width: `calc((100% - 190px) / 12)`,
                 top: 0,
                 bottom: 0,
-                background: "rgba(94,106,210,0.05)",
+                background: C.accentMuted,
               }}
             />
 
             {/* Header */}
-            <div className="flex border-b border-border sticky top-0 z-20" style={{ background: "#F3F3F4", height: 32 }}>
-              <div className="w-[190px] shrink-0 px-4 sticky left-0 z-30 text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground flex items-center" style={{ background: "#F3F3F4" }}>
+            <div className="flex border-b border-border sticky top-0 z-20" style={{ background: C.surfaceAlt, height: 32 }}>
+              <div className="w-[190px] shrink-0 px-4 sticky left-0 z-30 text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground flex items-center" style={{ background: C.surfaceAlt }}>
                 Konsulent
               </div>
               {MONTHS_SHORT.map((m, i) => (
