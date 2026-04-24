@@ -1214,6 +1214,11 @@ export function ForespørselSheet({
   const matchFreshness = formatConsultantMatchFreshness(matchUpdatedAt);
   const isPreparingMatch = pendingMatchRequest && !consultantCacheReady;
 
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    toast("Kopiert!", { duration: 1500 });
+  };
+
   const SUGGESTED_TAGS = ["C++", "C", "Embedded", "Yocto", "Linux", "Qt", "FPGA", "Python", "SPI/I2C", "MCU", "Embedded Linux", "Sikkerhet"];
 
   if (!row) return null;
@@ -1279,16 +1284,24 @@ export function ForespørselSheet({
             {(contactPhone || contactEmail) && (
               <div className="mt-2 flex flex-wrap items-center gap-x-5 gap-y-1.5 text-[0.8125rem] text-muted-foreground">
                 {contactPhone && (
-                  <span className="inline-flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => copyToClipboard(contactPhone)}
+                    className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground cursor-pointer"
+                  >
                     <Phone className="h-3.5 w-3.5" />
                     {contactPhone}
-                  </span>
+                  </button>
                 )}
                 {contactEmail && (
-                  <span className="inline-flex items-center gap-1.5 break-all">
+                  <button
+                    type="button"
+                    onClick={() => copyToClipboard(contactEmail)}
+                    className="inline-flex items-center gap-1.5 break-all text-left transition-colors hover:text-foreground cursor-pointer"
+                  >
                     <Mail className="h-3.5 w-3.5 shrink-0" />
                     {contactEmail}
-                  </span>
+                  </button>
                 )}
               </div>
             )}
