@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { addDays, endOfWeek, format, isBefore, isToday, startOfDay } from "date-fns";
 import { nb } from "date-fns/locale";
-import { CalendarIcon, Plus, X } from "lucide-react";
+import { X } from "lucide-react";
 
 import { ContactCardContent } from "@/components/ContactCardContent";
 import { DesignLabEntitySheet } from "@/components/designlab/DesignLabEntitySheet";
@@ -27,31 +27,15 @@ import {
 import { CommandPalette } from "@/components/designlab/CommandPalette";
 import {
   DesignLabFilterRow,
-  DesignLabGhostAction,
-  DesignLabModalActions,
-  DesignLabModalContent,
-  DesignLabModalField,
-  DesignLabModalForm,
-  DesignLabModalInput,
-  DesignLabModalLabel,
-  DesignLabPrimaryAction,
   DesignLabReadonlyChip,
   DesignLabStatusBadge,
-  getDesignLabV2ActionStyle,
 } from "@/components/designlab/system";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
-import { Dialog, DialogTrigger } from "@/components/ui/dialog";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Textarea } from "@/components/ui/textarea";
-import { toast } from "@/components/ui/sonner";
 
 type FollowUpViewFilter = "Alle" | "I dag" | "Denne uken" | "Neste 30 dager" | "Forfalt";
 
 const FOLLOW_UP_QUERY_KEY = ["design-lab-follow-ups"] as const;
 const FOLLOW_UP_ACTIVITY_QUERY_KEY = ["design-lab-follow-up-activities"] as const;
-const FOLLOW_UP_CONTACT_QUERY_KEY = ["design-lab-follow-up-modal-contacts"] as const;
 
 const VIEW_FILTERS = ["Alle", "I dag", "Denne uken", "Neste 30 dager", "Forfalt"] as const satisfies readonly FollowUpViewFilter[];
 
@@ -86,15 +70,6 @@ const PRIORITY_COLORS: Record<Exclude<FollowUpPriority, null>, { background: str
     border: "1px solid #E5D8D8",
     fontWeight: 500,
   },
-};
-
-const EMPTY_FORM = {
-  title: "",
-  description: "",
-  dueDate: "",
-  contactId: "",
-  companyId: "",
-  emailNotify: false,
 };
 
 function formatListDate(value: string | null) {
@@ -145,11 +120,6 @@ export default function DesignLabOppfolginger() {
     setOwnerFilterState(value);
   };
   const [selectedId, setSelectedId] = useState<string | null>(searchParams.get("task"));
-  const [createOpen, setCreateOpen] = useState(false);
-  const [contactSearch, setContactSearch] = useState("");
-  const [form, setForm] = useState(EMPTY_FORM);
-  const [dueDateOpen, setDueDateOpen] = useState(false);
-  const contactInputRef = useRef<HTMLInputElement | null>(null);
   const [cmdOpen, setCmdOpen] = useState(false);
 
   // ⌘K shortcut
@@ -212,19 +182,6 @@ export default function DesignLabOppfolginger() {
       if (error) throw error;
       return data || [];
     },
-  });
-
-  const { data: modalContacts = [] } = useQuery({
-    queryKey: FOLLOW_UP_CONTACT_QUERY_KEY,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("contacts")
-        .select("id, first_name, last_name, company_id, companies(id, name)")
-        .order("first_name");
-      if (error) throw error;
-      return data || [];
-    },
-    enabled: createOpen,
   });
 
   const profilesById = useMemo(
@@ -400,18 +357,6 @@ export default function DesignLabOppfolginger() {
     return { overdueCount, mineCount, thisWeekCount, unassignedCount };
   }, [user?.id, viewModels]);
 
-  const filteredContacts = useMemo(() => {
-    const lower = contactSearch.trim().toLowerCase();
-    if (!lower) return modalContacts.slice(0, 12);
-    return modalContacts
-      .filter((contact: any) => {
-        const fullName = `${contact.first_name} ${contact.last_name}`.toLowerCase();
-        const companyName = contact.companies?.name?.toLowerCase() || "";
-        return fullName.includes(lower) || companyName.includes(lower);
-      })
-      .slice(0, 12);
-  }, [contactSearch, modalContacts]);
-
   async function invalidateFollowUpData() {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: FOLLOW_UP_QUERY_KEY }),
@@ -421,43 +366,6 @@ export default function DesignLabOppfolginger() {
       invalidateQueryGroup(queryClient, crmSummaryQueryKeys),
     ]);
   }
-
-  const createMutation = useMutation({
-    mutationFn: async () => {
-      const { error } = await supabase.from("tasks").insert({
-        title: form.title.trim(),
-        description: form.description.trim() || null,
-        due_date: form.dueDate || null,
-        contact_id: form.contactId || null,
-        company_id: form.companyId || null,
-        assigned_to: user?.id || null,
-        created_by: user?.id || null,
-        priority: "medium",
-        email_notify: form.emailNotify,
-        status: "open",
-      });
-      if (error) throw error;
-    },
-    onSuccess: async () => {
-      await invalidateFollowUpData();
-      setCreateOpen(false);
-      setContactSearch("");
-      setForm(EMPTY_FORM);
-      toast.success("Oppfølging opprettet");
-    },
-    onError: () => {
-      toast.error("Kunne ikke opprette oppfølging");
-    },
-  });
-
-  const handleContactPick = (contact: any) => {
-    setForm((current) => ({
-      ...current,
-      contactId: contact.id,
-      companyId: contact.company_id || "",
-    }));
-    setContactSearch(`${contact.first_name} ${contact.last_name}`);
-  };
 
   // ── Command palette data ──
   const paletteContacts = useMemo(() => {
@@ -510,150 +418,6 @@ export default function DesignLabOppfolginger() {
               <h1 style={{ fontSize: 14, fontWeight: 600, color: C.text }}>Oppfølginger</h1>
               <span style={{ fontSize: 13, color: C.textGhost, fontWeight: 500 }}>· {filtered.length}</span>
             </div>
-          </div>
-          <div className="ml-auto flex w-full flex-wrap items-center gap-2 sm:w-auto sm:justify-end">
-            <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-              <DialogTrigger asChild>
-                <DesignLabPrimaryAction>
-                  <Plus className="h-3.5 w-3.5" />
-                  Ny oppfølging
-                </DesignLabPrimaryAction>
-              </DialogTrigger>
-              <DesignLabModalContent title="Ny oppfølging">
-                <DesignLabModalForm
-                  onSubmit={(event) => {
-                    event.preventDefault();
-                    createMutation.mutate();
-                  }}
-                >
-                  <DesignLabModalField>
-                    <DesignLabModalLabel>Tittel</DesignLabModalLabel>
-                    <DesignLabModalInput
-                      autoFocus
-                      value={form.title}
-                      onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))}
-                      placeholder="Hva skal følges opp?"
-                    />
-                  </DesignLabModalField>
-
-                  <DesignLabModalField>
-                    <DesignLabModalLabel>Kontaktperson</DesignLabModalLabel>
-                    <div className="relative">
-                      <DesignLabModalInput
-                        ref={contactInputRef}
-                        value={contactSearch}
-                        onChange={(event) => {
-                          setContactSearch(event.target.value);
-                          if (!event.target.value) {
-                            setForm((current) => ({ ...current, contactId: "", companyId: "" }));
-                          }
-                        }}
-                        placeholder="Søk etter kontakt…"
-                      />
-                      {contactSearch && !form.contactId && filteredContacts.length > 0 ? (
-                        <div
-                          className="absolute left-0 right-0 z-50 mt-1 overflow-hidden rounded-[8px] border"
-                          style={{ borderColor: C.border, background: C.surface, boxShadow: C.shadowMd }}
-                        >
-                          {filteredContacts.map((contact: any) => (
-                            <button
-                              key={contact.id}
-                              type="button"
-                              onClick={() => handleContactPick(contact)}
-                              className="w-full px-3 py-2 text-left transition-colors"
-                              style={{ fontSize: 12, color: C.text }}
-                              onMouseEnter={(event) => {
-                                event.currentTarget.style.background = C.hoverSubtle;
-                              }}
-                              onMouseLeave={(event) => {
-                                event.currentTarget.style.background = "transparent";
-                              }}
-                            >
-                              {contact.first_name} {contact.last_name}
-                              {contact.companies?.name ? (
-                                <span style={{ color: C.textMuted }}> · {contact.companies.name}</span>
-                              ) : null}
-                            </button>
-                          ))}
-                        </div>
-                      ) : null}
-                    </div>
-                  </DesignLabModalField>
-
-                  <DesignLabModalField>
-                    <DesignLabModalLabel>Neste oppfølging</DesignLabModalLabel>
-                    <Popover open={dueDateOpen} onOpenChange={setDueDateOpen}>
-                      <PopoverTrigger asChild>
-                        <button
-                          type="button"
-                          className="flex items-center justify-between rounded-[6px] border px-3 text-left"
-                          style={{
-                            ...getDesignLabV2ActionStyle({
-                              width: "100%",
-                              height: 32,
-                              fontSize: 13,
-                              background: C.surface,
-                              color: form.dueDate ? C.text : C.textFaint,
-                              border: `1px solid ${C.border}`,
-                            }),
-                          }}
-                        >
-                          <span>{form.dueDate ? format(new Date(form.dueDate), "d. MMMM yyyy", { locale: nb }) : "Velg dato"}</span>
-                          <CalendarIcon className="h-3.5 w-3.5" />
-                        </button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={form.dueDate ? new Date(form.dueDate) : undefined}
-                          onSelect={(date) => {
-                            if (!date) return;
-                            setForm((current) => ({ ...current, dueDate: format(date, "yyyy-MM-dd") }));
-                            setDueDateOpen(false);
-                          }}
-                          locale={nb}
-                          className="p-3 pointer-events-auto"
-                        />
-                      </PopoverContent>
-                    </Popover>
-                  </DesignLabModalField>
-
-                  <DesignLabModalField>
-                    <DesignLabModalLabel>Beskrivelse</DesignLabModalLabel>
-                    <Textarea
-                      value={form.description}
-                      onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))}
-                      rows={3}
-                      className="min-h-[88px] rounded-[6px]"
-                    />
-                  </DesignLabModalField>
-
-                  <label className="flex items-center gap-2" style={{ fontSize: 12, color: C.text }}>
-                    <Checkbox
-                      checked={form.emailNotify}
-                      onCheckedChange={(checked) => setForm((current) => ({ ...current, emailNotify: Boolean(checked) }))}
-                    />
-                    Epostvarsling ved forfall
-                  </label>
-
-                  <DesignLabModalActions>
-                    <DesignLabPrimaryAction type="submit" disabled={createMutation.isPending || !form.title.trim()}>
-                      {createMutation.isPending ? "Oppretter..." : "Opprett"}
-                    </DesignLabPrimaryAction>
-                    <DesignLabGhostAction
-                      type="button"
-                      onClick={() => {
-                        setCreateOpen(false);
-                        setContactSearch("");
-                        setForm(EMPTY_FORM);
-                      }}
-                    >
-                      Avbryt
-                    </DesignLabGhostAction>
-                  </DesignLabModalActions>
-                </DesignLabModalForm>
-              </DesignLabModalContent>
-            </Dialog>
           </div>
         </header>
 
