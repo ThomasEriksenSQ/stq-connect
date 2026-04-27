@@ -527,10 +527,11 @@ function ContactSentCvNotice({
                     </p>
                     <Link
                       to={`${getEmployeePath(entry.ansatt_id)}?tab=sent-cv`}
-                      className="block truncate text-[0.875rem] font-semibold text-foreground transition-colors hover:text-primary hover:underline focus:outline-none focus-visible:ring-1 focus-visible:ring-primary/40"
+                      className="group inline-flex max-w-full items-center gap-1.5 rounded-md border border-primary/20 bg-background px-2 py-1 text-[0.875rem] font-semibold text-foreground shadow-sm transition-colors hover:border-primary/35 hover:bg-primary/10 hover:text-primary focus:outline-none focus-visible:ring-1 focus-visible:ring-primary/40"
                       title={`Åpne ${entry.consultantName} med Sendt CV-fanen`}
                     >
-                      {entry.consultantName}
+                      <span className="truncate">{entry.consultantName}</span>
+                      <ExternalLink className="h-3 w-3 shrink-0 text-muted-foreground transition-colors group-hover:text-primary" aria-hidden="true" />
                     </Link>
                   </div>
                   <div className="min-w-0">
