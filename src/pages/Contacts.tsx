@@ -329,6 +329,8 @@ const Contacts = () => {
           .select(
             "id, selskap_id, kontakt_id, selskap_navn, sted, mottatt_dato, frist_dato, status, teknologier, companies!foresporsler_selskap_id_fkey(id, name, address, city, zip_code, status, ikke_relevant, owner_id, profiles!companies_owner_id_fkey(id, full_name)), contacts!foresporsler_kontakt_id_fkey(id, first_name, last_name, title)",
           )
+          .not("kontakt_id", "is", null)
+          .not("selskap_id", "is", null)
           .order("mottatt_dato", { ascending: false })
           .limit(5000),
       ]);

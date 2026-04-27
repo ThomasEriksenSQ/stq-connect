@@ -626,6 +626,7 @@ export default function DesignLabContacts() {
         .select(
           "id, selskap_id, kontakt_id, selskap_navn, sted, mottatt_dato, frist_dato, status, teknologier, companies!foresporsler_selskap_id_fkey(id, name, address, city, zip_code, status, ikke_relevant, owner_id, profiles!companies_owner_id_fkey(id, full_name)), contacts!foresporsler_kontakt_id_fkey(id, first_name, last_name, title)",
         )
+        .not("kontakt_id", "is", null)
         .not("selskap_id", "is", null)
         .order("mottatt_dato", { ascending: false })
         .limit(5000);
@@ -790,6 +791,8 @@ export default function DesignLabContacts() {
           .select(
             "id, selskap_id, kontakt_id, selskap_navn, sted, mottatt_dato, frist_dato, status, teknologier, companies!foresporsler_selskap_id_fkey(id, name, address, city, zip_code, status, ikke_relevant, owner_id, profiles!companies_owner_id_fkey(id, full_name)), contacts!foresporsler_kontakt_id_fkey(id, first_name, last_name, title)",
           )
+          .not("kontakt_id", "is", null)
+          .not("selskap_id", "is", null)
           .order("mottatt_dato", { ascending: false })
           .limit(5000),
       ]);
@@ -2310,6 +2313,14 @@ export default function DesignLabContacts() {
 
         {/* Filters bar */}
         <div className="dl-filter-bar shrink-0 space-y-0" style={{ borderBottom: `1px solid ${C.border}` }}>
+          <div className="pb-3 md:hidden">
+            <DesignLabSearchInput
+              ref={searchRef}
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder={selectedConsultant ? "Søk i matcher..." : "Søk kontakt, selskap eller teknologi..."}
+            />
+          </div>
           {!selectedConsultant ? (
             <>
               <DesignLabFilterRow label="EIER" options={ownerOptions} value={ownerFilter} onChange={setOwnerFilter} />

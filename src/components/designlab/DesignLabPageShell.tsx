@@ -42,7 +42,14 @@ export function DesignLabPageShell({
       <DesignLabSidebar navigate={navigate} signOut={signOut} user={user} activePath={activePath} />
 
       <main className="flex-1 flex min-w-0 flex-col overflow-hidden" style={{ ...getDesignLabTextSizeStyle(textSize), background: C.appBg }}>
-        {hideHeader ? null : (
+        {hideHeader ? (
+          <header className="dl-shell-header flex shrink-0 items-center justify-between gap-3 md:hidden" style={{ borderBottom: `1px solid ${C.border}` }}>
+            <div className="flex min-w-0 items-center gap-3">
+              <DesignLabMobileNavButton navigate={navigate} signOut={signOut} user={user} activePath={activePath} />
+              <h1 className="truncate" style={{ fontSize: 14, fontWeight: 600, color: C.text }}>{title}</h1>
+            </div>
+          </header>
+        ) : (
           <header className="dl-shell-header flex shrink-0 flex-wrap items-center justify-between gap-3" style={{ borderBottom: `1px solid ${C.border}` }}>
             <div className="flex min-w-0 items-center gap-3">
               <DesignLabMobileNavButton navigate={navigate} signOut={signOut} user={user} activePath={activePath} />

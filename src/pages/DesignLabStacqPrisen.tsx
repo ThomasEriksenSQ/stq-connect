@@ -298,11 +298,18 @@ export default function DesignLabStacqPrisen() {
                     return (
                       <div
                         key={row.id}
-                        className="grid items-center"
+                        className="grid items-center transition-colors"
                         style={{
                           gridTemplateColumns: "minmax(0,1.5fr) minmax(0,1.5fr) 96px 96px 88px 112px 72px 88px",
                           minHeight: 38, paddingInline: 16,
                           borderBottom: `1px solid ${C.borderLight}`,
+                          background: "transparent",
+                        }}
+                        onMouseEnter={(event) => {
+                          event.currentTarget.style.background = C.hoverSubtle;
+                        }}
+                        onMouseLeave={(event) => {
+                          event.currentTarget.style.background = "transparent";
                         }}
                       >
                         <div className="flex items-center gap-2 min-w-0">

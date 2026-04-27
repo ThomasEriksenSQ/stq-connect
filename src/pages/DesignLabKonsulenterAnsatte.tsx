@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { differenceInDays, differenceInMonths, format } from "date-fns";
 import { nb } from "date-fns/locale";
-import { Download, Plus, X } from "lucide-react";
+import { Download, MessageCircle, Plus, X } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "@/components/ui/sonner";
@@ -21,6 +21,7 @@ import { C } from "@/components/designlab/theme";
 import { DesignLabIconButton } from "@/components/designlab/controls";
 import {
   DesignLabPrimaryAction,
+  DesignLabSecondaryAction,
   DesignLabFilterRow,
   DesignLabReadonlyChip,
 } from "@/components/designlab/system";
@@ -34,6 +35,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { AnsattDetailSheet } from "@/components/AnsattDetailSheet";
+import { EmployeeCvChatPanel } from "@/components/EmployeeCvChatPanel";
 import AnsattDetail from "./AnsattDetail";
 import { useCrmNavigation } from "@/lib/crmNavigation";
 
@@ -66,6 +68,7 @@ export default function DesignLabKonsulenterAnsatte() {
   const [search] = useState("");
   const [filter, setFilter] = useState<Filter>("Aktiv");
   const [createOpen, setCreateOpen] = useState(false);
+  const [cvChatOpen, setCvChatOpen] = useState(false);
   const [isDownloadingAddressList, setIsDownloadingAddressList] = useState(false);
   const today = new Date();
 
@@ -459,6 +462,10 @@ export default function DesignLabKonsulenterAnsatte() {
             </div>
           </div>
           <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:justify-end">
+            <DesignLabSecondaryAction onClick={() => setCvChatOpen(true)}>
+              <MessageCircle className="h-3.5 w-3.5" />
+              Spør CV-AI
+            </DesignLabSecondaryAction>
             <DesignLabPrimaryAction onClick={() => setCreateOpen(true)}>
               <Plus className="h-3.5 w-3.5" />
               Ny ansatt
@@ -632,6 +639,11 @@ export default function DesignLabKonsulenterAnsatte() {
         ansatt={null}
         openInEditMode={false}
         autoRunMatch={false}
+      />
+      <EmployeeCvChatPanel
+        open={cvChatOpen}
+        onOpenChange={setCvChatOpen}
+        employeeCount={stats.aktive + stats.kommende}
       />
     </div>
   );

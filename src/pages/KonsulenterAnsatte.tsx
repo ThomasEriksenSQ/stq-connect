@@ -4,11 +4,12 @@ import { useMemo, useState } from "react";
 import { cn, getInitials, formatMonths } from "@/lib/utils";
 import { format, differenceInMonths, differenceInDays } from "date-fns";
 import { nb } from "date-fns/locale";
-import { Plus } from "lucide-react";
+import { MessageCircle, Plus } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "@/components/ui/sonner";
 import { useNavigate } from "react-router-dom";
 import { AnsattDetailSheet } from "@/components/AnsattDetailSheet";
+import { EmployeeCvChatPanel } from "@/components/EmployeeCvChatPanel";
 import { issueAndCopyCvShareLink } from "@/lib/cvAccess";
 import { getEmployeeLifecycleStatus } from "@/lib/employeeStatus";
 import {
@@ -33,6 +34,7 @@ export default function KonsulenterAnsatte({ hidePageTitle = false }: Konsulente
   const [filter, setFilter] = useState<Filter>("Aktiv");
   const [detailAnsatt, setDetailAnsatt] = useState<any | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
+  const [cvChatOpen, setCvChatOpen] = useState(false);
   const navigate = useNavigate();
   const today = new Date();
 
@@ -180,13 +182,22 @@ export default function KonsulenterAnsatte({ hidePageTitle = false }: Konsulente
       {/* Header */}
       <div className="flex items-center justify-between">
         {hidePageTitle ? <div /> : <h1 className="text-[1.375rem] font-bold">Ansatte</h1>}
-        <button
-          onClick={() => { setDetailAnsatt(null); setDetailOpen(true); }}
-          className="inline-flex items-center gap-1.5 h-9 px-4 text-[0.8125rem] font-medium rounded-lg bg-primary text-primary-foreground hover:opacity-90"
-        >
-          <Plus className="h-4 w-4" />
-          Ny ansatt
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setCvChatOpen(true)}
+            className="inline-flex items-center gap-1.5 h-9 px-4 text-[0.8125rem] font-medium rounded-lg border border-border bg-card text-foreground hover:bg-secondary"
+          >
+            <MessageCircle className="h-4 w-4" />
+            Spør CV-AI
+          </button>
+          <button
+            onClick={() => { setDetailAnsatt(null); setDetailOpen(true); }}
+            className="inline-flex items-center gap-1.5 h-9 px-4 text-[0.8125rem] font-medium rounded-lg bg-primary text-primary-foreground hover:opacity-90"
+          >
+            <Plus className="h-4 w-4" />
+            Ny ansatt
+          </button>
+        </div>
       </div>
 
       <div className="flex items-center gap-3">
@@ -359,6 +370,11 @@ export default function KonsulenterAnsatte({ hidePageTitle = false }: Konsulente
       </div>
 
       <AnsattDetailSheet open={detailOpen} onClose={() => { setDetailOpen(false); }} ansatt={detailAnsatt} openInEditMode={false} autoRunMatch={false} />
+      <EmployeeCvChatPanel
+        open={cvChatOpen}
+        onOpenChange={setCvChatOpen}
+        employeeCount={stats.aktive + stats.kommende}
+      />
     </div>
   );
 }

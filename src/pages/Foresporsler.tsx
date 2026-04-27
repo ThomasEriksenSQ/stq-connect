@@ -897,6 +897,8 @@ export default function Foresporsler() {
       const { data, error } = await supabase
         .from("foresporsler")
         .select("*, contacts(id, first_name, last_name, title, email, phone), foresporsler_konsulenter(id, konsulent_type, status, status_updated_at, stacq_ansatte(navn), external_consultants(navn))")
+        .not("kontakt_id", "is", null)
+        .not("selskap_id", "is", null)
         .order("mottatt_dato", { ascending: false });
       if (error) throw error;
       return data;

@@ -197,6 +197,8 @@ export default function DesignLabForesporsler() {
       const { data, error } = await supabase
         .from("foresporsler")
         .select("*, contacts(id, first_name, last_name, title, email, phone), foresporsler_konsulenter(id, konsulent_type, status, status_updated_at, stacq_ansatte(id, navn), external_consultants(id, navn))")
+        .not("kontakt_id", "is", null)
+        .not("selskap_id", "is", null)
         .order("mottatt_dato", { ascending: false });
       if (error) throw error;
       return data || [];
@@ -429,6 +431,14 @@ export default function DesignLabForesporsler() {
 
         {/* Filters + stat line */}
         <div className="dl-filter-bar shrink-0 space-y-0" style={{ borderBottom: `1px solid ${C.border}` }}>
+          <div className="pb-3 md:hidden">
+            <DesignLabSearchInput
+              ref={searchRef}
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Søk forespørsel, kontakt eller teknologi..."
+            />
+          </div>
           <DesignLabFilterRow
             label="TID"
             options={STATUS_CHIPS.map((option) => option.label)}

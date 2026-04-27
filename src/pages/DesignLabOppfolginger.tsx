@@ -23,6 +23,7 @@ import { DesignLabMobileNavButton, DesignLabSidebar } from "@/components/designl
 import { C } from "@/components/designlab/theme";
 import {
   DesignLabIconButton,
+  DesignLabSearchInput,
 } from "@/components/designlab/controls";
 import { CommandPalette } from "@/components/designlab/CommandPalette";
 import {
@@ -205,10 +206,15 @@ export default function DesignLabOppfolginger() {
     [tasks, activities, profilesById, companiesById],
   );
 
+  const linkedViewModels = useMemo(
+    () => viewModels.filter((model) => model.contactId && model.companyId),
+    [viewModels],
+  );
+
   const ownerOptions = useMemo(() => {
-    const names = Array.from(new Set(viewModels.map((model) => model.ownerName).filter((value): value is string => Boolean(value))));
+    const names = Array.from(new Set(linkedViewModels.map((model) => model.ownerName).filter((value): value is string => Boolean(value))));
     return ["Alle", ...names.sort((left, right) => left.localeCompare(right, "nb")), "Uten eier"];
-  }, [viewModels]);
+  }, [linkedViewModels]);
 
   const filtered = useMemo(() => {
     const lowerSearch = search.trim().toLowerCase();
@@ -216,7 +222,7 @@ export default function DesignLabOppfolginger() {
     const weekEnd = endOfWeek(today, { weekStartsOn: 1 });
     const in30Days = addDays(today, 30);
 
-    return viewModels
+    return linkedViewModels
       .filter((model) => {
         if (ownerFilter === "Uten eier" && model.ownerId) return false;
         if (ownerFilter !== "Alle" && ownerFilter !== "Uten eier" && model.ownerName !== ownerFilter) return false;
@@ -267,7 +273,7 @@ export default function DesignLabOppfolginger() {
 
         return (b.updatedAt || b.createdAt).localeCompare(a.updatedAt || a.createdAt);
       });
-  }, [ownerFilter, search, user?.id, viewFilter, viewModels]);
+  }, [linkedViewModels, ownerFilter, search, viewFilter]);
 
   useEffect(() => {
     const paramId = searchParams.get("task");
@@ -300,8 +306,8 @@ export default function DesignLabOppfolginger() {
 
   const selected = useMemo(() => {
     if (!selectedId) return null;
-    return filtered.find((model) => model.id === selectedId) || viewModels.find((model) => model.id === selectedId) || null;
-  }, [filtered, selectedId, viewModels]);
+    return filtered.find((model) => model.id === selectedId) || linkedViewModels.find((model) => model.id === selectedId) || null;
+  }, [filtered, linkedViewModels, selectedId]);
 
   const renderMobileRow = (model: FollowUpViewModel) => {
     const active = selectedId === model.id;
@@ -350,12 +356,12 @@ export default function DesignLabOppfolginger() {
   };
 
   const stats = useMemo(() => {
-    const overdueCount = viewModels.filter((model) => isOverdueDate(model.nextFollowUpAt)).length;
-    const mineCount = viewModels.filter((model) => model.ownerId === user?.id).length;
-    const thisWeekCount = viewModels.filter((model) => isDueThisWeek(model.nextFollowUpAt)).length;
-    const unassignedCount = viewModels.filter((model) => !model.ownerId).length;
+    const overdueCount = linkedViewModels.filter((model) => isOverdueDate(model.nextFollowUpAt)).length;
+    const mineCount = linkedViewModels.filter((model) => model.ownerId === user?.id).length;
+    const thisWeekCount = linkedViewModels.filter((model) => isDueThisWeek(model.nextFollowUpAt)).length;
+    const unassignedCount = linkedViewModels.filter((model) => !model.ownerId).length;
     return { overdueCount, mineCount, thisWeekCount, unassignedCount };
-  }, [user?.id, viewModels]);
+  }, [linkedViewModels, user?.id]);
 
   async function invalidateFollowUpData() {
     await Promise.all([
@@ -370,7 +376,7 @@ export default function DesignLabOppfolginger() {
   // ── Command palette data ──
   const paletteContacts = useMemo(() => {
     const map = new Map<string, any>();
-    viewModels.forEach((vm) => {
+    linkedViewModels.forEach((vm) => {
       if (!vm.contactId || map.has(vm.contactId)) return;
       const [firstName, ...rest] = (vm.contactName || "").split(" ");
       map.set(vm.contactId, {
@@ -386,11 +392,11 @@ export default function DesignLabOppfolginger() {
       });
     });
     return Array.from(map.values());
-  }, [viewModels]);
+  }, [linkedViewModels]);
 
   const paletteCompanies = useMemo(() => {
     const counts = new Map<string, { id: string; name: string; contactCount: number }>();
-    viewModels.forEach((vm) => {
+    linkedViewModels.forEach((vm) => {
       if (!vm.companyName) return;
       const key = vm.companyId || `name:${vm.companyName.toLowerCase()}`;
       const existing = counts.get(key);
@@ -401,7 +407,7 @@ export default function DesignLabOppfolginger() {
       }
     });
     return Array.from(counts.values()).sort((a, b) => a.name.localeCompare(b.name, "nb"));
-  }, [viewModels]);
+  }, [linkedViewModels]);
 
   return (
     <div
@@ -422,6 +428,13 @@ export default function DesignLabOppfolginger() {
         </header>
 
         <div className="dl-filter-bar shrink-0 space-y-0" style={{ borderBottom: `1px solid ${C.border}` }}>
+          <div className="pb-3 md:hidden">
+            <DesignLabSearchInput
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Søk oppfølging, kontakt eller selskap..."
+            />
+          </div>
           <DesignLabFilterRow label="EIER" options={ownerOptions} value={ownerFilter} onChange={setOwnerFilter} />
           <div className="flex items-center justify-between gap-4">
             <DesignLabFilterRow
@@ -676,7 +689,7 @@ export default function DesignLabOppfolginger() {
         companies={paletteCompanies}
         selectedContact={null}
         onSelectContact={(id) => {
-          const task = viewModels.find((vm) => vm.contactId === id);
+          const task = linkedViewModels.find((vm) => vm.contactId === id);
           if (task) setSelectedId(task.id);
         }}
         onFilterByCompany={(name) => setSearch(name)}

@@ -673,6 +673,14 @@ export default function DesignLabCompanies() {
 
         {/* Filters bar */}
         <div className="dl-filter-bar shrink-0 space-y-0" style={{ borderBottom: `1px solid ${C.border}` }}>
+          <div className="pb-3 md:hidden">
+            <DesignLabSearchInput
+              ref={searchRef}
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Søk selskap, org.nr. eller sted..."
+            />
+          </div>
           <DesignLabFilterRow label="EIER" options={OWNERS} value={ownerFilter} onChange={setOwnerFilter} />
           <div className="flex items-center justify-between">
             <DesignLabFilterRow label="TYPE" options={[...TYPE_FILTERS]} value={typeFilter} onChange={(v) => setTypeFilter(v as TypeFilter)} />

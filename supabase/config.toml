@@ -3,6 +3,9 @@ project_id = "kbvzpcebfopqqrvmbiap"
 [functions.chat]
 verify_jwt = false
 
+[functions.employee-cv-chat]
+verify_jwt = false
+
 [functions.parse-cv]
 verify_jwt = false
 

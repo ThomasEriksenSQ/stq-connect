@@ -80,6 +80,8 @@ export function OppdragsMatchPanel({
         const { data } = await supabase
           .from("foresporsler")
           .select("id, selskap_navn, sted, teknologier, frist_dato, status, kontakt_id, selskap_id")
+          .not("kontakt_id", "is", null)
+          .not("selskap_id", "is", null)
           .gte("created_at", fortyFiveDaysAgo)
           .in("status", ["Ny", "Aktiv"])
           .order("frist_dato", { ascending: true });
