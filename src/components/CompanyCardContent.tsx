@@ -98,7 +98,6 @@ import { format, isPast, isToday, getYear } from "date-fns";
 import { nb } from "date-fns/locale";
 import { relativeDate, fullDate } from "@/lib/relativeDate";
 import { cleanDescription } from "@/lib/cleanDescription";
-import InlineEdit from "@/components/InlineEdit";
 import { useClickWithoutSelection, activateOnEnterOrSpace } from "@/hooks/useClickWithoutSelection";
 import { lookupByOrgNr } from "@/components/BrregSearch";
 import { cn } from "@/lib/utils";
@@ -1587,13 +1586,7 @@ export function CompanyCardContent({
       {/* ── ZONE A: Header ── */}
       <div className="mb-5" style={headerPaddingTop ? { paddingTop: headerPaddingTop } : undefined}>
         <div className="flex items-center gap-3">
-          {editable ? (
-            <h2 className="text-[1.5rem] font-bold truncate flex-1 min-w-0">
-              <InlineEdit value={companyName} onSave={updateField("name")} className="text-[1.5rem] font-bold" />
-            </h2>
-          ) : (
-            <h2 className="text-[1.5rem] font-bold truncate flex-1 min-w-0">{companyName}</h2>
-          )}
+          <h2 className="text-[1.5rem] font-bold truncate flex-1 min-w-0">{companyName}</h2>
           <div className="ml-auto flex items-center gap-2 flex-shrink-0">
             {/* Signal badge */}
             {editable ? (
