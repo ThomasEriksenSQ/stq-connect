@@ -3,7 +3,9 @@ import { describe, expect, it } from "vitest";
 import {
   GEO_FILTERS,
   companyMatchesGeoFilter,
+  contactMatchesGeoFilter,
   getCompanyGeoAreas,
+  getContactGeoAreas,
   getGeoFilterDescription,
   normalizeGeoFilter,
 } from "@/lib/companyGeoAreas";
@@ -41,6 +43,41 @@ describe("companyGeoAreas", () => {
     expect(areas).toContain("Oslo+");
     expect(areas).toContain("Trondheim+");
     expect(companyMatchesGeoFilter({ city: "Oslo, Trondheim" }, "Trondheim+")).toBe(true);
+    expect(companyMatchesGeoFilter({ locations: ["Oslo", "Bergen"] }, "Oslo+")).toBe(true);
+    expect(companyMatchesGeoFilter({ locations: ["Oslo", "Bergen"] }, "Bergen+")).toBe(true);
+  });
+
+  it("lets contact geography override company geography", () => {
+    const contact = {
+      locations: ["Bergen"],
+      company: { city: "Oslo" },
+    };
+
+    expect(getContactGeoAreas(contact)).toEqual(["Bergen+"]);
+    expect(contactMatchesGeoFilter(contact, "Bergen+")).toBe(true);
+    expect(contactMatchesGeoFilter(contact, "Oslo+")).toBe(false);
+  });
+
+  it("falls back to company geography when contact has no own geography", () => {
+    const contact = {
+      locations: [],
+      company: { city: "Oslo, Trondheim" },
+    };
+
+    expect(getContactGeoAreas(contact)).toContain("Oslo+");
+    expect(getContactGeoAreas(contact)).toContain("Trondheim+");
+    expect(contactMatchesGeoFilter(contact, "Trondheim+")).toBe(true);
+  });
+
+  it("keeps contacts with unmapped own geography in unknown even when company is known", () => {
+    const contact = {
+      location: "Atlantis",
+      company: { city: "Oslo" },
+    };
+
+    expect(getContactGeoAreas(contact)).toEqual(["Ukjent sted"]);
+    expect(contactMatchesGeoFilter(contact, "Ukjent sted")).toBe(true);
+    expect(contactMatchesGeoFilter(contact, "Oslo+")).toBe(false);
   });
 
   it("maps broader region labels instead of leaving them unknown", () => {

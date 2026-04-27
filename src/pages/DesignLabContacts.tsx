@@ -55,6 +55,13 @@ import {
   type GeoMatchInput,
   type GeoMatchResult,
 } from "@/lib/geographicMatch";
+import {
+  GEO_FILTERS,
+  contactMatchesGeoFilter,
+  getGeoFilterDescription,
+  normalizeGeoFilter,
+  type GeoFilter,
+} from "@/lib/companyGeoAreas";
 import { isEmployeeEndDatePassed } from "@/lib/employeeStatus";
 import {
   MATCH_OWNER_FILTER_NONE,
@@ -438,6 +445,8 @@ export default function DesignLabContacts() {
   const [ownerFilter, setOwnerFilter] = useState("Alle");
   const [signalFilter, setSignalFilter] = useState("Alle");
   const [typeFilter, setTypeFilter] = useState<TypeFilter>("Alle");
+  const [geoFilter, setGeoFilter] = useState<GeoFilter>("Alle");
+  const effectiveGeoFilter = normalizeGeoFilter(geoFilter);
   const [sort, setSort] = useState<{ field: SortField; dir: SortDir }>({ field: "priority", dir: "desc" });
   const [selectedConsultantId, setSelectedConsultantId] = useState<number | null>(null);
   const [jaktChip, setJaktChip] = useState<HuntChipValue>("alle");
@@ -1153,9 +1162,21 @@ export default function DesignLabContacts() {
     if (typeFilter === "Innkjøper") list = list.filter((contact) => contact.callList === true);
     else if (typeFilter === "CV-Epost") list = list.filter((contact) => contact.cvEmail === true);
     else if (typeFilter === "Ikke relevant kontakt") list = list.filter((contact) => contact.ikkeAktuell);
+    if (effectiveGeoFilter !== "Alle") {
+      list = list.filter((contact) =>
+        contactMatchesGeoFilter(
+          {
+            location: contact.location,
+            locations: contact.locations,
+            company: contact.companyPreview,
+          },
+          effectiveGeoFilter,
+        ),
+      );
+    }
 
     return list;
-  }, [ownerFilter, searchFilteredContacts, signalFilter, typeFilter]);
+  }, [effectiveGeoFilter, ownerFilter, searchFilteredContacts, signalFilter, typeFilter]);
 
   const matchBaseContacts = useMemo(
     () =>
@@ -2300,19 +2321,28 @@ export default function DesignLabContacts() {
                   value={typeFilter}
                   onChange={(v) => setTypeFilter(v as TypeFilter)}
                 />
-                {(ownerFilter !== "Alle" || signalFilter !== "Alle" || typeFilter !== "Alle") && (
+                {(ownerFilter !== "Alle" || signalFilter !== "Alle" || typeFilter !== "Alle" || effectiveGeoFilter !== "Alle") && (
                   <DesignLabActionButton
                     variant="ghost"
                     onClick={() => {
                       setOwnerFilter("Alle");
                       setSignalFilter("Alle");
                       setTypeFilter("Alle");
+                      setGeoFilter("Alle");
                     }}
                   >
                     <X style={{ width: 12, height: 12 }} /> Nullstill
                   </DesignLabActionButton>
                 )}
               </div>
+              <DesignLabFilterRow
+                label="GEO"
+                options={GEO_FILTERS}
+                value={effectiveGeoFilter}
+                onChange={(value) => setGeoFilter(value as GeoFilter)}
+                getOptionDescription={getGeoFilterDescription}
+                description={effectiveGeoFilter !== "Alle" ? getGeoFilterDescription(effectiveGeoFilter) : undefined}
+              />
             </>
           ) : (
             <div className="space-y-2">

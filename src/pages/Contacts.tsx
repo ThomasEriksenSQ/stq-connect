@@ -55,6 +55,13 @@ import {
   resolveMatchLeadOwner,
   type MatchLeadOwnerSource,
 } from "@/lib/matchLeadOwners";
+import {
+  GEO_FILTERS,
+  contactMatchesGeoFilter,
+  getGeoFilterDescription,
+  normalizeGeoFilter,
+  type GeoFilter,
+} from "@/lib/companyGeoAreas";
 
 type SortField = "name" | "company" | "title" | "signal" | "owner" | "last_activity" | "priority";
 type SortDir = "asc" | "desc";
@@ -65,7 +72,7 @@ type HuntConsultant = Pick<
 type OwnerPreview = { id: string; full_name: string } | null;
 type CompanyPreview = Pick<
   Database["public"]["Tables"]["companies"]["Row"],
-  "id" | "name" | "status" | "ikke_relevant" | "owner_id"
+  "id" | "name" | "address" | "city" | "zip_code" | "status" | "ikke_relevant" | "owner_id"
 > & {
   profiles: OwnerPreview;
 };
@@ -268,6 +275,8 @@ const Contacts = () => {
   const [matchOwnerFilter, setMatchOwnerFilter] = usePersistentState("stacq:contacts:matchOwnerFilter", "all");
   const [signalFilter, setSignalFilter] = usePersistentState("stacq:contacts:signalFilter", "all");
   const [typeFilter, setTypeFilter] = usePersistentState("stacq:contacts:typeFilter", "all");
+  const [geoFilter, setGeoFilter] = usePersistentState<GeoFilter>("stacq:contacts:geoFilter", "Alle");
+  const effectiveGeoFilter = normalizeGeoFilter(geoFilter);
   const [sort, setSort] = usePersistentState<{ field: SortField; dir: SortDir }>("stacq:contacts:sort", {
     field: "priority",
     dir: "desc",
@@ -287,7 +296,7 @@ const Contacts = () => {
       const { data, error, count } = await supabase
         .from("contacts")
         .select(
-          "*, companies(id, name, status, ikke_relevant, owner_id, profiles!companies_owner_id_fkey(id, full_name)), profiles!contacts_owner_id_fkey(id, full_name)",
+          "*, companies(id, name, address, city, zip_code, status, ikke_relevant, owner_id, profiles!companies_owner_id_fkey(id, full_name)), profiles!contacts_owner_id_fkey(id, full_name)",
           { count: "exact" },
         )
         .order("first_name")
@@ -311,14 +320,14 @@ const Contacts = () => {
         supabase
           .from("company_tech_profile")
           .select(
-            "company_id, sist_fra_finn, teknologier, companies!company_tech_profile_company_id_fkey(id, name, status, ikke_relevant, owner_id, profiles!companies_owner_id_fkey(id, full_name))",
+            "company_id, sist_fra_finn, teknologier, companies!company_tech_profile_company_id_fkey(id, name, address, city, zip_code, status, ikke_relevant, owner_id, profiles!companies_owner_id_fkey(id, full_name))",
           )
           .not("company_id", "is", null)
           .limit(5000),
         supabase
           .from("foresporsler")
           .select(
-            "id, selskap_id, kontakt_id, selskap_navn, sted, mottatt_dato, frist_dato, status, teknologier, companies!foresporsler_selskap_id_fkey(id, name, status, ikke_relevant, owner_id, profiles!companies_owner_id_fkey(id, full_name)), contacts!foresporsler_kontakt_id_fkey(id, first_name, last_name, title)",
+            "id, selskap_id, kontakt_id, selskap_navn, sted, mottatt_dato, frist_dato, status, teknologier, companies!foresporsler_selskap_id_fkey(id, name, address, city, zip_code, status, ikke_relevant, owner_id, profiles!companies_owner_id_fkey(id, full_name)), contacts!foresporsler_kontakt_id_fkey(id, first_name, last_name, title)",
           )
           .order("mottatt_dato", { ascending: false })
           .limit(5000),
@@ -710,6 +719,10 @@ const Contacts = () => {
           `${contact.first_name} ${contact.last_name}`.toLowerCase().includes(searchTerm) ||
           (contact.companies as any)?.name?.toLowerCase().includes(searchTerm) ||
           contact.title?.toLowerCase().includes(searchTerm) ||
+          contact.location?.toLowerCase().includes(searchTerm) ||
+          (contact.locations || []).join(" ").toLowerCase().includes(searchTerm) ||
+          ((contact.companies as any)?.city || "").toLowerCase().includes(searchTerm) ||
+          ((contact.companies as any)?.zip_code || "").toLowerCase().includes(searchTerm) ||
           technologyTags.join(" ").toLowerCase().includes(searchTerm)
         );
       }),
@@ -728,9 +741,17 @@ const Contacts = () => {
           (typeFilter === "cv_email" && contact.cv_email) ||
           (typeFilter === "not_cv_email" && !contact.cv_email && contactHasEmail(contact)) ||
           (typeFilter === "ikke_aktuell" && contact.ikke_aktuell_kontakt);
-        return matchOwner && matchSignal && matchType;
+        const matchGeo = contactMatchesGeoFilter(
+          {
+            location: contact.location,
+            locations: contact.locations,
+            company: (contact.companies as CompanyPreview | null) || null,
+          },
+          effectiveGeoFilter,
+        );
+        return matchOwner && matchSignal && matchType && matchGeo;
       }),
-    [ownerFilter, searchFilteredContacts, signalFilter, typeFilter],
+    [effectiveGeoFilter, ownerFilter, searchFilteredContacts, signalFilter, typeFilter],
   );
 
   const matchBaseContacts = useMemo(
@@ -1603,6 +1624,28 @@ const Contacts = () => {
                 </button>
                 <Chip label="Ikke relevant kontakt" value="ikke_aktuell" current={typeFilter} onSelect={setTypeFilter} />
               </div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground w-16 shrink-0">
+                  Geo
+                </span>
+                {GEO_FILTERS.map((option) => (
+                  <button
+                    key={option}
+                    type="button"
+                    title={getGeoFilterDescription(option)}
+                    aria-label={`${option}. ${getGeoFilterDescription(option)}`}
+                    onClick={() => setGeoFilter(option)}
+                    className={effectiveGeoFilter === option ? CHIP_ON : CHIP_OFF}
+                  >
+                    {option}
+                  </button>
+                ))}
+              </div>
+              {effectiveGeoFilter !== "Alle" && (
+                <p className="pl-[4.5rem] text-[0.75rem] text-muted-foreground">
+                  {getGeoFilterDescription(effectiveGeoFilter)}
+                </p>
+              )}
             </>
           )}
           {selectedConsultant && (

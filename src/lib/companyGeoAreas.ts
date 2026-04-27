@@ -22,6 +22,13 @@ export type CompanyGeoAreaInput = {
   city?: string | null;
   address?: string | null;
   zip_code?: string | null;
+  locations?: Array<string | null | undefined> | null;
+};
+
+export type ContactGeoAreaInput = {
+  location?: string | null;
+  locations?: Array<string | null | undefined> | null;
+  company?: CompanyGeoAreaInput | null;
 };
 
 type GeoAreaDefinition = {
@@ -457,10 +464,14 @@ function splitLocationText(value: string | null | undefined): string[] {
 }
 
 function getLocationParts(input: CompanyGeoAreaInput) {
-  const values = [input.city, input.address].flatMap(splitLocationText);
+  const values = [input.city, input.address, ...(input.locations || [])].flatMap(splitLocationText);
   const zip = String(input.zip_code || "").trim();
   if (zip) values.push(zip);
   return values;
+}
+
+function getContactLocationParts(input: ContactGeoAreaInput) {
+  return [input.location, ...(input.locations || [])].flatMap(splitLocationText);
 }
 
 function findPostalCode(value: string | null | undefined): string | null {
@@ -495,14 +506,7 @@ function geoAreaFromPostalCode(postalCode: string | null): Exclude<GeoFilter, "A
   return null;
 }
 
-export function normalizeGeoFilter(value: string | null | undefined): GeoFilter {
-  const normalized = String(value || "").trim();
-  if (GEO_FILTERS.includes(normalized as GeoFilter)) return normalized as GeoFilter;
-  return LEGACY_GEO_FILTER_LABELS[normalized] || "Alle";
-}
-
-export function getCompanyGeoAreas(input: CompanyGeoAreaInput): Exclude<GeoFilter, "Alle">[] {
-  const parts = getLocationParts(input);
+function getGeoAreasFromParts(parts: string[]): Exclude<GeoFilter, "Alle">[] {
   if (parts.length === 0) return ["Ukjent sted"];
 
   const matches = new Set<Exclude<GeoFilter, "Alle">>();
@@ -516,17 +520,36 @@ export function getCompanyGeoAreas(input: CompanyGeoAreaInput): Exclude<GeoFilte
 
   if (matches.size > 0) return [...matches];
 
-  const postalArea = geoAreaFromPostalCode(
-    findPostalCode(input.zip_code) || findPostalCode(input.city) || findPostalCode(input.address),
-  );
-
+  const postalArea = geoAreaFromPostalCode(parts.map(findPostalCode).find(Boolean) || null);
   return postalArea ? [postalArea] : ["Ukjent sted"];
+}
+
+export function normalizeGeoFilter(value: string | null | undefined): GeoFilter {
+  const normalized = String(value || "").trim();
+  if (GEO_FILTERS.includes(normalized as GeoFilter)) return normalized as GeoFilter;
+  return LEGACY_GEO_FILTER_LABELS[normalized] || "Alle";
+}
+
+export function getCompanyGeoAreas(input: CompanyGeoAreaInput): Exclude<GeoFilter, "Alle">[] {
+  return getGeoAreasFromParts(getLocationParts(input));
+}
+
+export function getContactGeoAreas(input: ContactGeoAreaInput): Exclude<GeoFilter, "Alle">[] {
+  const contactParts = getContactLocationParts(input);
+  if (contactParts.length > 0) return getGeoAreasFromParts(contactParts);
+  return input.company ? getCompanyGeoAreas(input.company) : ["Ukjent sted"];
 }
 
 export function companyMatchesGeoFilter(input: CompanyGeoAreaInput, filter: GeoFilter | string) {
   const normalizedFilter = normalizeGeoFilter(filter);
   if (normalizedFilter === "Alle") return true;
   return getCompanyGeoAreas(input).includes(normalizedFilter);
+}
+
+export function contactMatchesGeoFilter(input: ContactGeoAreaInput, filter: GeoFilter | string) {
+  const normalizedFilter = normalizeGeoFilter(filter);
+  if (normalizedFilter === "Alle") return true;
+  return getContactGeoAreas(input).includes(normalizedFilter);
 }
 
 export function getGeoFilterDescription(filter: GeoFilter | string) {
