@@ -27,9 +27,17 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { format } from "date-fns";
 import { nb } from "date-fns/locale";
 import { crmQueryKeys } from "@/lib/queryKeys";
+import {
+  GEO_FILTERS,
+  companyMatchesGeoFilter,
+  getGeoFilterDescription,
+  normalizeGeoFilter,
+  type GeoFilter,
+} from "@/lib/companyGeoAreas";
 
 type SortField = "name" | "type" | "city" | "last_activity" | "tasks";
 type SortDir = "asc" | "desc";
+const SHOW_GEO_MAP_ACTION = false;
 
 import { getEffectiveSignal } from "@/lib/categoryUtils";
 import {
@@ -154,6 +162,8 @@ const Companies = () => {
   const [search, setSearch] = usePersistentState("stacq:companies:search", "");
   const [ownerFilter, setOwnerFilter] = usePersistentState("stacq:companies:ownerFilter", "all");
   const [statusFilter, setStatusFilter] = usePersistentState("stacq:companies:statusFilter", "all");
+  const [geoFilter, setGeoFilter] = usePersistentState<GeoFilter>("stacq:companies:geoFilter", "Alle");
+  const effectiveGeoFilter = normalizeGeoFilter(geoFilter);
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({
     name: "",
@@ -407,7 +417,8 @@ const Companies = () => {
       !q || c.name.toLowerCase().includes(q) || c.org_number?.includes(q) || c.industry?.toLowerCase().includes(q);
     const matchOwner = ownerFilter === "all" || getOwnerId(c) === ownerFilter;
     const matchStatus = statusFilter === "all" || c.status === statusFilter;
-    return matchSearch && matchOwner && matchStatus;
+    const matchGeo = companyMatchesGeoFilter(c, effectiveGeoFilter);
+    return matchSearch && matchOwner && matchStatus && matchGeo;
   });
 
   const SIGNAL_PRIORITY: Record<string, number> = {
@@ -505,6 +516,14 @@ const Companies = () => {
     const [field, dir] = value.split(":");
     setUserHasSorted(true);
     setSort({ field: field as SortField, dir: dir as SortDir });
+  };
+
+  const openGeoMap = () => {
+    const params = new URLSearchParams();
+    if (ownerFilter !== "all") params.set("ownerId", ownerFilter);
+    if (statusFilter !== "all") params.set("type", statusFilter);
+    if (effectiveGeoFilter !== "Alle") params.set("geo", effectiveGeoFilter);
+    navigate(`/selskaper/kart${params.toString() ? `?${params.toString()}` : ""}`);
   };
 
   return (
@@ -724,19 +743,44 @@ const Companies = () => {
               </button>
             ))}
           </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-muted-foreground w-16 shrink-0">
+              Geo
+            </span>
+            {GEO_FILTERS.map((option) => (
+              <button
+                key={option}
+                type="button"
+                title={getGeoFilterDescription(option)}
+                aria-label={`${option}. ${getGeoFilterDescription(option)}`}
+                onClick={() => setGeoFilter(option)}
+                className={effectiveGeoFilter === option ? CHIP_ON : CHIP_OFF}
+              >
+                {option}
+              </button>
+            ))}
+          </div>
+          {effectiveGeoFilter !== "Alle" && (
+            <p className="pl-[4.5rem] text-[0.75rem] text-muted-foreground">
+              {getGeoFilterDescription(effectiveGeoFilter)}
+            </p>
+          )}
         </div>
         <div className="flex items-center gap-3 md:ml-auto shrink-0">
           <div className="w-px h-8 bg-border" />
           <div className="text-right">
             <span className="text-[0.9375rem] font-semibold text-foreground">{filtered.length}</span>
             <span className="text-[0.9375rem] text-muted-foreground ml-1.5">selskaper</span>
-            <button
-              onClick={() => navigate("/selskaper/kart")}
-              className="flex items-center gap-1 text-[0.75rem] text-muted-foreground hover:text-foreground border border-border rounded-md px-2 py-0.5 hover:bg-secondary transition-colors ml-3"
-            >
-              <MapIcon className="w-3.5 h-3.5" />
-              Geografisk kart
-            </button>
+            {SHOW_GEO_MAP_ACTION && (
+              <button
+                type="button"
+                onClick={openGeoMap}
+                className="ml-3 inline-flex items-center gap-1 rounded-md border border-border px-2 py-0.5 text-[0.75rem] text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+              >
+                <MapIcon className="h-3.5 w-3.5" />
+                Geografisk kart
+              </button>
+            )}
           </div>
         </div>
       </div>

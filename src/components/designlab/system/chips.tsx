@@ -142,29 +142,42 @@ export function DesignLabFilterRow<TOption extends string>({
   options,
   value,
   onChange,
+  getOptionDescription,
+  description,
 }: {
   label: string;
   options: readonly TOption[];
   value: string;
   onChange: (value: TOption) => void;
+  getOptionDescription?: (value: TOption) => string;
+  description?: ReactNode;
 }) {
   return (
     <div className="flex flex-wrap items-start gap-x-2 gap-y-1.5 py-[3px]">
       <DesignLabControlLabel>{label}</DesignLabControlLabel>
-      <div className="flex items-center gap-1.5 flex-wrap">
-        {options.map((option) => {
-          const active = value === option;
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {options.map((option) => {
+            const active = value === option;
 
-          return (
-            <DesignLabFilterButton
-              key={option}
-              onClick={() => onChange(option)}
-              active={active}
-            >
-              {option}
-            </DesignLabFilterButton>
-          );
-        })}
+            return (
+              <DesignLabFilterButton
+                key={option}
+                title={getOptionDescription?.(option)}
+                aria-label={getOptionDescription ? `${option}. ${getOptionDescription(option)}` : option}
+                onClick={() => onChange(option)}
+                active={active}
+              >
+                {option}
+              </DesignLabFilterButton>
+            );
+          })}
+        </div>
+        {description ? (
+          <p className="mt-1" style={{ fontSize: 12, color: C.textMuted, lineHeight: 1.4 }}>
+            {description}
+          </p>
+        ) : null}
       </div>
     </div>
   );

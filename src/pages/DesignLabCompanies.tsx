@@ -9,7 +9,7 @@ import { RenderErrorBoundary } from "@/components/RenderErrorBoundary";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import {
-  X, Plus, Loader2,
+  X, Plus, Loader2, Map as MapIcon,
 } from "lucide-react";
 import { differenceInDays } from "date-fns";
 import { getEffectiveSignal, normalizeCategoryLabel } from "@/lib/categoryUtils";
@@ -24,6 +24,13 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { BrregSearch, lookupByOrgNr } from "@/components/BrregSearch";
 import { toast } from "@/components/ui/sonner";
 import { useCrmNavigation } from "@/lib/crmNavigation";
+import {
+  GEO_FILTERS,
+  companyMatchesGeoFilter,
+  getGeoFilterDescription,
+  normalizeGeoFilter,
+  type GeoFilter,
+} from "@/lib/companyGeoAreas";
 import {
   DesignLabEntitySheet,
 } from "@/components/designlab/DesignLabEntitySheet";
@@ -71,6 +78,7 @@ const SIGNAL_ORDER: Record<Signal, number> = {
 
 const OWNERS = ["Alle", "Jon Richard Nygaard", "Thomas Eriksen", "Uten eier"];
 const TYPE_FILTERS = ["Alle", "Potensiell kunde", "Kunde", "Partner", "Ikke relevant selskap"] as const;
+const SHOW_GEO_MAP_ACTION = false;
 type TypeFilter = typeof TYPE_FILTERS[number];
 
 const TYPE_OPTIONS = [
@@ -193,6 +201,8 @@ export default function DesignLabCompanies() {
   const [cmdOpen, setCmdOpen] = useState(false);
   const [ownerFilter, setOwnerFilter] = useState("Alle");
   const [typeFilter, setTypeFilter] = useState<TypeFilter>("Alle");
+  const [geoFilter, setGeoFilter] = useState<GeoFilter>("Alle");
+  const effectiveGeoFilter = normalizeGeoFilter(geoFilter);
   const [sort, setSort] = useState<{ field: SortField; dir: SortDir }>({ field: "name", dir: "asc" });
   const [selectedId, setSelectedId] = useState<string | null>(searchParams.get("company"));
   const prefillCompanyName = searchParams.get("ny")?.trim() || "";
@@ -449,8 +459,9 @@ export default function DesignLabCompanies() {
       const dbValue = TYPE_LABEL_TO_VALUE[typeFilter];
       if (dbValue) list = list.filter((c: any) => c.status === dbValue || (dbValue === "customer" && c.status === "kunde"));
     }
+    if (effectiveGeoFilter !== "Alle") list = list.filter((c: any) => companyMatchesGeoFilter(c, effectiveGeoFilter));
     return list;
-  }, [companies, search, ownerFilter, typeFilter]);
+  }, [companies, effectiveGeoFilter, search, ownerFilter, typeFilter]);
 
   // ── Sorting ──
   const sorted = useMemo(() => {
@@ -622,6 +633,14 @@ export default function DesignLabCompanies() {
     [allProfiles],
   );
 
+  const openGeoMap = useCallback(() => {
+    const params = new URLSearchParams();
+    if (ownerFilter !== "Alle") params.set("owner", ownerFilter);
+    if (typeFilter !== "Alle") params.set("type", TYPE_LABEL_TO_VALUE[typeFilter] || typeFilter);
+    if (effectiveGeoFilter !== "Alle") params.set("geo", effectiveGeoFilter);
+    navigate(`/selskaper/kart${params.toString() ? `?${params.toString()}` : ""}`);
+  }, [effectiveGeoFilter, navigate, ownerFilter, typeFilter]);
+
   /* ═══ RENDER ═══ */
   return (
     <div className="dl-shell flex h-screen overflow-hidden select-none" style={{ fontFamily: "'Inter', -apple-system, system-ui, sans-serif", background: C.bg }}>
@@ -640,6 +659,12 @@ export default function DesignLabCompanies() {
             </div>
           </div>
           <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:justify-end">
+            {SHOW_GEO_MAP_ACTION && (
+              <DesignLabGhostAction onClick={openGeoMap}>
+                <MapIcon style={{ width: 14, height: 14 }} />
+                Geografisk kart
+              </DesignLabGhostAction>
+            )}
             <DesignLabPrimaryAction onClick={() => setCreateOpen(true)}>
               + Nytt selskap
             </DesignLabPrimaryAction>
@@ -652,13 +677,21 @@ export default function DesignLabCompanies() {
           <div className="flex items-center justify-between">
             <DesignLabFilterRow label="TYPE" options={[...TYPE_FILTERS]} value={typeFilter} onChange={(v) => setTypeFilter(v as TypeFilter)} />
             <div className="flex items-center gap-3">
-              {(ownerFilter !== "Alle" || typeFilter !== "Alle") && (
-                <DesignLabGhostAction onClick={() => { setOwnerFilter("Alle"); setTypeFilter("Alle"); }}>
+              {(ownerFilter !== "Alle" || typeFilter !== "Alle" || effectiveGeoFilter !== "Alle") && (
+                <DesignLabGhostAction onClick={() => { setOwnerFilter("Alle"); setTypeFilter("Alle"); setGeoFilter("Alle"); }}>
                   <X style={{ width: 12, height: 12 }} /> Nullstill
                 </DesignLabGhostAction>
               )}
             </div>
           </div>
+          <DesignLabFilterRow
+            label="GEO"
+            options={GEO_FILTERS}
+            value={effectiveGeoFilter}
+            onChange={(value) => setGeoFilter(value as GeoFilter)}
+            getOptionDescription={getGeoFilterDescription}
+            description={effectiveGeoFilter !== "Alle" ? getGeoFilterDescription(effectiveGeoFilter) : undefined}
+          />
         </div>
 
         {/* Content: list + detail */}

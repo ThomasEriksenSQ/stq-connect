@@ -220,6 +220,14 @@ function AppRouter() {
             }
           />
           <Route
+            path="selskaper/kart"
+            element={
+              <Suspense fallback={<LazyFallback />}>
+                <CompaniesMap />
+              </Suspense>
+            }
+          />
+          <Route
             path="selskaper/:id"
             element={
               <VersionedRoute
@@ -401,14 +409,6 @@ function AppRouter() {
           />
         </Route>
         <Route path="/" element={<ProtectedAppLayout />}>
-          <Route
-            path="selskaper/kart"
-            element={
-              <Suspense fallback={<LazyFallback />}>
-                <CompaniesMap />
-              </Suspense>
-            }
-          />
           <Route path="cv-maker" element={<CVMaker />} />
           <Route path="import" element={<Import />} />
           <Route path="admin/brreg-sync" element={<AdminBrregSync />} />
