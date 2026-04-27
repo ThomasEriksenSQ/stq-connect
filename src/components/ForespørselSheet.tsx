@@ -509,6 +509,32 @@ export function ForespørselSheet({
     },
   });
 
+  const laterReviewNotifyUserIds = useMemo(
+    () => Array.from(new Set(laterReviewKonsulenter.map((entry) => entry.notify_user_id).filter(Boolean))).sort(),
+    [laterReviewKonsulenter],
+  );
+
+  const { data: laterReviewNotifyProfiles = [] } = useQuery({
+    queryKey: ["foresporsler-later-review-notify-profiles", row?.id, laterReviewNotifyUserIds.join(",")],
+    enabled: laterReviewNotifyUserIds.length > 0,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id, full_name")
+        .in("id", laterReviewNotifyUserIds);
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  const laterReviewNotifyUserNameById = useMemo(() => {
+    const map = new Map<string, string>();
+    (laterReviewNotifyProfiles as Array<{ id?: string | null; full_name?: string | null }>).forEach((profile) => {
+      if (profile.id) map.set(profile.id, profile.full_name?.trim() || "Ukjent CRM-bruker");
+    });
+    return map;
+  }, [laterReviewNotifyProfiles]);
+
   const externalConsultantIds = useMemo(() => {
     const ids = new Set<string>();
 
@@ -1556,6 +1582,7 @@ export function ForespørselSheet({
                       const externalPartnerCompanyName = getExternalConsultantPartnerCompanyName(externalMeta);
                       const pipelineNotificationReady = Boolean(entry.pipeline_notification_task_id);
                       const hasNotifications = entry.notify_on_pipeline_exit || Boolean(entry.notify_email_date);
+                      const notifyUserName = laterReviewNotifyUserNameById.get(entry.notify_user_id) || "Ukjent CRM-bruker";
 
                       return (
                         <div
@@ -1633,6 +1660,14 @@ export function ForespørselSheet({
                                 {!hasNotifications && (
                                   <span className="inline-flex items-center rounded-full border border-border bg-muted px-2 py-0.5 text-[0.6875rem] font-medium text-muted-foreground">
                                     Ingen varsling
+                                  </span>
+                                )}
+                                {hasNotifications && (
+                                  <span
+                                    className="inline-flex items-center rounded-full border border-border bg-background px-2 py-0.5 text-[0.6875rem] font-medium text-muted-foreground"
+                                    title={`CRM-bruker: ${notifyUserName}`}
+                                  >
+                                    Varsles: {notifyUserName}
                                   </span>
                                 )}
                               </div>
