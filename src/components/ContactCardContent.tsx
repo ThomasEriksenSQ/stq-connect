@@ -216,6 +216,11 @@ const CONTACT_PREVIOUS_REQUEST_CHIP_COLORS = {
   border: `1px solid ${C.statusNeutralBorder}`,
   fontWeight: 500,
 };
+const CONTACT_NOTE_BADGE_STYLE = {
+  background: C.warningBg,
+  color: C.warning,
+  border: "1px solid rgba(229, 160, 48, 0.24)",
+};
 const CONTACT_HEAT_CHIP_COLORS = {
   hett: {
     background: "rgba(208, 64, 69, 0.10)",
@@ -404,6 +409,18 @@ function NotesEditTrigger({ onEdit, children }: { onEdit: () => void; children: 
     >
       {children}
     </div>
+  );
+}
+
+function ContactNoteBadge() {
+  return (
+    <span
+      className="mr-2 inline-flex h-5 align-middle items-center gap-1 rounded-md px-1.5 text-[0.6875rem] font-medium leading-none"
+      style={CONTACT_NOTE_BADGE_STYLE}
+    >
+      <StickyNote className="h-3 w-3" aria-hidden="true" />
+      Notat
+    </span>
   );
 }
 
@@ -2294,12 +2311,14 @@ export function ContactCardContent({
                 }}
               >
                 <p className="text-[0.8125rem] text-muted-foreground leading-relaxed whitespace-pre-wrap transition-colors group-hover:text-foreground/80">
+                  <ContactNoteBadge />
                   {contact.notes}
                 </p>
               </NotesEditTrigger>
             ) : (
               <div className="group relative">
                 <p className="text-[0.8125rem] text-muted-foreground leading-relaxed whitespace-pre-wrap">
+                  <ContactNoteBadge />
                   {contact.notes}
                 </p>
               </div>
