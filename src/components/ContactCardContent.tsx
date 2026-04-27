@@ -10,7 +10,7 @@ import {
   DesignLabIconButton,
 } from "@/components/designlab/controls";
 import { AiSignalBanner } from "@/components/AiSignalBanner";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useConsultantCache } from "@/hooks/useConsultantCache";
@@ -497,6 +497,7 @@ function ContactSentCvNotice({
   profileMap: Record<string, string>;
 }) {
   const [expandedEntryId, setExpandedEntryId] = useState<string | null>(null);
+  const { getEmployeePath } = useCrmNavigation();
   if (entries.length === 0) return null;
 
   return (
@@ -524,7 +525,13 @@ function ContactSentCvNotice({
                     <p className="mb-0.5 text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground md:hidden">
                       Konsulent
                     </p>
-                    <p className="truncate text-[0.875rem] font-semibold text-foreground">{entry.consultantName}</p>
+                    <Link
+                      to={`${getEmployeePath(entry.ansatt_id)}?tab=sent-cv`}
+                      className="block truncate text-[0.875rem] font-semibold text-foreground transition-colors hover:text-primary hover:underline focus:outline-none focus-visible:ring-1 focus-visible:ring-primary/40"
+                      title={`Åpne ${entry.consultantName} med Sendt CV-fanen`}
+                    >
+                      {entry.consultantName}
+                    </Link>
                   </div>
                   <div className="min-w-0">
                     <p className="mb-0.5 text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground md:hidden">

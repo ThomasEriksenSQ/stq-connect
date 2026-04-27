@@ -1,4 +1,4 @@
-import { useParams, useNavigate, Link } from "react-router-dom";
+import { useParams, useNavigate, Link, useSearchParams } from "react-router-dom";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -71,6 +71,13 @@ type SentCvEntry = SentCvRow & {
   company?: CompanyRow | null;
 };
 
+const EMPLOYEE_DETAIL_TABS = ["aktive", "tidligere", "prosesser", "tidl-prosesser", "sent-cv"] as const;
+type EmployeeDetailTab = (typeof EMPLOYEE_DETAIL_TABS)[number];
+
+function isEmployeeDetailTab(value: string | null): value is EmployeeDetailTab {
+  return EMPLOYEE_DETAIL_TABS.includes(value as EmployeeDetailTab);
+}
+
 interface AnsattDetailProps {
   ansattIdOverride?: number;
   hideBackButton?: boolean;
@@ -86,6 +93,7 @@ const AnsattDetail = ({
 }: AnsattDetailProps = {}) => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { getNavPath, getContactPath, getCompanyPath } = useCrmNavigation();
   const queryClient = useQueryClient();
   const { user } = useAuth();
@@ -380,6 +388,20 @@ const AnsattDetail = ({
   const durationMonths = ansatt.start_dato
     ? differenceInMonths(ansatt.slutt_dato ? new Date(ansatt.slutt_dato) : today, new Date(ansatt.start_dato))
     : null;
+  const fallbackTab: EmployeeDetailTab = ansatt.tilgjengelig_fra ? "prosesser" : "aktive";
+  const requestedTab = searchParams.get("tab");
+  const activeTab: EmployeeDetailTab = isEmployeeDetailTab(requestedTab) ? requestedTab : fallbackTab;
+
+  const handleTabChange = (value: string) => {
+    if (!isEmployeeDetailTab(value)) return;
+    const nextParams = new URLSearchParams(searchParams);
+    if (value === fallbackTab) {
+      nextParams.delete("tab");
+    } else {
+      nextParams.set("tab", value);
+    }
+    setSearchParams(nextParams, { replace: true });
+  };
 
   const activeOppdrag = oppdrag.filter((o: any) => o.status === "Aktiv" || o.status === "Oppstart");
   const previousOppdrag = oppdrag.filter((o: any) => o.status !== "Aktiv" && o.status !== "Oppstart");
@@ -480,7 +502,7 @@ const AnsattDetail = ({
       {/* OPPDRAG */}
       <Card className="bg-card border border-border rounded-lg shadow-card">
         <CardContent className="p-5">
-          <Tabs defaultValue={ansatt.tilgjengelig_fra ? "prosesser" : "aktive"}>
+          <Tabs value={activeTab} onValueChange={handleTabChange}>
             <TabsList className="h-auto flex-wrap justify-start">
               {ansatt.tilgjengelig_fra ? (
                 <>
