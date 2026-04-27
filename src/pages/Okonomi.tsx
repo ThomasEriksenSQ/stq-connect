@@ -131,20 +131,6 @@ export default function Okonomi() {
         emphasis: "subtotal",
         tone: "result",
       },
-      {
-        label: "Finansnetto",
-        values: months.map((entry) => entry.finansnetto),
-        ytd: months.reduce((sum, entry) => sum + entry.finansnetto, 0),
-        emphasis: "default",
-        tone: "result",
-      },
-      {
-        label: "Resultat før skatt",
-        values: months.map((entry) => entry.resultatForSkatt),
-        ytd: months.reduce((sum, entry) => sum + entry.resultatForSkatt, 0),
-        emphasis: "total",
-        tone: "result",
-      },
     ];
 
     return rowDefinitions;

@@ -108,33 +108,51 @@ async function createSessionToken(consumerToken: string, employeeToken: string) 
 async function fetchLedgerPostings(sessionToken: string, monthIndex: number) {
   const month = monthIndex + 1;
   const dateFrom = `${REPORT_YEAR}-${String(month).padStart(2, "0")}-01`;
-  const lastDayOfMonth = new Date(Date.UTC(REPORT_YEAR, monthIndex + 1, 0)).getUTCDate();
-  const dateTo = `${REPORT_YEAR}-${String(month).padStart(2, "0")}-${String(lastDayOfMonth).padStart(2, "0")}`;
+  // Tripletex treats dateTo as exclusive, so we must use the first day of the next month.
+  const nextMonthDate = new Date(Date.UTC(REPORT_YEAR, monthIndex + 1, 1));
+  const dateTo = `${nextMonthDate.getUTCFullYear()}-${String(nextMonthDate.getUTCMonth() + 1).padStart(2, "0")}-${String(
+    nextMonthDate.getUTCDate(),
+  ).padStart(2, "0")}`;
+  const pageSize = 1000;
+  const allPostings: TripletexPosting[] = [];
+  let from = 0;
 
-  const params = new URLSearchParams({
-    dateFrom,
-    dateTo,
-    count: "1000",
-    fields: "account(number,type),amount,date",
-  });
+  while (true) {
+    const params = new URLSearchParams({
+      dateFrom,
+      dateTo,
+      from: String(from),
+      count: String(pageSize),
+      fields: "account(number,type),amount,date",
+    });
 
-  const response = await fetch(`${TRIPLETEX_BASE_URL}/ledger/posting?${params.toString()}`, {
-    headers: {
-      Authorization: `Basic ${btoa(`0:${sessionToken}`)}`,
-      Accept: "application/json",
-    },
-  });
+    const response = await fetch(`${TRIPLETEX_BASE_URL}/ledger/posting?${params.toString()}`, {
+      headers: {
+        Authorization: `Basic ${btoa(`0:${sessionToken}`)}`,
+        Accept: "application/json",
+      },
+    });
 
-  const payload = await parseJsonResponse<{ values?: TripletexPosting[]; value?: TripletexPosting[]; message?: string }>(
-    response,
-  );
+    const payload = await parseJsonResponse<{ values?: TripletexPosting[]; value?: TripletexPosting[]; message?: string }>(
+      response,
+    );
 
-  if (!response.ok) {
-    const message = payload?.message ?? `Kunne ikke hente hovedboksposteringer for ${MONTH_LABELS[monthIndex]}.`;
-    throw new Error(message);
+    if (!response.ok) {
+      const message = payload?.message ?? `Kunne ikke hente hovedboksposteringer for ${MONTH_LABELS[monthIndex]}.`;
+      throw new Error(message);
+    }
+
+    const postings = payload?.values ?? payload?.value ?? [];
+    allPostings.push(...postings);
+
+    if (postings.length < pageSize) {
+      break;
+    }
+
+    from += postings.length;
   }
 
-  return payload?.values ?? payload?.value ?? [];
+  return allPostings;
 }
 
 function roundAmount(value: number) {
