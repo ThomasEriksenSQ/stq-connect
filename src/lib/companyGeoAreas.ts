@@ -99,6 +99,17 @@ const AREA_DEFINITIONS: GeoAreaDefinition[] = [
       "Skedsmokorset",
       "Kjeller",
       "Hvalstad",
+      "Trollåsen",
+      "Trollasen",
+      "Greverud",
+      "Myrvoll",
+      "Fjellhamar",
+      "Løvenstad",
+      "Lovenstad",
+      "Sørumsand",
+      "Sorumsand",
+      "Aurskog",
+      "Frogner",
       "Skøyen",
       "Skoyen",
       "Nydalen",
@@ -151,8 +162,14 @@ const AREA_DEFINITIONS: GeoAreaDefinition[] = [
       "Moholt",
       "Stjørdal",
       "Stjordal",
+      "Hell",
       "Malvik",
       "Hommelvik",
+      "Vanvikan",
+      "Skaun",
+      "Børsa",
+      "Borsa",
+      "Selbu",
       "Melhus",
       "Orkanger",
       "Orkland",
@@ -171,6 +188,7 @@ const AREA_DEFINITIONS: GeoAreaDefinition[] = [
       "Hokksund",
       "Drammen",
       "Lier",
+      "Lierstranda",
       "Tranby",
       "Vestfossen",
       "Øvre Eiker",
@@ -201,6 +219,17 @@ const AREA_DEFINITIONS: GeoAreaDefinition[] = [
       "Tananger",
       "Randaberg",
       "Bryne",
+      "Tau",
+      "Jørpeland",
+      "Jorpeland",
+      "Strand",
+      "Hjelmeland",
+      "Hundvåg",
+      "Hundvag",
+      "Finnøy",
+      "Finnoy",
+      "Rennesøy",
+      "Rennesoy",
       "Klepp",
       "Kleppe",
       "Time",
@@ -240,6 +269,14 @@ const AREA_DEFINITIONS: GeoAreaDefinition[] = [
       "Nyborg",
       "Loddefjord",
       "Paradis",
+      "Bønes",
+      "Bones",
+      "Godvik",
+      "Eidsvåg",
+      "Eidsvag",
+      "Søreidgrend",
+      "Soreidgrend",
+      "Blomsterdalen",
       "Laksevåg",
       "Laksevag",
       "Arna",
@@ -282,6 +319,9 @@ const AREA_DEFINITIONS: GeoAreaDefinition[] = [
       "Kjevik",
       "Hånes",
       "Hanes",
+      "Flekkerøy",
+      "Flekkeroy",
+      "Kongshavn",
       "Kristiansand-området",
       "Kristiansandsregionen",
     ],
@@ -290,6 +330,7 @@ const AREA_DEFINITIONS: GeoAreaDefinition[] = [
     label: "Østlandet",
     places: [
       "Fredrikstad",
+      "Gamle Fredrikstad",
       "Kråkerøy",
       "Krakeroy",
       "Rolvsøy",
@@ -298,6 +339,9 @@ const AREA_DEFINITIONS: GeoAreaDefinition[] = [
       "Sellebakk",
       "Sarpsborg",
       "Moss",
+      "Rygge",
+      "Våler i Østfold",
+      "Valer i Ostfold",
       "Halden",
       "Hamar",
       "Lillehammer",
@@ -322,6 +366,8 @@ const AREA_DEFINITIONS: GeoAreaDefinition[] = [
       "Larvik",
       "Horten",
       "Holmestrand",
+      "Revetal",
+      "Stokke",
       "Nøtterøy",
       "Notteroy",
       "Nesbyen",
@@ -330,6 +376,9 @@ const AREA_DEFINITIONS: GeoAreaDefinition[] = [
       "Geilo",
       "Flå",
       "Fla",
+      "Gol",
+      "Hemsedal",
+      "Lampeland",
       "Porsgrunn",
       "Skien",
       "Bø",
@@ -362,6 +411,17 @@ const AREA_DEFINITIONS: GeoAreaDefinition[] = [
       "Alesund",
       "Molde",
       "Kristiansund",
+      "Bremanger",
+      "Åkrehamn",
+      "Akrehamn",
+      "Karmøy",
+      "Karmoy",
+      "Tysvær",
+      "Tysvaer",
+      "Nedre Vats",
+      "Vats",
+      "Ølen",
+      "Olen",
       "Florø",
       "Floro",
       "Ulsteinvik",
@@ -390,7 +450,7 @@ const AREA_DEFINITIONS: GeoAreaDefinition[] = [
   },
   {
     label: "Midt-Norge",
-    places: ["Namsos", "Røros", "Roros", "Oppdal", "Tynset", "Trøndelag", "Trondelag", "Midt-Norge"],
+    places: ["Namsos", "Røros", "Roros", "Oppdal", "Tynset", "Rindal", "Trøndelag", "Trondelag", "Midt-Norge"],
   },
   {
     label: "Nord-Norge",
@@ -403,6 +463,11 @@ const AREA_DEFINITIONS: GeoAreaDefinition[] = [
       "Harstad",
       "Narvik",
       "Alta",
+      "Andenes",
+      "Andøya",
+      "Andoya",
+      "Andøy",
+      "Andoy",
       "Hammerfest",
       "Kirkenes",
       "Vadsø",
@@ -536,6 +601,11 @@ function getGeoResolutionFromParts(parts: string[]): CompanyGeoResolution {
     return { areas: ["Ukjent sted"], source: "unknown", unresolvedPlaces: [] };
   }
 
+  const postalArea = geoAreaFromPostalCode(parts.map(findPostalCode).find(Boolean) || null);
+  if (postalArea) {
+    return { areas: [postalArea], source: "postal", unresolvedPlaces: [] };
+  }
+
   const matches = new Set<Exclude<GeoFilter, "Alle">>();
   parts.forEach((part) => {
     AREA_PLACE_KEYS.forEach((definition) => {
@@ -547,11 +617,6 @@ function getGeoResolutionFromParts(parts: string[]): CompanyGeoResolution {
 
   if (matches.size > 0) {
     return { areas: [...matches], source: "place", unresolvedPlaces: [] };
-  }
-
-  const postalArea = geoAreaFromPostalCode(parts.map(findPostalCode).find(Boolean) || null);
-  if (postalArea) {
-    return { areas: [postalArea], source: "postal", unresolvedPlaces: [] };
   }
 
   return { areas: ["Ukjent sted"], source: "unknown", unresolvedPlaces: parts };

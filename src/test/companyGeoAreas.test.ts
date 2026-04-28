@@ -98,6 +98,17 @@ describe("companyGeoAreas", () => {
     expect(companyMatchesGeoFilter({ city: "KRÅKERØY" }, "Ukjent sted")).toBe(false);
   });
 
+  it("maps local post places from the unknown filter screenshot to configured regions", () => {
+    expect(getCompanyGeoAreas({ city: "TROLLÅSEN" })).toEqual(["Oslo+"]);
+    expect(getCompanyGeoAreas({ city: "Andenes" })).toEqual(["Nord-Norge"]);
+    expect(getCompanyGeoAreas({ city: "Andøya" })).toEqual(["Nord-Norge"]);
+    expect(getCompanyGeoAreas({ city: "HELL" })).toEqual(["Trondheim+"]);
+    expect(getCompanyGeoAreas({ city: "TAU" })).toEqual(["Stavanger+"]);
+    expect(getCompanyGeoAreas({ city: "LIERSTRANDA" })).toEqual(["Kongsberg+"]);
+    expect(getCompanyGeoAreas({ city: "Bremanger" })).toEqual(["Vestlandet"]);
+    expect(getCompanyGeoAreas({ city: "FLEKKERØY" })).toEqual(["Kristiansand+"]);
+  });
+
   it("keeps unmapped or missing locations in unknown place", () => {
     expect(getCompanyGeoAreas({ city: "" })).toEqual(["Ukjent sted"]);
     expect(getCompanyGeoAreas({ city: "Atlantis" })).toEqual(["Ukjent sted"]);
