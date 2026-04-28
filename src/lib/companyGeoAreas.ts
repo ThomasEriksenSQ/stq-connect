@@ -290,6 +290,12 @@ const AREA_DEFINITIONS: GeoAreaDefinition[] = [
     label: "Østlandet",
     places: [
       "Fredrikstad",
+      "Kråkerøy",
+      "Krakeroy",
+      "Rolvsøy",
+      "Rolvsoy",
+      "Gressvik",
+      "Sellebakk",
       "Sarpsborg",
       "Moss",
       "Halden",

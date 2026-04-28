@@ -92,6 +92,12 @@ describe("companyGeoAreas", () => {
     expect(getCompanyGeoAreas({ city: "Agder" })).toContain("Sørlandet");
   });
 
+  it("maps Fredrikstad local places to Østlandet without a postal code", () => {
+    expect(getCompanyGeoAreas({ city: "KRÅKERØY" })).toEqual(["Østlandet"]);
+    expect(companyMatchesGeoFilter({ city: "KRÅKERØY" }, "Østlandet")).toBe(true);
+    expect(companyMatchesGeoFilter({ city: "KRÅKERØY" }, "Ukjent sted")).toBe(false);
+  });
+
   it("keeps unmapped or missing locations in unknown place", () => {
     expect(getCompanyGeoAreas({ city: "" })).toEqual(["Ukjent sted"]);
     expect(getCompanyGeoAreas({ city: "Atlantis" })).toEqual(["Ukjent sted"]);
