@@ -9,6 +9,7 @@ import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/componen
 import { OppdragEditSheet } from "@/components/OppdragEditSheet";
 import { FornyelsesTimeline, buildMonthlySummary } from "@/components/FornyelsesTimeline";
 import { DesignLabStaticTag, DesignLabFilterButton, DESIGN_LAB_NEUTRAL_TAG_ACTIVE_COLORS, DESIGN_LAB_NEUTRAL_TAG_INACTIVE_COLORS, DESIGN_LAB_NEUTRAL_TAG_INACTIVE_HOVER_COLORS } from "@/components/designlab/controls";
+import { DealTypeTag } from "@/components/designlab/DealTypeTag";
 import { DesignLabPrimaryAction } from "@/components/designlab/system";
 import { computeOppdragStatus, parseOppdragDate } from "@/lib/oppdragForm";
 import { C } from "@/theme";
@@ -840,10 +841,5 @@ function OppdragStatusTag({ status }: { status: string }) {
 }
 
 function OppdragTypeTag({ dealType }: { dealType: string | null | undefined }) {
-  const isVia = dealType === "VIA";
-  return (
-    <DesignLabStaticTag colors={isVia ? DESIGN_LAB_NEUTRAL_TAG_INACTIVE_COLORS : DESIGN_LAB_NEUTRAL_TAG_ACTIVE_COLORS}>
-      {isVia ? "Via partner" : "Direkte"}
-    </DesignLabStaticTag>
-  );
+  return <DealTypeTag type={dealType === "VIA" ? "VIA" : "DIR"} />;
 }
