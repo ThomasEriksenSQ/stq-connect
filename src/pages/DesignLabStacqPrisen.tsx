@@ -19,6 +19,7 @@ import { DesignLabMobileNavButton, DesignLabSidebar } from "@/components/designl
 import { DesignLabColumnHeader } from "@/components/designlab/system";
 import { computeOppdragStatus as computeSharedOppdragStatus } from "@/lib/oppdragForm";
 import { DesignLabStaticTag } from "@/components/designlab/controls";
+import { DealTypeTag } from "@/components/designlab/DealTypeTag";
 
 /* Colors imported from @/components/designlab/theme */
 
@@ -475,19 +476,7 @@ function TopStatCard({
 }
 
 function TypeBadge({ dealType }: { dealType: string | null }) {
-  const isVia = dealType === "VIA";
-  if (isVia) {
-    return (
-      <span className="inline-flex items-center rounded-full bg-amber-100 text-amber-700 border border-amber-200 px-2.5 py-0.5 text-[0.6875rem] font-semibold">
-        Via partner
-      </span>
-    );
-  }
-  return (
-    <span className="inline-flex items-center rounded-full bg-slate-100 text-slate-700 border border-slate-200 px-2.5 py-0.5 text-[0.6875rem] font-semibold">
-      Direkte
-    </span>
-  );
+  return <DealTypeTag type={dealType === "VIA" ? "VIA" : "DIR"} />;
 }
 
 function StatusBadge({ status }: { status: string }) {

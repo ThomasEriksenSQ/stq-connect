@@ -37,6 +37,7 @@ import { upsertTaskSignalDescription } from "@/lib/categoryUtils";
 import { useSearchParams } from "react-router-dom";
 import { DesignLabEntitySheet } from "@/components/designlab/DesignLabEntitySheet";
 import { DesignLabStaticTag } from "@/components/designlab/controls";
+import { DealTypeTag } from "@/components/designlab/DealTypeTag";
 
 type StatusFilter = "aktive" | "utgatte" | "alle";
 type TypeFilter = "Alle" | "DIR" | "VIA";
@@ -49,21 +50,6 @@ const STATUS_CHIPS: { value: StatusFilter; label: string }[] = [
 const CHIP_BASE = "h-7 px-2.5 text-[0.75rem] rounded-[6px] border transition-colors cursor-pointer select-none font-medium";
 const CHIP_OFF = `${CHIP_BASE} border-border text-muted-foreground hover:bg-secondary`;
 const CHIP_ON = `${CHIP_BASE} bg-[#E8ECF5] text-[#1A1C1F] border-[#C5CBE8] font-semibold`;
-const REQUEST_TYPE_TAG_COLORS = {
-  direct: { background: "#F1F5F9", color: "#334155", border: "1px solid #CBD5E1", fontWeight: 600 },
-  via: { background: "#FEF3C7", color: "#B45309", border: "1px solid #FDE68A", fontWeight: 600 },
-  broker: { background: "#F5F3FF", color: "#6D28D9", border: "1px solid #DDD6FE", fontWeight: 600 },
-  muted: { background: "#F7F8FA", color: "#8C929C", border: "1px solid #E3E6EB", fontWeight: 500 },
-} as const;
-const VIA_PARTNER_BADGE_STYLE = {
-  height: "auto",
-  minHeight: 20,
-  paddingInline: 10,
-  paddingBlock: 2,
-  fontSize: 11,
-  lineHeight: 1.25,
-  borderRadius: 9999,
-} as const;
 const REQUEST_STATUS_TAG_COLORS = {
   sendt_cv: { background: "#FBF3E6", color: "#7D4E00", border: "1px solid #E8D0A0", fontWeight: 600 },
   intervju: { background: "#EAF0F9", color: "#1A4FA0", border: "1px solid #B3C8E8", fontWeight: 600 },
@@ -111,20 +97,7 @@ const URGENCY_COLOR: Record<Urgency, string> = {
 /* ─── Type badge helper ─── */
 
 function TypeBadge({ type }: { type: string | null }) {
-  if (type === "DIR" || type === "direktekunde") {
-    return <DesignLabStaticTag colors={REQUEST_TYPE_TAG_COLORS.direct}>Direkte</DesignLabStaticTag>;
-  }
-  if (type === "VIA" || type === "via_partner") {
-    return (
-      <DesignLabStaticTag colors={REQUEST_TYPE_TAG_COLORS.via} style={VIA_PARTNER_BADGE_STYLE}>
-        Via partner
-      </DesignLabStaticTag>
-    );
-  }
-  if (type === "via_megler") {
-    return <DesignLabStaticTag colors={REQUEST_TYPE_TAG_COLORS.broker}>Megler</DesignLabStaticTag>;
-  }
-  return <span className="text-[0.8125rem] text-muted-foreground">—</span>;
+  return <DealTypeTag type={type} />;
 }
 
 function RequestStatusBadge({ status }: { status: string | null | undefined }) {
