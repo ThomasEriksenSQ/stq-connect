@@ -11,6 +11,16 @@ const NOISE_MARKERS = [
 const EMAIL_HEADER_RE = /^(To|From|BCC|CC|Attachment|Subject|Body|Sent|Sendt|Fra):\s/m;
 const URL_RE = /https?:\/\/[^\s)>\]]+/g;
 
+function normalizeReadableWhitespace(text: string): string {
+  return text
+    .replace(/\r\n?/g, "\n")
+    .split("\n")
+    .map((line) => line.replace(/[ \t\f\v]+/g, " ").trim())
+    .join("\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
 export function cleanDescription(rawText: string | null | undefined): string | null {
   if (!rawText) return null;
 
@@ -36,7 +46,7 @@ export function cleanDescription(rawText: string | null | undefined): string | n
     }
   }
 
-  cleaned = cleaned.replace(URL_RE, "").replace(/\s+/g, " ").trim();
+  cleaned = normalizeReadableWhitespace(cleaned.replace(URL_RE, ""));
 
   if (cleaned.length < 3) return null;
   return cleaned;

@@ -28,6 +28,17 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import {
   Phone,
   Mail,
   Linkedin,
@@ -646,7 +657,7 @@ export function ContactCardContent({
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
-  const { getCompanyPath, useModernRoutes } = useCrmNavigation();
+  const { getCompanyPath, getNavPath, useModernRoutes } = useCrmNavigation();
   const { interne: cachedInterne, eksterne: cachedEksterne, isReady: consultantCacheReady } = useConsultantCache();
 
   // Form states
@@ -1000,6 +1011,30 @@ export function ContactCardContent({
       notifyDataChanged();
     },
     onError: () => toast.error("Kunne ikke oppdatere"),
+  });
+
+  const deleteContactMutation = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase.from("contacts").delete().eq("id", contactId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      setEditSheetOpen(false);
+      queryClient.removeQueries({ queryKey: crmQueryKeys.contacts.detail(contactId) });
+      queryClient.invalidateQueries({ queryKey: crmQueryKeys.contacts.all() });
+      queryClient.invalidateQueries({ queryKey: crmQueryKeys.companies.all() });
+      queryClient.invalidateQueries({ queryKey: crmQueryKeys.generic.tasks() });
+      if (companyId) {
+        queryClient.invalidateQueries({ queryKey: crmQueryKeys.companies.contacts(companyId) });
+        queryClient.invalidateQueries({ queryKey: crmQueryKeys.foresporsler.kontakter(companyId) });
+        queryClient.invalidateQueries({ queryKey: crmQueryKeys.foresporsler.editKontakter(companyId) });
+      }
+      invalidateQueryGroup(queryClient, crmSummaryQueryKeys);
+      notifyDataChanged();
+      toast.success("Kontakt slettet");
+      navigate(getNavPath("contacts"));
+    },
+    onError: () => toast.error("Kunne ikke slette kontakt"),
   });
 
   const updateSignalMutation = useMutation({
@@ -2804,6 +2839,8 @@ export function ContactCardContent({
             await updateMutation.mutateAsync(updates);
             setEditSheetOpen(false);
           }}
+          onDelete={() => deleteContactMutation.mutateAsync()}
+          deleting={deleteContactMutation.isPending}
           defaultHidden={defaultHidden}
         />
       </DesignLabEntitySheet>
@@ -3171,6 +3208,8 @@ function ContactProfileEditor({
   defaultHidden,
   onCancel,
   onSave,
+  onDelete,
+  deleting = false,
 }: {
   contact: any;
   companyName?: string | null;
@@ -3179,8 +3218,11 @@ function ContactProfileEditor({
   defaultHidden?: DefaultHiddenConfig;
   onCancel: () => void;
   onSave: (updates: Record<string, any>) => Promise<unknown>;
+  onDelete: () => Promise<unknown>;
+  deleting?: boolean;
 }) {
   const [saving, setSaving] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [form, setForm] = useState({
     first_name: "",
     last_name: "",
@@ -3217,6 +3259,7 @@ function ContactProfileEditor({
 
   const isUnsubscribed =
     (contact as any)?.mailchimp_status === "unsubscribed" || (contact as any)?.mailchimp_status === "cleaned";
+  const contactName = `${form.first_name} ${form.last_name}`.trim() || "denne kontakten";
 
   const setField = (field: string, value: any) => {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -3275,6 +3318,16 @@ function ContactProfileEditor({
       return;
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleConfirmDelete = async (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    try {
+      await onDelete();
+      setDeleteDialogOpen(false);
+    } catch {
+      // Feiltoast håndteres av delete-mutasjonen i parent-komponenten.
     }
   };
 
@@ -3443,21 +3496,54 @@ function ContactProfileEditor({
         )}
 
         <div className="mt-2 border-t border-border/80 pt-4">
-          <div className="flex items-center justify-end gap-2">
-            <button
-              type="button"
-              className="inline-flex h-10 min-w-[110px] items-center justify-center rounded-lg border border-input bg-background px-4 text-[0.8125rem] font-medium text-foreground transition-colors hover:bg-accent"
-              onClick={onCancel}
-            >
-              Avbryt
-            </button>
-            <button
-              type="submit"
-              disabled={saving}
-              className="inline-flex h-10 min-w-[110px] items-center justify-center rounded-lg bg-primary px-4 text-[0.8125rem] font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
-            >
-              {saving ? "Lagrer..." : "Lagre"}
-            </button>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+              <AlertDialogTrigger asChild>
+                <button
+                  type="button"
+                  className="inline-flex h-10 w-fit min-w-[110px] items-center justify-center rounded-lg border border-destructive/25 bg-background px-4 text-[0.8125rem] font-medium text-destructive transition-colors hover:bg-destructive/10"
+                >
+                  <Trash2 className="mr-1.5 h-4 w-4" />
+                  Slett kontakt
+                </button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Slett {contactName}?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Er du sikker på at du vil slette denne kontakten? Aktivitet, oppfølginger og forespørsler som peker på kontakten blir liggende, men koblingen til kontakten fjernes. Dette kan ikke angres.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel disabled={deleting}>Avbryt</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={handleConfirmDelete}
+                    disabled={deleting}
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  >
+                    {deleting ? "Sletter..." : "Ja, slett kontakt"}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+
+            <div className="flex items-center justify-end gap-2">
+              <button
+                type="button"
+                className="inline-flex h-10 min-w-[110px] items-center justify-center rounded-lg border border-input bg-background px-4 text-[0.8125rem] font-medium text-foreground transition-colors hover:bg-accent disabled:opacity-50"
+                onClick={onCancel}
+                disabled={deleting}
+              >
+                Avbryt
+              </button>
+              <button
+                type="submit"
+                disabled={saving || deleting}
+                className="inline-flex h-10 min-w-[110px] items-center justify-center rounded-lg bg-primary px-4 text-[0.8125rem] font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
+              >
+                {saving ? "Lagrer..." : "Lagre"}
+              </button>
+            </div>
           </div>
         </div>
       </form>
@@ -3708,7 +3794,11 @@ function TaskRow({
       </div>
       <div className="flex-1 min-w-0">
         <div className="text-[1.0625rem] font-bold text-foreground">{displayTitle}</div>
-        {displayDesc && <p className="text-[0.875rem] text-foreground/70 truncate mt-0.5">{displayDesc}</p>}
+        {displayDesc && (
+          <p className="mt-0.5 text-[0.875rem] leading-relaxed whitespace-pre-wrap text-foreground/70">
+            {displayDesc}
+          </p>
+        )}
         {task.assigned_to && profileMap[task.assigned_to] && (
           <div className="mt-1">
             <DesignLabStatusBadge tone="signal">
