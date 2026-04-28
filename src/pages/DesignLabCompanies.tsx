@@ -468,6 +468,7 @@ export default function DesignLabCompanies() {
 
   const createMutation = useMutation({
     mutationFn: async () => {
+      if (!createForm.owner_id) throw new Error("Missing company owner");
       const geoResolution = getCreateCompanyGeoResolution();
       const { data, error } = await supabase
         .from("companies")
@@ -486,7 +487,7 @@ export default function DesignLabCompanies() {
           geo_updated_at: new Date().toISOString(),
           created_by: user?.id,
           status: createForm.status,
-          owner_id: createForm.owner_id || null,
+          owner_id: createForm.owner_id,
         })
         .select("id")
         .single();
@@ -519,6 +520,10 @@ export default function DesignLabCompanies() {
 
   const handleCreateCompanySubmit = useCallback(() => {
     if (!createForm.name.trim() || createMutation.isPending) return;
+    if (!createForm.owner_id) {
+      toast.error("Velg eier før du oppretter selskapet");
+      return;
+    }
     const cleanedOrgNumber = createForm.org_number.replace(/\D/g, "");
     const geoResolution = getCreateCompanyGeoResolution();
 
@@ -532,7 +537,7 @@ export default function DesignLabCompanies() {
     }
 
     createMutation.mutate();
-  }, [createForm.name, createForm.org_number, createGeoOverride, createMutation, getCreateCompanyGeoResolution]);
+  }, [createForm.name, createForm.org_number, createForm.owner_id, createGeoOverride, createMutation, getCreateCompanyGeoResolution]);
 
   const createGeoPreview = getCreateCompanyGeoResolution();
 
@@ -1010,7 +1015,7 @@ export default function DesignLabCompanies() {
             <AktivOppdragPrimaryButton
               type="submit"
               form="design-lab-create-company-form"
-              disabled={createMutation.isPending || !createForm.name.trim()}
+              disabled={createMutation.isPending || !createForm.name.trim() || !createForm.owner_id}
             >
               {createMutation.isPending ? "Oppretter..." : "Opprett selskap"}
             </AktivOppdragPrimaryButton>
@@ -1134,7 +1139,7 @@ export default function DesignLabCompanies() {
                     onClick={() =>
                       setCreateForm((prev) => ({
                         ...prev,
-                        owner_id: prev.owner_id === owner.id ? "" : owner.id,
+                        owner_id: owner.id,
                       }))
                     }
                     active={createForm.owner_id === owner.id}

@@ -156,6 +156,11 @@ export function ImportForesporslerModal({ open, onOpenChange }: { open: boolean;
   }, [newCompanies]);
 
   const handleImport = async () => {
+    if (!user?.id) {
+      toast.error("Du må være innlogget for å importere forespørsler");
+      return;
+    }
+
     setStep("importing");
     setProgress({ done: 0, total: importable.length });
 
@@ -164,7 +169,7 @@ export function ImportForesporslerModal({ open, onOpenChange }: { open: boolean;
     for (const r of uniqueNewCompanies) {
       const { data, error } = await supabase
         .from("companies")
-        .insert({ name: r.selskap, status: "prospect", created_by: user?.id })
+        .insert({ name: r.selskap, status: "prospect", created_by: user.id, owner_id: user.id })
         .select("id")
         .single();
       if (data) {
@@ -192,7 +197,7 @@ export function ImportForesporslerModal({ open, onOpenChange }: { open: boolean;
           teknologier: r.teknologier,
           kommentar: kommentarParts.join(" · ") || null,
           status: "Ny",
-          created_by: user?.id,
+          created_by: user.id,
         };
       });
 

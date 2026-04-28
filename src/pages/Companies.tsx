@@ -350,8 +350,18 @@ const Companies = () => {
     },
   });
 
+  const { data: allProfiles = [] } = useQuery({
+    queryKey: crmQueryKeys.profiles.all(),
+    queryFn: async () => {
+      const { data, error } = await supabase.from("profiles").select("id, full_name").order("full_name");
+      if (error) throw error;
+      return data;
+    },
+  });
+
   const createMutation = useMutation({
     mutationFn: async () => {
+      if (!form.owner_id) throw new Error("Missing company owner");
       const finalLocations = locations.map((location) => location.trim()).filter(Boolean);
       const cityValue = finalLocations.length > 0 ? finalLocations.join(", ") : form.city || null;
       const geoResolution = resolveCompanyGeoAreas({
@@ -375,7 +385,7 @@ const Companies = () => {
         geo_updated_at: new Date().toISOString(),
         created_by: user?.id,
         status: form.status,
-        owner_id: form.owner_id || null,
+        owner_id: form.owner_id,
       });
       if (error) throw error;
     },
@@ -407,13 +417,9 @@ const Companies = () => {
 
   const getOwnerId = (company: any) => (company.profiles as any)?.id || null;
 
-  const ownerMap = new Map<string, string>();
-  companies.forEach((c) => {
-    const id = getOwnerId(c);
-    const fullName = (c.profiles as any)?.full_name;
-    if (id && fullName) ownerMap.set(id, fullName);
-  });
-  const ownerList = Array.from(ownerMap.entries());
+  const ownerList = allProfiles
+    .filter((profile) => Boolean(profile.full_name))
+    .map((profile) => [profile.id, profile.full_name] as const);
 
   useEffect(() => {
     if (!open || form.owner_id || !user?.id) return;
@@ -552,6 +558,10 @@ const Companies = () => {
 
   const handleCreateSubmit = () => {
     if (!form.name.trim() || createMutation.isPending) return;
+    if (!form.owner_id) {
+      toast.error("Velg eier før du oppretter selskapet");
+      return;
+    }
     const cleanedOrgNumber = form.org_number.replace(/\D/g, "");
     if (!cleanedOrgNumber) {
       const finalLocations = locations.map((location) => location.trim()).filter(Boolean);
@@ -737,7 +747,7 @@ const Companies = () => {
                   <DesignLabFilterButton
                     key={id}
                     type="button"
-                    onClick={() => setForm((prev) => ({ ...prev, owner_id: prev.owner_id === id ? "" : id }))}
+                    onClick={() => setForm((prev) => ({ ...prev, owner_id: id }))}
                     active={form.owner_id === id}
                     activeColors={DESIGN_LAB_NEUTRAL_TAG_ACTIVE_COLORS}
                     inactiveColors={DESIGN_LAB_NEUTRAL_TAG_INACTIVE_COLORS}
@@ -750,7 +760,7 @@ const Companies = () => {
             </DesignLabModalField>
           )}
           <DesignLabModalActions style={{ marginTop: 24 }}>
-            <DesignLabPrimaryAction type="submit" disabled={createMutation.isPending}>
+            <DesignLabPrimaryAction type="submit" disabled={createMutation.isPending || !form.name.trim() || !form.owner_id}>
               {createMutation.isPending ? "Oppretter..." : "Opprett"}
             </DesignLabPrimaryAction>
             <DesignLabGhostAction type="button" onClick={() => handleDialogOpenChange(false)}>

@@ -101,6 +101,7 @@ import { format, isPast, isToday, getYear } from "date-fns";
 import { nb } from "date-fns/locale";
 import { relativeDate, fullDate } from "@/lib/relativeDate";
 import { cleanDescription } from "@/lib/cleanDescription";
+import { cleanCompanyImportNoteHeaders, hasCompanyImportNoteHeaders } from "@/lib/companyNotes";
 import { useClickWithoutSelection, activateOnEnterOrSpace } from "@/hooks/useClickWithoutSelection";
 import { BrregSearch, lookupByOrgNr } from "@/components/BrregSearch";
 import { cn } from "@/lib/utils";
@@ -507,8 +508,25 @@ export function CompanyCardContent({
 
   useEffect(() => {
     if (!company) return;
-    setShowNotes(Boolean(safeText((company as any).notes).trim()));
-  }, [companyId, company?.notes]);
+    const rawNotes = safeText((company as any).notes);
+    const cleanedNotes = cleanCompanyImportNoteHeaders(rawNotes);
+    setShowNotes(Boolean(cleanedNotes.trim()));
+
+    if (hasCompanyImportNoteHeaders(rawNotes) && rawNotes !== cleanedNotes) {
+      supabase
+        .from("companies")
+        .update({ notes: cleanedNotes || null })
+        .eq("id", companyId)
+        .then(({ error }) => {
+          if (error) {
+            console.error("Could not clean company import note headers:", error);
+            return;
+          }
+          queryClient.invalidateQueries({ queryKey: crmQueryKeys.companies.detail(companyId) });
+          queryClient.invalidateQueries({ queryKey: crmQueryKeys.companies.all() });
+        });
+    }
+  }, [companyId, company?.notes, queryClient]);
 
   // BRREG lookup when org.nr is 9 digits
   useEffect(() => {
@@ -789,7 +807,8 @@ export function CompanyCardContent({
   });
 
   const updateField = (field: string) => (value: string) => {
-    updateMutation.mutate({ [field]: value || null });
+    const nextValue = field === "notes" ? cleanCompanyImportNoteHeaders(value) : value;
+    updateMutation.mutate({ [field]: nextValue || null });
   };
 
   const visibleKonsulentResults = useMemo(
@@ -814,7 +833,7 @@ export function CompanyCardContent({
   const companyWebsite = safeText(company.website);
   const companyLinkedin = safeText(company.linkedin);
   const companyEmail = safeText((company as any).email);
-  const companyNotes = safeText((company as any).notes);
+  const companyNotes = cleanCompanyImportNoteHeaders(safeText((company as any).notes));
   const companyLocations = splitCommaSeparatedText(companyCity);
   const companyBrregStatus = safeText((company as any).brreg_status);
   const companyBrregLastError = safeText((company as any).brreg_last_error);
@@ -2437,7 +2456,7 @@ export function CompanyCardContent({
                   if (e.key === "Escape") setEditingNotes(false);
                   if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
                     updateField("notes")(notesDraft);
-                    setShowNotes(Boolean(notesDraft.trim()));
+                    setShowNotes(Boolean(cleanCompanyImportNoteHeaders(notesDraft).trim()));
                     setEditingNotes(false);
                   }
                 }}
@@ -2449,7 +2468,7 @@ export function CompanyCardContent({
                   style={{ height: 32, fontSize: 12 }}
                   onClick={() => {
                     updateField("notes")(notesDraft);
-                    setShowNotes(Boolean(notesDraft.trim()));
+                    setShowNotes(Boolean(cleanCompanyImportNoteHeaders(notesDraft).trim()));
                     setEditingNotes(false);
                   }}
                 >

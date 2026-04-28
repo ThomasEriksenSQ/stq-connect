@@ -16,7 +16,6 @@ type ParsedRow = {
   url: string;
   linkedin: string;
   org_nr: string;
-  nace: string;
   ansatte: string;
   kontaktpersoner: string;
 };
@@ -35,6 +34,29 @@ type ExistingCompanyCandidate = {
   org_number: string | null;
   aliases: string[];
 };
+
+const CRM_COMPANY_OWNER_NAMES = ["Jon Richard Nygaard", "Thomas Eriksen"] as const;
+
+async function fetchCrmCompanyOwners() {
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("id, full_name")
+    .in("full_name", [...CRM_COMPANY_OWNER_NAMES]);
+
+  if (error) throw error;
+
+  const byName = new Map((data || []).map((profile) => [profile.full_name, profile]));
+  const owners = CRM_COMPANY_OWNER_NAMES.map((name) => byName.get(name)).filter(Boolean) as Array<{
+    id: string;
+    full_name: string;
+  }>;
+
+  if (owners.length !== CRM_COMPANY_OWNER_NAMES.length) {
+    throw new Error("Fant ikke begge CRM-eierne for selskapsimport");
+  }
+
+  return owners;
+}
 
 function matchesExactCompanyIdentity(name: string, candidate: ExistingCompanyCandidate): boolean {
   const normalized = normalizeCompanyName(name);
@@ -65,7 +87,6 @@ export function ImportCompaniesModal({ open, onOpenChange }: { open: boolean; on
       url: String(r["URL"] || r["url"] || r["Url"] || "").trim(),
       linkedin: String(r["Linkedin"] || r["linkedin"] || r["LinkedIn"] || "").trim(),
       org_nr: String(r["Organisasjonsnummer"] || r["organisasjonsnummer"] || r["Org.nr"] || "").replace(/\D/g, "").trim(),
-      nace: String(r["NACE"] || r["nace"] || "").trim(),
       ansatte: String(r["Antall ansatte"] || r["antall_ansatte"] || "").trim(),
       kontaktpersoner: String(r["Kontaktpersoner"] || r["kontaktpersoner"] || "").trim(),
     })).filter((r) => r.selskap);
@@ -150,32 +171,49 @@ export function ImportCompaniesModal({ open, onOpenChange }: { open: boolean; on
   const selectedCount = rows.filter((r) => r.selected).length;
 
   const handleImport = async () => {
+    if (!user?.id) {
+      toast.error("Du må være innlogget for å importere selskaper");
+      return;
+    }
+
     const toImport = rows.filter((r) => r.selected);
     setStep("importing");
     setProgress({ done: 0, total: toImport.length });
 
     let imported = 0;
     const batchSize = 50;
+    let crmOwners: Awaited<ReturnType<typeof fetchCrmCompanyOwners>>;
+
+    try {
+      crmOwners = await fetchCrmCompanyOwners();
+    } catch (error) {
+      console.error("Owner lookup error:", error);
+      toast.error("Fant ikke CRM-eierne for importen");
+      setStep("preview");
+      return;
+    }
+
+    const ownerOffset = Math.floor(Math.random() * crmOwners.length);
 
     for (let i = 0; i < toImport.length; i += batchSize) {
-      const batch = toImport.slice(i, i + batchSize).map((r) => ({
-        name: r.selskap,
-        industry: r.bransje || null,
-        city: r.sted || null,
-        website: r.url || null,
-        linkedin: r.linkedin || null,
-        org_number: r.org_nr || null,
-        status: "prospect",
-        
-        notes: [
-          "[Must-have]",
-          `Kilde: LinkedIn-import`,
-          r.nace ? `NACE: ${r.nace}` : null,
-          r.ansatte ? `Ansatte: ${r.ansatte}` : null,
-          r.kontaktpersoner ? `Kontaktpersoner: ${r.kontaktpersoner}` : null,
-        ].filter(Boolean).join("\n"),
-        created_by: user?.id,
-      }));
+      const batch = toImport.slice(i, i + batchSize).map((r, batchIndex) => {
+        const owner = crmOwners[(i + batchIndex + ownerOffset) % crmOwners.length];
+        return {
+          name: r.selskap,
+          industry: r.bransje || null,
+          city: r.sted || null,
+          website: r.url || null,
+          linkedin: r.linkedin || null,
+          org_number: r.org_nr || null,
+          status: "prospect",
+          owner_id: owner.id,
+          notes: [
+            r.ansatte ? `Ansatte: ${r.ansatte}` : null,
+            r.kontaktpersoner ? `Kontaktpersoner: ${r.kontaktpersoner}` : null,
+          ].filter(Boolean).join("\n") || null,
+          created_by: user.id,
+        };
+      });
 
       const { error } = await supabase.from("companies").insert(batch);
       if (error) {
@@ -394,7 +432,7 @@ export function ImportCompaniesModal({ open, onOpenChange }: { open: boolean; on
             </p>
             <p className="text-[0.8125rem] text-muted-foreground">
               {result.skipped > 0 && `${result.skipped} duplikater hoppet over · `}
-              Alle importerte selskaper er tagget som «Must-have»
+              Ansatte og kontaktpersoner er lagret i notatene der de finnes
             </p>
             <Button
               onClick={() => { reset(); onOpenChange(false); }}
