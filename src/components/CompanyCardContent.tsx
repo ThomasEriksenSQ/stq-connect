@@ -85,6 +85,7 @@ import {
   Plus,
   Trash2,
   ArrowRightLeft,
+  AlertTriangle,
   MapPin,
   Loader2,
   Target,
@@ -101,7 +102,7 @@ import { nb } from "date-fns/locale";
 import { relativeDate, fullDate } from "@/lib/relativeDate";
 import { cleanDescription } from "@/lib/cleanDescription";
 import { useClickWithoutSelection, activateOnEnterOrSpace } from "@/hooks/useClickWithoutSelection";
-import { lookupByOrgNr } from "@/components/BrregSearch";
+import { BrregSearch, lookupByOrgNr } from "@/components/BrregSearch";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { scaleTextMetric, type TextSize } from "@/components/designlab/TextSizeControl";
@@ -309,6 +310,8 @@ const statusLabels: Record<string, { label: string; className: string }> = {
   active: { label: "Aktiv", className: "bg-success/10 text-success" },
 };
 
+type OrgLookupStatus = "idle" | "checking" | "valid" | "deleted" | "not_found";
+
 interface DefaultHiddenConfig {
   techDna?: boolean;
   notes?: boolean;
@@ -363,6 +366,8 @@ export function CompanyCardContent({
     linkedin: "",
     locations: [] as string[],
   });
+  const [brregSearchValue, setBrregSearchValue] = useState("");
+  const [orgLookupStatus, setOrgLookupStatus] = useState<OrgLookupStatus>("idle");
   const [newLocation, setNewLocation] = useState("");
   const [signalPickerOpen, setSignalPickerOpen] = useState(false);
   const [pendingSignal, setPendingSignal] = useState<string | null>(null);
@@ -484,6 +489,8 @@ export function CompanyCardContent({
         linkedin: safeText(company.linkedin),
         locations: locs.length > 0 ? locs : [],
       });
+      setBrregSearchValue(safeText(company.name));
+      setOrgLookupStatus(safeText((company as any).brreg_status) === "org_number_needs_review" ? "checking" : "idle");
       setNewLocation("");
     }
   }, [editCompanyOpen, company]);
@@ -505,18 +512,31 @@ export function CompanyCardContent({
 
   // BRREG lookup when org.nr is 9 digits
   useEffect(() => {
-    const cleaned = editForm.org_number.replace(/\s/g, "");
-    if (cleaned.length !== 9 || !/^\d{9}$/.test(cleaned)) return;
+    if (!editCompanyOpen) return;
+    const cleaned = editForm.org_number.replace(/\D/g, "");
+    if (cleaned.length !== 9 || !/^\d{9}$/.test(cleaned)) {
+      setOrgLookupStatus("idle");
+      return;
+    }
+    let cancelled = false;
+    setOrgLookupStatus("checking");
     lookupByOrgNr(cleaned).then((r) => {
+      if (cancelled) return;
       if (r) {
+        setOrgLookupStatus(r.slettedato ? "deleted" : "valid");
         if (!editForm.name) setEditForm((prev) => ({ ...prev, name: r.navn }));
         const city = r.forretningsadresse?.poststed || r.forretningsadresse?.kommune || null;
         if (city && editForm.locations.length === 0) {
           setEditForm((prev) => ({ ...prev, locations: [city] }));
         }
+      } else {
+        setOrgLookupStatus("not_found");
       }
     });
-  }, [editForm.org_number]);
+    return () => {
+      cancelled = true;
+    };
+  }, [editCompanyOpen, editForm.org_number]);
 
   const { data: allProfiles = [] } = useQuery({
     queryKey: crmQueryKeys.profiles.all(),
@@ -796,6 +816,9 @@ export function CompanyCardContent({
   const companyEmail = safeText((company as any).email);
   const companyNotes = safeText((company as any).notes);
   const companyLocations = splitCommaSeparatedText(companyCity);
+  const companyBrregStatus = safeText((company as any).brreg_status);
+  const companyBrregLastError = safeText((company as any).brreg_last_error);
+  const companyNeedsOrgNumberReview = ["org_number_needs_review", "not_found", "invalid_org"].includes(companyBrregStatus);
 
   const STATUS_OPTIONS = [
     { value: "prospect", label: "Potensiell kunde" },
@@ -898,6 +921,8 @@ export function CompanyCardContent({
       linkedin: companyLinkedin,
       locations: companyLocations,
     });
+    setBrregSearchValue(companyName);
+    setOrgLookupStatus(companyNeedsOrgNumberReview ? "checking" : "idle");
     setNewLocation("");
     setEditCompanyOpen(true);
   };
@@ -1808,7 +1833,9 @@ export function CompanyCardContent({
                       zip_code: company?.zip_code,
                       locations: finalLocations,
                     });
-                    updateMutation.mutate({
+                    const nextOrgNumber = editForm.org_number.replace(/\D/g, "");
+                    const currentOrgNumber = companyOrgNumber.replace(/\D/g, "");
+                    const updates: Record<string, unknown> = {
                       name: editForm.name,
                       org_number: editForm.org_number || null,
                       city: cityValue || null,
@@ -1818,7 +1845,21 @@ export function CompanyCardContent({
                       geo_source: geoResolution.source,
                       geo_unresolved_places: geoResolution.unresolvedPlaces,
                       geo_updated_at: new Date().toISOString(),
-                    });
+                    };
+                    if (companyNeedsOrgNumberReview) {
+                      if (orgLookupStatus === "valid" && nextOrgNumber && nextOrgNumber !== currentOrgNumber) {
+                        updates.brreg_status = "active";
+                        updates.brreg_deleted_at = null;
+                        updates.brreg_last_error = null;
+                        updates.brreg_synced_at = new Date().toISOString();
+                      } else if (orgLookupStatus === "deleted" && nextOrgNumber) {
+                        updates.brreg_status = "org_number_needs_review";
+                        updates.brreg_deleted_at = null;
+                        updates.brreg_last_error = `Org.nr ${nextOrgNumber} er slettet i BRREG. Avklar korrekt org.nr manuelt.`;
+                        updates.brreg_synced_at = new Date().toISOString();
+                      }
+                    }
+                    updateMutation.mutate(updates);
                     setEditCompanyOpen(false);
                   }}
                   className="mt-3 w-full max-w-full min-w-0 space-y-4 overflow-x-hidden"
@@ -1832,6 +1873,38 @@ export function CompanyCardContent({
                       className="h-10 max-w-full rounded-lg"
                     />
                   </div>
+                  {companyNeedsOrgNumberReview && (
+                    <div className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-[0.8125rem] text-amber-900">
+                      <div className="flex items-start gap-2">
+                        <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                        <div className="min-w-0">
+                          <p className="font-medium">Org.nr må avklares</p>
+                          {companyBrregLastError && <p className="mt-0.5 text-amber-800">{companyBrregLastError}</p>}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  <div className="max-w-full min-w-0 space-y-1.5">
+                    <Label className="text-label">Finn korrekt selskap i BRREG</Label>
+                    <BrregSearch
+                      value={brregSearchValue}
+                      onChange={setBrregSearchValue}
+                      placeholder="Søk etter selskapsnavn..."
+                      required={false}
+                      onSelect={(result) => {
+                        setBrregSearchValue(result.name);
+                        setEditForm((prev) => ({
+                          ...prev,
+                          name: result.name || prev.name,
+                          org_number: result.org_number,
+                          city: result.city || prev.city,
+                          locations: result.city ? [result.city] : prev.locations,
+                        }));
+                        setNewLocation("");
+                        setOrgLookupStatus(result.slettedato ? "deleted" : "valid");
+                      }}
+                    />
+                  </div>
                   <div className="max-w-full min-w-0 space-y-1.5">
                     <Label className="text-label">Org.nr</Label>
                     <Input
@@ -1839,6 +1912,14 @@ export function CompanyCardContent({
                       onChange={(e) => setEditForm({ ...editForm, org_number: e.target.value })}
                       className="h-10 max-w-full rounded-lg"
                     />
+                    {orgLookupStatus === "checking" && <p className="text-[0.75rem] text-muted-foreground">Sjekker org.nr mot BRREG...</p>}
+                    {orgLookupStatus === "valid" && companyNeedsOrgNumberReview && (
+                      <p className="text-[0.75rem] text-emerald-700">Aktivt org.nr funnet. Avklaringsflagget fjernes når du lagrer.</p>
+                    )}
+                    {orgLookupStatus === "deleted" && (
+                      <p className="text-[0.75rem] text-amber-700">Dette org.nr er slettet i BRREG. Velg et annet selskap/org.nr før du markerer avklaringen ferdig.</p>
+                    )}
+                    {orgLookupStatus === "not_found" && <p className="text-[0.75rem] text-destructive">Fant ikke org.nr i BRREG.</p>}
                   </div>
                   <div className="max-w-full min-w-0 space-y-1.5">
                     <Label className="text-label">Geografisk sted</Label>
@@ -2268,6 +2349,22 @@ export function CompanyCardContent({
         {/* Org.nr · city · phone · links */}
         <div className="flex items-center gap-3 text-sm text-muted-foreground flex-wrap mt-0.5">
           {companyOrgNumber && <span>Org.nr {companyOrgNumber}</span>}
+          {companyNeedsOrgNumberReview &&
+            (editable ? (
+              <button
+                type="button"
+                onClick={openEditCompanyDialog}
+                className="inline-flex items-center gap-1 rounded-[6px] border border-amber-300 bg-amber-50 px-2 py-0.5 text-[0.75rem] font-medium text-amber-800 hover:bg-amber-100"
+              >
+                <AlertTriangle className="h-3.5 w-3.5" />
+                Org.nr må avklares
+              </button>
+            ) : (
+              <span className="inline-flex items-center gap-1 rounded-[6px] border border-amber-300 bg-amber-50 px-2 py-0.5 text-[0.75rem] font-medium text-amber-800">
+                <AlertTriangle className="h-3.5 w-3.5" />
+                Org.nr må avklares
+              </span>
+            ))}
           {companyLocations.map((loc, i) => (
             <a
               key={i}

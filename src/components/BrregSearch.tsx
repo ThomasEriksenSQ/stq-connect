@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 interface BrregResult {
   navn: string;
   organisasjonsnummer: string;
+  slettedato?: string;
   forretningsadresse?: {
     adresse?: string[];
     kommune?: string;
@@ -28,6 +29,7 @@ interface BrregSearchProps {
     zip_code: string;
     address: string;
     industry: string;
+    slettedato?: string;
   }) => void;
   placeholder?: string;
   showSearchIcon?: boolean;
@@ -43,6 +45,7 @@ interface BrregSearchProps {
   resultMetaStyle?: CSSProperties;
   emptyStateClassName?: string;
   emptyStateStyle?: CSSProperties;
+  required?: boolean;
 }
 
 const searchBRREG = async (query: string): Promise<BrregResult[]> => {
@@ -87,6 +90,7 @@ export const BrregSearch = ({
   resultMetaStyle,
   emptyStateClassName,
   emptyStateStyle,
+  required = true,
 }: BrregSearchProps) => {
   const [results, setResults] = useState<BrregResult[]>([]);
   const [loading, setLoading] = useState(false);
@@ -147,6 +151,7 @@ export const BrregSearch = ({
       zip_code: r.forretningsadresse?.postnummer || "",
       address: r.forretningsadresse?.adresse?.filter(Boolean).join(", ") || "",
       industry: r.naeringskode1?.beskrivelse || "",
+      slettedato: r.slettedato,
     });
     setShowDropdown(false);
     setResults([]);
@@ -162,7 +167,7 @@ export const BrregSearch = ({
           value={value}
           onChange={(e) => onChange(e.target.value)}
           onFocus={() => { if (results.length > 0 || noResults) setShowDropdown(true); }}
-          required
+          required={required}
           placeholder={placeholder}
           className={cn("h-10 rounded-lg pr-9", showSearchIcon ? "pl-9" : undefined, inputClassName)}
           style={inputStyle}

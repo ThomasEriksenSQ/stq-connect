@@ -57,6 +57,7 @@ type RowResult = {
   name: string | null;
   org_number: string | null;
   status: string;
+  brreg_deleted_at?: string | null;
   geo_areas?: GeoArea[];
   changes?: Record<string, { from: unknown; to: unknown }>;
   error?: string;
@@ -70,12 +71,14 @@ type Summary = {
   missingOrg: number;
   invalidOrg: number;
   deleted: number;
+  orgNumberReview: number;
   notFound: number;
   errors: number;
   unresolvedGeo: number;
   hasMore: boolean;
   nextOffset: number;
   rows: RowResult[];
+  deletedRows: RowResult[];
 };
 
 const AREA_PLACE_KEYS: Array<{ area: GeoArea; places: string[] }> = [
@@ -283,7 +286,7 @@ function resolveGeo(input: {
 }
 
 function brregStatus(entity: BrregEntity) {
-  if (entity.slettedato) return "deleted";
+  if (entity.slettedato) return "org_number_needs_review";
   if (entity.konkurs || entity.underKonkursbehandling) return "bankrupt";
   if (entity.underAvvikling || entity.underTvangsavviklingEllerTvangsopplosning) return "winding_up";
   return "active";
@@ -374,12 +377,14 @@ Deno.serve(async (req) => {
       missingOrg: 0,
       invalidOrg: 0,
       deleted: 0,
+      orgNumberReview: 0,
       notFound: 0,
       errors: 0,
       unresolvedGeo: 0,
       hasMore: count ? offset + (companies?.length || 0) < count : (companies?.length || 0) === limit,
       nextOffset: offset + (companies?.length || 0),
       rows: [],
+      deletedRows: [],
     };
 
     for (const company of (companies || []) as CompanyRow[]) {
@@ -458,33 +463,49 @@ Deno.serve(async (req) => {
 
         const fields = getBrregFields(brreg.entity);
         const status = brregStatus(brreg.entity);
-        if (status === "deleted") summary.deleted++;
+        const orgNumberNeedsReview = status === "org_number_needs_review";
+        if (orgNumberNeedsReview) {
+          summary.deleted++;
+          summary.orgNumberReview++;
+        }
 
         const geo = resolveGeo({
-          city: fields.city || company.city,
-          address: fields.address || company.address,
-          zip_code: fields.zip_code || company.zip_code,
+          city: orgNumberNeedsReview ? company.city : fields.city || company.city,
+          address: orgNumberNeedsReview ? company.address : fields.address || company.address,
+          zip_code: orgNumberNeedsReview ? company.zip_code : fields.zip_code || company.zip_code,
           existingAreas: company.geo_areas,
           existingSource: company.geo_source,
         });
         if (geo.areas.includes("Ukjent sted")) summary.unresolvedGeo++;
 
-        const updates = {
-          name: fields.name || company.name,
-          org_number: fields.org_number || orgNumber,
-          address: fields.address || company.address,
-          city: fields.city || company.city,
-          zip_code: fields.zip_code || company.zip_code,
-          industry: fields.industry || company.industry,
-          geo_areas: geo.areas,
-          geo_source: geo.source,
-          geo_unresolved_places: geo.unresolvedPlaces,
-          geo_updated_at: now,
-          brreg_status: status,
-          brreg_synced_at: now,
-          brreg_deleted_at: brreg.entity.slettedato || null,
-          brreg_last_error: null,
-        };
+        const updates = orgNumberNeedsReview
+          ? {
+              org_number: orgNumber,
+              geo_areas: geo.areas,
+              geo_source: geo.source,
+              geo_unresolved_places: geo.unresolvedPlaces,
+              geo_updated_at: now,
+              brreg_status: status,
+              brreg_synced_at: now,
+              brreg_deleted_at: null,
+              brreg_last_error: `Org.nr ${orgNumber} er slettet i BRREG (${brreg.entity.slettedato}). Avklar korrekt org.nr manuelt.`,
+            }
+          : {
+              name: fields.name || company.name,
+              org_number: fields.org_number || orgNumber,
+              address: fields.address || company.address,
+              city: fields.city || company.city,
+              zip_code: fields.zip_code || company.zip_code,
+              industry: fields.industry || company.industry,
+              geo_areas: geo.areas,
+              geo_source: geo.source,
+              geo_unresolved_places: geo.unresolvedPlaces,
+              geo_updated_at: now,
+              brreg_status: status,
+              brreg_synced_at: now,
+              brreg_deleted_at: null,
+              brreg_last_error: null,
+            };
         const changes = buildChanges(company, updates);
         if (Object.keys(changes).length > 0) {
           summary.updated++;
@@ -492,9 +513,17 @@ Deno.serve(async (req) => {
         } else {
           summary.unchanged++;
         }
-        if (summary.rows.length < 50) {
-          summary.rows.push({ id: company.id, name: company.name, org_number: orgNumber, status, geo_areas: geo.areas, changes });
-        }
+        const rowResult = {
+          id: company.id,
+          name: company.name,
+          org_number: orgNumber,
+          status,
+          brreg_deleted_at: brreg.entity.slettedato || null,
+          geo_areas: geo.areas,
+          changes,
+        };
+        if (orgNumberNeedsReview && summary.deletedRows.length < 100) summary.deletedRows.push(rowResult);
+        if (summary.rows.length < 50) summary.rows.push(rowResult);
 
         await new Promise((resolve) => setTimeout(resolve, 60));
       } catch (err) {

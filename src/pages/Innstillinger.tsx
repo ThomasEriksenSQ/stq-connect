@@ -38,6 +38,14 @@ type SentCvSyncResult = {
 
 type BrregWashAction = "preview" | "execute";
 
+type BrregWashRow = {
+  id: string;
+  name: string | null;
+  org_number: string | null;
+  status: string;
+  brreg_deleted_at?: string | null;
+};
+
 type BrregWashResult = {
   action: BrregWashAction;
   scanned: number;
@@ -46,18 +54,32 @@ type BrregWashResult = {
   missingOrg: number;
   invalidOrg: number;
   deleted: number;
+  orgNumberReview?: number;
   notFound: number;
   errors: number;
   unresolvedGeo: number;
   hasMore?: boolean;
   nextOffset?: number;
-  rows?: Array<unknown>;
+  rows?: BrregWashRow[];
+  deletedRows?: BrregWashRow[];
 };
 
 type BrregWashAggregate = BrregWashResult & {
   batches: number;
-  rows: Array<unknown>;
+  rows: BrregWashRow[];
+  deletedRows: BrregWashRow[];
 };
+
+function getBrregOrgNumberReviewCount(result: BrregWashResult) {
+  return result.orgNumberReview ?? result.deleted;
+}
+
+function formatBrregDeletedDate(value?: string | null) {
+  if (!value) return "";
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return value;
+  return parsed.toLocaleDateString("nb-NO");
+}
 
 function useSentCvSync() {
   const [sentCvLookbackDays, setSentCvLookbackDays] = useState<string>("14");
@@ -117,6 +139,7 @@ function emptyBrregWashAggregate(action: BrregWashAction): BrregWashAggregate {
     missingOrg: 0,
     invalidOrg: 0,
     deleted: 0,
+    orgNumberReview: 0,
     notFound: 0,
     errors: 0,
     unresolvedGeo: 0,
@@ -124,6 +147,7 @@ function emptyBrregWashAggregate(action: BrregWashAction): BrregWashAggregate {
     nextOffset: 0,
     batches: 0,
     rows: [],
+    deletedRows: [],
   };
 }
 
@@ -136,6 +160,7 @@ function mergeBrregWashResult(current: BrregWashAggregate, next: BrregWashResult
     missingOrg: current.missingOrg + next.missingOrg,
     invalidOrg: current.invalidOrg + next.invalidOrg,
     deleted: current.deleted + next.deleted,
+    orgNumberReview: getBrregOrgNumberReviewCount(current) + getBrregOrgNumberReviewCount(next),
     notFound: current.notFound + next.notFound,
     errors: current.errors + next.errors,
     unresolvedGeo: current.unresolvedGeo + next.unresolvedGeo,
@@ -143,6 +168,7 @@ function mergeBrregWashResult(current: BrregWashAggregate, next: BrregWashResult
     nextOffset: next.nextOffset,
     batches: current.batches + 1,
     rows: [...current.rows, ...(next.rows || [])].slice(0, 50),
+    deletedRows: [...current.deletedRows, ...(next.deletedRows || [])].slice(0, 100),
   };
 }
 
@@ -416,16 +442,37 @@ function InnstillingerV1() {
             <div className="flex-1 min-w-0">
               <p className="text-[0.9375rem] font-semibold text-foreground">Vask selskaper mot BRREG</p>
               <p className="text-[0.8125rem] text-muted-foreground mt-1">
-                Oppdaterer selskapsinformasjon, markerer slettede enheter og fyller GEO fra postnummer eller sted.
+                Oppdaterer selskapsinformasjon og GEO. Hvis registrert org.nr er slettet i BRREG, flagges selskapet for org.nr-avklaring uten å endre CRM-status.
               </p>
               {brregResult ? (
-                <div className="mt-3 text-[0.8125rem]">
-                  <span className="text-emerald-600 font-medium">{brregResult.updated} oppdateres</span>
-                  <span className="text-muted-foreground ml-2">{brregResult.scanned} skannet</span>
-                  {brregResult.deleted > 0 && <span className="text-amber-600 ml-2">{brregResult.deleted} slettet i BRREG</span>}
-                  {brregResult.unresolvedGeo > 0 && <span className="text-amber-600 ml-2">{brregResult.unresolvedGeo} ukjent GEO</span>}
-                  {brregResult.errors > 0 && <span className="text-red-600 ml-2">{brregResult.errors} feil</span>}
-                </div>
+                <>
+                  <div className="mt-3 text-[0.8125rem]">
+                    <span className="text-emerald-600 font-medium">
+                      {brregResult.updated} {brregResult.action === "execute" ? "oppdatert" : "oppdateres"}
+                    </span>
+                    <span className="text-muted-foreground ml-2">{brregResult.scanned} skannet</span>
+                    {getBrregOrgNumberReviewCount(brregResult) > 0 && <span className="text-amber-600 ml-2">{getBrregOrgNumberReviewCount(brregResult)} org.nr må avklares</span>}
+                    {brregResult.unresolvedGeo > 0 && <span className="text-amber-600 ml-2">{brregResult.unresolvedGeo} ukjent GEO</span>}
+                    {brregResult.errors > 0 && <span className="text-red-600 ml-2">{brregResult.errors} feil</span>}
+                  </div>
+                  {brregResult.deletedRows.length > 0 && (
+                    <div className="mt-2 border-l-2 border-amber-500 pl-3 text-[0.75rem] text-muted-foreground">
+                      <p className="font-medium text-foreground">Org.nr slettet i BRREG, selskap beholdt som aktiv CRM-rad:</p>
+                      <ul className="mt-1 space-y-1">
+                        {brregResult.deletedRows.slice(0, 8).map((row) => (
+                          <li key={row.id}>
+                            {row.name || "Ukjent selskap"}
+                            {row.org_number ? ` (${row.org_number})` : ""}
+                            {row.brreg_deleted_at ? ` - slettedato ${formatBrregDeletedDate(row.brreg_deleted_at)}` : ""}
+                          </li>
+                        ))}
+                      </ul>
+                      {getBrregOrgNumberReviewCount(brregResult) > brregResult.deletedRows.length && (
+                        <p className="mt-1">+ {getBrregOrgNumberReviewCount(brregResult) - brregResult.deletedRows.length} flere til avklaring.</p>
+                      )}
+                    </div>
+                  )}
+                </>
               ) : (
                 <div className="mt-3 text-[0.8125rem] text-muted-foreground">
                   Ingen BRREG-vask kjørt i denne økten.
@@ -749,16 +796,37 @@ export function InnstillingerV2() {
 
         <SectionCard
           title="Vask selskaper mot BRREG"
-          description="Oppdater selskapsinformasjon, marker slettede enheter og fyll GEO fra postnummer eller sted."
+          description="Oppdater selskapsinformasjon og GEO. Hvis registrert org.nr er slettet i BRREG, flagges selskapet for org.nr-avklaring uten å endre CRM-status."
         >
           {brregResult ? (
-            <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", fontSize: 13 }}>
-              <span style={{ color: C.success, fontWeight: 500 }}>{brregResult.updated} oppdateres</span>
-              <span style={{ color: C.textMuted }}>{brregResult.scanned} skannet</span>
-              {brregResult.deleted > 0 && <span style={{ color: C.warning }}>{brregResult.deleted} slettet i BRREG</span>}
-              {brregResult.unresolvedGeo > 0 && <span style={{ color: C.warning }}>{brregResult.unresolvedGeo} ukjent GEO</span>}
-              {brregResult.errors > 0 && <span style={{ color: "#C2410C" }}>{brregResult.errors} feil</span>}
-            </div>
+            <>
+              <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", fontSize: 13 }}>
+                <span style={{ color: C.success, fontWeight: 500 }}>
+                  {brregResult.updated} {brregResult.action === "execute" ? "oppdatert" : "oppdateres"}
+                </span>
+                <span style={{ color: C.textMuted }}>{brregResult.scanned} skannet</span>
+                {getBrregOrgNumberReviewCount(brregResult) > 0 && <span style={{ color: C.warning }}>{getBrregOrgNumberReviewCount(brregResult)} org.nr må avklares</span>}
+                {brregResult.unresolvedGeo > 0 && <span style={{ color: C.warning }}>{brregResult.unresolvedGeo} ukjent GEO</span>}
+                {brregResult.errors > 0 && <span style={{ color: "#C2410C" }}>{brregResult.errors} feil</span>}
+              </div>
+              {brregResult.deletedRows.length > 0 && (
+                <div style={{ borderLeft: `2px solid ${C.warning}`, paddingLeft: 12, fontSize: 12, color: C.textMuted }}>
+                  <p style={{ margin: 0, color: C.text, fontWeight: 500 }}>Org.nr slettet i BRREG, selskap beholdt som aktiv CRM-rad:</p>
+                  <ul style={{ margin: "4px 0 0", paddingLeft: 16 }}>
+                    {brregResult.deletedRows.slice(0, 8).map((row) => (
+                      <li key={row.id}>
+                        {row.name || "Ukjent selskap"}
+                        {row.org_number ? ` (${row.org_number})` : ""}
+                        {row.brreg_deleted_at ? ` - slettedato ${formatBrregDeletedDate(row.brreg_deleted_at)}` : ""}
+                      </li>
+                    ))}
+                  </ul>
+                  {getBrregOrgNumberReviewCount(brregResult) > brregResult.deletedRows.length && (
+                    <p style={{ margin: "4px 0 0" }}>+ {getBrregOrgNumberReviewCount(brregResult) - brregResult.deletedRows.length} flere til avklaring.</p>
+                  )}
+                </div>
+              )}
+            </>
           ) : brregRunningAction ? (
             <StatusDot tone="loading" label="Kjører BRREG-vask..." />
           ) : (
