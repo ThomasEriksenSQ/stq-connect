@@ -108,8 +108,17 @@ const PIPELINE: Record<string, { label: string; color: string; step: number | nu
 
 const REQUEST_TYPE_TAG_COLORS = {
   direct: { background: "#F1F5F9", color: "#334155", border: "1px solid #CBD5E1", fontWeight: 600 },
-  via: { background: "#FEF3C7", color: "#B45309", border: "1px solid #FCD34D", fontWeight: 600 },
+  via: { background: "#FEF3C7", color: "#B45309", border: "1px solid #FDE68A", fontWeight: 600 },
   muted: { background: "#F7F8FA", color: "#8C929C", border: "1px solid #E3E6EB", fontWeight: 500 },
+} as const;
+const VIA_PARTNER_BADGE_STYLE = {
+  height: "auto",
+  minHeight: 20,
+  paddingInline: 10,
+  paddingBlock: 2,
+  fontSize: 11,
+  lineHeight: 1.25,
+  borderRadius: 9999,
 } as const;
 
 const REQUEST_STATUS_TAG_COLORS = {
@@ -914,14 +923,14 @@ function ForespMobileRow({
 function TypeChip({ type }: { type: string | null }) {
   const isDir = type === "DIR" || type === "direktekunde";
   const isVia = type === "VIA" || type === "via_partner";
-  const label = isDir ? "Direkte" : isVia ? "Via" : "—";
+  const label = isDir ? "Direkte" : isVia ? "Via partner" : "—";
   const colors = isDir
     ? REQUEST_TYPE_TAG_COLORS.direct
     : isVia
       ? REQUEST_TYPE_TAG_COLORS.via
       : REQUEST_TYPE_TAG_COLORS.muted;
 
-  return <DesignLabStaticTag colors={colors}>{label}</DesignLabStaticTag>;
+  return <DesignLabStaticTag colors={colors} style={isVia ? VIA_PARTNER_BADGE_STYLE : undefined}>{label}</DesignLabStaticTag>;
 }
 
 function StatusChip({ status, label }: { status: string | null | undefined; label: string }) {

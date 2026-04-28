@@ -51,9 +51,18 @@ const CHIP_OFF = `${CHIP_BASE} border-border text-muted-foreground hover:bg-seco
 const CHIP_ON = `${CHIP_BASE} bg-[#E8ECF5] text-[#1A1C1F] border-[#C5CBE8] font-semibold`;
 const REQUEST_TYPE_TAG_COLORS = {
   direct: { background: "#F1F5F9", color: "#334155", border: "1px solid #CBD5E1", fontWeight: 600 },
-  via: { background: "#FEF3C7", color: "#B45309", border: "1px solid #FCD34D", fontWeight: 600 },
+  via: { background: "#FEF3C7", color: "#B45309", border: "1px solid #FDE68A", fontWeight: 600 },
   broker: { background: "#F5F3FF", color: "#6D28D9", border: "1px solid #DDD6FE", fontWeight: 600 },
   muted: { background: "#F7F8FA", color: "#8C929C", border: "1px solid #E3E6EB", fontWeight: 500 },
+} as const;
+const VIA_PARTNER_BADGE_STYLE = {
+  height: "auto",
+  minHeight: 20,
+  paddingInline: 10,
+  paddingBlock: 2,
+  fontSize: 11,
+  lineHeight: 1.25,
+  borderRadius: 9999,
 } as const;
 const REQUEST_STATUS_TAG_COLORS = {
   sendt_cv: { background: "#FBF3E6", color: "#7D4E00", border: "1px solid #E8D0A0", fontWeight: 600 },
@@ -106,7 +115,11 @@ function TypeBadge({ type }: { type: string | null }) {
     return <DesignLabStaticTag colors={REQUEST_TYPE_TAG_COLORS.direct}>Direkte</DesignLabStaticTag>;
   }
   if (type === "VIA" || type === "via_partner") {
-    return <DesignLabStaticTag colors={REQUEST_TYPE_TAG_COLORS.via}>Via</DesignLabStaticTag>;
+    return (
+      <DesignLabStaticTag colors={REQUEST_TYPE_TAG_COLORS.via} style={VIA_PARTNER_BADGE_STYLE}>
+        Via partner
+      </DesignLabStaticTag>
+    );
   }
   if (type === "via_megler") {
     return <DesignLabStaticTag colors={REQUEST_TYPE_TAG_COLORS.broker}>Megler</DesignLabStaticTag>;
