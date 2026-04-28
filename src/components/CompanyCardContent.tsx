@@ -25,6 +25,8 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -102,6 +104,8 @@ import { useClickWithoutSelection, activateOnEnterOrSpace } from "@/hooks/useCli
 import { lookupByOrgNr } from "@/components/BrregSearch";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
+import { scaleTextMetric, type TextSize } from "@/components/designlab/TextSizeControl";
+import { usePersistentState } from "@/hooks/usePersistentState";
 import {
   filterConsultantMatches,
   formatConsultantMatchFreshness,
@@ -376,6 +380,29 @@ export function CompanyCardContent({
   const [mergeCompanyDialogOpen, setMergeCompanyDialogOpen] = useState(false);
   const [showTechDna, setShowTechDna] = useState(!defaultHidden?.techDna);
   const [showNotes, setShowNotes] = useState(false);
+  const [companyActionMenuOpen, setCompanyActionMenuOpen] = useState(false);
+  const [textSize] = usePersistentState<TextSize>("dl-text-size", "M");
+  const companyActionMenuMetrics = useMemo(
+    () => ({
+      triggerSize: Math.max(scaleTextMetric(32, textSize), 32),
+      triggerIconSize: scaleTextMetric(15, textSize),
+      triggerRadius: scaleTextMetric(8, textSize),
+      menuMinWidth: scaleTextMetric(248, textSize),
+      menuPadding: scaleTextMetric(6, textSize),
+      labelFontSize: scaleTextMetric(10.5, textSize),
+      labelPaddingX: scaleTextMetric(12, textSize),
+      labelPaddingTop: scaleTextMetric(6, textSize),
+      labelPaddingBottom: scaleTextMetric(4, textSize),
+      itemMinHeight: scaleTextMetric(52, textSize),
+      itemPaddingY: scaleTextMetric(10, textSize),
+      itemRadius: scaleTextMetric(10, textSize),
+      itemIconBoxSize: scaleTextMetric(28, textSize),
+      itemIconSize: scaleTextMetric(14, textSize),
+      itemTitleFontSize: scaleTextMetric(12, textSize),
+      itemDescriptionFontSize: scaleTextMetric(10, textSize),
+    }),
+    [textSize],
+  );
   const resetNewContactForm = () => {
     setContactForm({
       first_name: "",
@@ -1586,7 +1613,9 @@ export function CompanyCardContent({
       {/* ── ZONE A: Header ── */}
       <div className="mb-5" style={headerPaddingTop ? { paddingTop: headerPaddingTop } : undefined}>
         <div className="flex items-center gap-3">
-          <h2 className="text-[1.5rem] font-bold truncate flex-1 min-w-0">{companyName}</h2>
+          <h2 className="text-[1.5rem] font-bold truncate flex-1 min-w-0 select-text cursor-text">
+            {companyName}
+          </h2>
           <div className="ml-auto flex items-center gap-2 flex-shrink-0">
             {/* Signal badge */}
             {editable ? (
@@ -1933,30 +1962,184 @@ export function CompanyCardContent({
               onMerged={(targetCompanyId) => {
                 setEditCompanyOpen(false);
                 setMergeCompanyDialogOpen(false);
-                queryClient.invalidateQueries();
-                navigate(getCompanyPath(targetCompanyId));
+                queryClient.removeQueries({ queryKey: crmQueryKeys.companies.detail(companyId), exact: true });
+                void Promise.all([
+                  queryClient.invalidateQueries({ queryKey: crmQueryKeys.companies.all() }),
+                  queryClient.invalidateQueries({ queryKey: crmQueryKeys.contacts.all() }),
+                  queryClient.invalidateQueries({ queryKey: crmQueryKeys.foresporsler.list() }),
+                  queryClient.invalidateQueries({ queryKey: crmQueryKeys.generic.tasks() }),
+                  queryClient.invalidateQueries({ queryKey: crmQueryKeys.companies.detail(targetCompanyId) }),
+                  queryClient.invalidateQueries({ queryKey: crmQueryKeys.companies.contacts(targetCompanyId) }),
+                  queryClient.invalidateQueries({ queryKey: crmQueryKeys.companies.activities(targetCompanyId) }),
+                  queryClient.invalidateQueries({ queryKey: crmQueryKeys.companies.contactActivities(targetCompanyId) }),
+                  queryClient.invalidateQueries({ queryKey: crmQueryKeys.companies.tasks(targetCompanyId) }),
+                  queryClient.invalidateQueries({ queryKey: crmQueryKeys.companies.contactTasks(targetCompanyId) }),
+                  queryClient.invalidateQueries({ queryKey: crmQueryKeys.companies.techProfile(targetCompanyId) }),
+                ]);
+                navigate(getCompanyPath(targetCompanyId), { replace: true });
               }}
             />
             {editable && (
-              <DropdownMenu modal={false}>
+              <DropdownMenu modal={false} open={companyActionMenuOpen} onOpenChange={setCompanyActionMenuOpen}>
                 <DropdownMenuTrigger asChild>
-                  <DesignLabIconButton>
-                    <MoreVertical className="h-4 w-4" />
+                  <DesignLabIconButton
+                    size={32}
+                    aria-label="Flere handlinger"
+                    title="Flere handlinger"
+                    style={{
+                      width: companyActionMenuMetrics.triggerSize,
+                      minWidth: companyActionMenuMetrics.triggerSize,
+                      height: companyActionMenuMetrics.triggerSize,
+                      borderRadius: companyActionMenuMetrics.triggerRadius,
+                      border: `1px solid ${companyActionMenuOpen ? C.borderFocus : C.borderDefault}`,
+                      background: companyActionMenuOpen ? C.panel : "transparent",
+                      color: companyActionMenuOpen ? C.textPrimary : C.textSecondary,
+                      boxShadow: companyActionMenuOpen ? "0 8px 24px rgba(15,23,42,0.10)" : "none",
+                    }}
+                  >
+                    <MoreVertical
+                      style={{
+                        width: companyActionMenuMetrics.triggerIconSize,
+                        height: companyActionMenuMetrics.triggerIconSize,
+                      }}
+                    />
                   </DesignLabIconButton>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" sideOffset={4}>
-                  <DropdownMenuItem onClick={openEditCompanyDialog}>
-                    <Pencil className="h-3.5 w-3.5 mr-2" /> Rediger selskap
-                  </DropdownMenuItem>
+                <DropdownMenuContent
+                  align="end"
+                  sideOffset={8}
+                  className="rounded-[14px] border-[color:var(--dl-border-light)] bg-[color:var(--dl-surface)] shadow-[0_18px_48px_rgba(0,0,0,0.24)] backdrop-blur-[10px]"
+                  style={{
+                    minWidth: companyActionMenuMetrics.menuMinWidth,
+                    padding: companyActionMenuMetrics.menuPadding,
+                  }}
+                >
+                  <DropdownMenuLabel
+                    className="font-semibold uppercase tracking-[0.12em] text-[color:var(--dl-text-faint)]"
+                    style={{
+                      fontSize: companyActionMenuMetrics.labelFontSize,
+                      paddingLeft: companyActionMenuMetrics.labelPaddingX,
+                      paddingRight: companyActionMenuMetrics.labelPaddingX,
+                      paddingTop: companyActionMenuMetrics.labelPaddingTop,
+                      paddingBottom: companyActionMenuMetrics.labelPaddingBottom,
+                    }}
+                  >
+                    Selskap
+                  </DropdownMenuLabel>
                   <DropdownMenuItem
+                    className="rounded-[10px] px-2.5"
+                    style={{
+                      height: "auto",
+                      minHeight: companyActionMenuMetrics.itemMinHeight,
+                      borderRadius: companyActionMenuMetrics.itemRadius,
+                      alignItems: "flex-start",
+                      paddingTop: companyActionMenuMetrics.itemPaddingY,
+                      paddingBottom: companyActionMenuMetrics.itemPaddingY,
+                    }}
+                    onClick={openEditCompanyDialog}
+                  >
+                    <span
+                      className="mt-0.5 flex shrink-0 items-center justify-center rounded-[8px] border border-[color:var(--dl-border-light)] bg-[color:var(--dl-surface-alt)] text-[color:var(--dl-text-muted)]"
+                      style={{
+                        width: companyActionMenuMetrics.itemIconBoxSize,
+                        height: companyActionMenuMetrics.itemIconBoxSize,
+                      }}
+                    >
+                      <Pencil
+                        style={{
+                          width: companyActionMenuMetrics.itemIconSize,
+                          height: companyActionMenuMetrics.itemIconSize,
+                        }}
+                      />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span
+                        className="block truncate font-semibold text-[color:var(--dl-text)]"
+                        style={{ fontSize: companyActionMenuMetrics.itemTitleFontSize }}
+                      >
+                        Rediger selskap
+                      </span>
+                      <span
+                        className="mt-0.5 block text-[color:var(--dl-text-muted)]"
+                        style={{
+                          fontSize: companyActionMenuMetrics.itemDescriptionFontSize,
+                          lineHeight: 1.35,
+                        }}
+                      >
+                        Oppdater selskapsinfo, eierskap og felter.
+                      </span>
+                    </span>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator className="my-2 bg-[color:var(--dl-border-light)]" />
+                  <DropdownMenuLabel
+                    className="font-semibold uppercase tracking-[0.12em] text-[color:var(--dl-text-faint)]"
+                    style={{
+                      fontSize: companyActionMenuMetrics.labelFontSize,
+                      paddingLeft: companyActionMenuMetrics.labelPaddingX,
+                      paddingRight: companyActionMenuMetrics.labelPaddingX,
+                      paddingTop: companyActionMenuMetrics.labelPaddingTop,
+                      paddingBottom: companyActionMenuMetrics.labelPaddingBottom,
+                    }}
+                  >
+                    Visning og verktøy
+                  </DropdownMenuLabel>
+                  <DropdownMenuItem
+                    className="rounded-[10px] px-2.5"
+                    style={{
+                      height: "auto",
+                      minHeight: companyActionMenuMetrics.itemMinHeight,
+                      borderRadius: companyActionMenuMetrics.itemRadius,
+                      alignItems: "flex-start",
+                      paddingTop: companyActionMenuMetrics.itemPaddingY,
+                      paddingBottom: companyActionMenuMetrics.itemPaddingY,
+                    }}
                     onClick={() => {
                       setShowTechDna(true);
                       void handleFinnKonsulenter();
                     }}
                   >
-                    <Target className="h-3.5 w-3.5 mr-2" /> Finn konsulent
+                    <span
+                      className="mt-0.5 flex shrink-0 items-center justify-center rounded-[8px] border border-[color:var(--dl-border-light)] bg-[color:var(--dl-surface-alt)] text-[color:var(--dl-text-muted)]"
+                      style={{
+                        width: companyActionMenuMetrics.itemIconBoxSize,
+                        height: companyActionMenuMetrics.itemIconBoxSize,
+                      }}
+                    >
+                      <Target
+                        style={{
+                          width: companyActionMenuMetrics.itemIconSize,
+                          height: companyActionMenuMetrics.itemIconSize,
+                        }}
+                      />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span
+                        className="block truncate font-semibold text-[color:var(--dl-text)]"
+                        style={{ fontSize: companyActionMenuMetrics.itemTitleFontSize }}
+                      >
+                        Finn konsulent
+                      </span>
+                      <span
+                        className="mt-0.5 block text-[color:var(--dl-text-muted)]"
+                        style={{
+                          fontSize: companyActionMenuMetrics.itemDescriptionFontSize,
+                          lineHeight: 1.35,
+                        }}
+                      >
+                        Kjør match mot tilgjengelige konsulenter.
+                      </span>
+                    </span>
                   </DropdownMenuItem>
                   <DropdownMenuItem
+                    className="rounded-[10px] px-2.5"
+                    style={{
+                      height: "auto",
+                      minHeight: companyActionMenuMetrics.itemMinHeight,
+                      borderRadius: companyActionMenuMetrics.itemRadius,
+                      alignItems: "flex-start",
+                      paddingTop: companyActionMenuMetrics.itemPaddingY,
+                      paddingBottom: companyActionMenuMetrics.itemPaddingY,
+                    }}
                     onClick={() => {
                       if (showNotes) {
                         setShowNotes(false);
@@ -1970,12 +2153,94 @@ export function CompanyCardContent({
                       }
                     }}
                   >
-                    <StickyNote className="h-3.5 w-3.5 mr-2" />
-                    {showNotes ? "Skjul notat" : companyNotes ? "Vis notat" : "Legg til notat"}
+                    <span
+                      className="mt-0.5 flex shrink-0 items-center justify-center rounded-[8px] border border-[color:var(--dl-border-light)] bg-[color:var(--dl-surface-alt)] text-[color:var(--dl-text-muted)]"
+                      style={{
+                        width: companyActionMenuMetrics.itemIconBoxSize,
+                        height: companyActionMenuMetrics.itemIconBoxSize,
+                      }}
+                    >
+                      <StickyNote
+                        style={{
+                          width: companyActionMenuMetrics.itemIconSize,
+                          height: companyActionMenuMetrics.itemIconSize,
+                        }}
+                      />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span
+                        className="block truncate font-semibold text-[color:var(--dl-text)]"
+                        style={{ fontSize: companyActionMenuMetrics.itemTitleFontSize }}
+                      >
+                        {showNotes ? "Skjul notat" : companyNotes ? "Vis notat" : "Legg til notat"}
+                      </span>
+                      <span
+                        className="mt-0.5 block text-[color:var(--dl-text-muted)]"
+                        style={{
+                          fontSize: companyActionMenuMetrics.itemDescriptionFontSize,
+                          lineHeight: 1.35,
+                        }}
+                      >
+                        {companyNotes
+                          ? "Åpne eller skjul interne notater på selskapskortet."
+                          : "Opprett et nytt notat direkte på selskapet."}
+                      </span>
+                    </span>
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setShowTechDna((prev) => !prev)}>
-                    {showTechDna ? <EyeOff className="h-3.5 w-3.5 mr-2" /> : <Eye className="h-3.5 w-3.5 mr-2" />}
-                    {showTechDna ? "Skjul teknisk DNA" : "Vis teknisk DNA"}
+                  <DropdownMenuItem
+                    className="rounded-[10px] px-2.5"
+                    style={{
+                      height: "auto",
+                      minHeight: companyActionMenuMetrics.itemMinHeight,
+                      borderRadius: companyActionMenuMetrics.itemRadius,
+                      alignItems: "flex-start",
+                      paddingTop: companyActionMenuMetrics.itemPaddingY,
+                      paddingBottom: companyActionMenuMetrics.itemPaddingY,
+                    }}
+                    onClick={() => setShowTechDna((prev) => !prev)}
+                  >
+                    <span
+                      className="mt-0.5 flex shrink-0 items-center justify-center rounded-[8px] border border-[color:var(--dl-border-light)] bg-[color:var(--dl-surface-alt)] text-[color:var(--dl-text-muted)]"
+                      style={{
+                        width: companyActionMenuMetrics.itemIconBoxSize,
+                        height: companyActionMenuMetrics.itemIconBoxSize,
+                      }}
+                    >
+                      {showTechDna ? (
+                        <EyeOff
+                          style={{
+                            width: companyActionMenuMetrics.itemIconSize,
+                            height: companyActionMenuMetrics.itemIconSize,
+                          }}
+                        />
+                      ) : (
+                        <Eye
+                          style={{
+                            width: companyActionMenuMetrics.itemIconSize,
+                            height: companyActionMenuMetrics.itemIconSize,
+                          }}
+                        />
+                      )}
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span
+                        className="block truncate font-semibold text-[color:var(--dl-text)]"
+                        style={{ fontSize: companyActionMenuMetrics.itemTitleFontSize }}
+                      >
+                        {showTechDna ? "Skjul teknisk DNA" : "Vis teknisk DNA"}
+                      </span>
+                      <span
+                        className="mt-0.5 block text-[color:var(--dl-text-muted)]"
+                        style={{
+                          fontSize: companyActionMenuMetrics.itemDescriptionFontSize,
+                          lineHeight: 1.35,
+                        }}
+                      >
+                        {showTechDna
+                          ? "Skjul teknologier og identifiserte behov."
+                          : "Vis teknologier og identifiserte behov."}
+                      </span>
+                    </span>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>

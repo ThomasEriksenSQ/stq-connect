@@ -14,6 +14,7 @@ import { Plus, Search, ArrowUpDown, Loader2, X, ChevronDown, Map as MapIcon } fr
 import { toast } from "@/components/ui/sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { usePersistentState } from "@/hooks/usePersistentState";
+import { cn } from "@/lib/utils";
 
 import { BrregSearch, lookupByOrgNr } from "@/components/BrregSearch";
 import {
@@ -837,7 +838,12 @@ const Companies = () => {
                         );
                         const label = t?.label || company.status;
                         return (
-                          <button className="inline-flex items-center rounded-full border border-border px-3 py-1 text-[0.75rem] font-medium text-muted-foreground hover:text-foreground transition-colors text-left cursor-pointer">
+                          <button
+                            className={cn(
+                              "inline-flex items-center rounded-full border px-3 py-1 text-[0.75rem] font-medium transition-colors text-left cursor-pointer",
+                              t?.badgeColor || "border-border text-muted-foreground hover:text-foreground",
+                            )}
+                          >
                             {label}
                             <ChevronDown className="ml-1 h-3 w-3 flex-shrink-0" />
                           </button>
@@ -888,7 +894,12 @@ const Companies = () => {
                           );
                           const label = t?.label || company.status;
                           return (
-                            <button className="inline-flex items-center text-[0.8125rem] text-muted-foreground hover:text-foreground transition-colors text-left cursor-pointer">
+                            <button
+                              className={cn(
+                                "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors text-left cursor-pointer",
+                                t?.badgeColor || "border-border text-muted-foreground hover:text-foreground",
+                              )}
+                            >
                               {label}
                               <ChevronDown className="h-3 w-3 ml-1 flex-shrink-0" />
                             </button>

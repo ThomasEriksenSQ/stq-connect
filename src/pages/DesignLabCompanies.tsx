@@ -14,7 +14,7 @@ import {
 import { differenceInDays } from "date-fns";
 import { getEffectiveSignal, normalizeCategoryLabel } from "@/lib/categoryUtils";
 import { useAuth } from "@/hooks/useAuth";
-import { C } from "@/components/designlab/theme";
+import { C, SIGNAL_COLORS } from "@/components/designlab/theme";
 import { crmQueryKeys } from "@/lib/queryKeys";
 import { DesignLabMobileNavButton, DesignLabSidebar } from "@/components/designlab/DesignLabSidebar";
 import { CommandPalette } from "@/components/designlab/CommandPalette";
@@ -104,6 +104,17 @@ const TYPE_LABEL_TO_VALUE: Record<string, string> = {
   "Partner": "partner",
   "Ikke relevant selskap": "churned",
 };
+
+const IKKE_RELEVANT_COMPANY_TAG_COLORS = {
+  background: SIGNAL_COLORS["Ikke aktuelt"].bg,
+  color: SIGNAL_COLORS["Ikke aktuelt"].color,
+  border: `1px solid ${SIGNAL_COLORS["Ikke aktuelt"].border}`,
+  fontWeight: 500,
+};
+
+function getCompanyTypeTagColors(status: string | null | undefined) {
+  return status === "churned" ? IKKE_RELEVANT_COMPANY_TAG_COLORS : undefined;
+}
 
 type SortField = "name" | "type" | "signal" | "city" | "last_activity" | "tasks";
 type SortDir = "asc" | "desc";
@@ -540,7 +551,7 @@ export default function DesignLabCompanies() {
 
         {/* Type */}
         <div className="min-w-0">
-          <DesignLabStaticTag className="max-w-full">
+          <DesignLabStaticTag className="max-w-full" colors={getCompanyTypeTagColors(company.status)}>
             <span className="truncate">{typeLabel}</span>
           </DesignLabStaticTag>
         </div>
@@ -593,7 +604,7 @@ export default function DesignLabCompanies() {
               {company.city || "Sted ikke satt"}
             </p>
           </div>
-          <DesignLabStaticTag>
+          <DesignLabStaticTag colors={getCompanyTypeTagColors(company.status)}>
             <span className="truncate">{typeLabel}</span>
           </DesignLabStaticTag>
         </div>

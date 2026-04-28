@@ -1470,7 +1470,7 @@ export function ContactCardContent({
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-x-2.5 gap-y-2">
               {canEditProfile ? (
-                <h2 className="min-w-0 shrink text-[1.5rem] font-bold truncate">
+                <h2 className="min-w-0 shrink text-[1.5rem] font-bold truncate select-text cursor-text">
                   <InlineField
                     value={`${contact.first_name} ${contact.last_name}`}
                     onSave={(v) => {
@@ -1479,11 +1479,11 @@ export function ContactCardContent({
                       const last = parts.slice(1).join(" ") || "";
                       updateMutation.mutate({ first_name: first, last_name: last });
                     }}
-                    className="text-[1.5rem] font-bold text-foreground"
+                    className="text-[1.5rem] font-bold text-foreground select-text"
                   />
                 </h2>
               ) : (
-                <h2 className="min-w-0 shrink text-[1.5rem] font-bold truncate">
+                <h2 className="min-w-0 shrink text-[1.5rem] font-bold truncate select-text cursor-text">
                   {contact.first_name} {contact.last_name}
                 </h2>
               )}
