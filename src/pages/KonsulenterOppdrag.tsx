@@ -831,7 +831,7 @@ function OppdragSummaryCard({
 function OppdragStatusTag({ status }: { status: string }) {
   const colors =
     status === "Aktiv"
-      ? DESIGN_LAB_NEUTRAL_TAG_ACTIVE_COLORS
+      ? { background: C.successBg, color: C.success, border: `1px solid ${C.statusNeutralBorder}`, fontWeight: 600 }
       : status === "Oppstart"
         ? { background: C.warningBg, color: C.warning, border: `1px solid ${C.statusNeutralBorder}`, fontWeight: 600 }
         : DESIGN_LAB_NEUTRAL_TAG_INACTIVE_COLORS;
