@@ -1114,6 +1114,12 @@ export default function DesignLabContacts() {
     [fallbackContacts, isLoadingParity, parityContacts, rawContacts.length],
   );
 
+  useEffect(() => {
+    if (!selectedId || isLoading || isLoadingParity) return;
+    if (contacts.some((contact) => contact.id === selectedId)) return;
+    setSelectedId(null);
+  }, [contacts, isLoading, isLoadingParity, selectedId]);
+
   const selectedConsultant = useMemo(
     () => sortedConsultants.find((consultant) => consultant.id === selectedConsultantId) ?? null,
     [selectedConsultantId, sortedConsultants],
@@ -3011,6 +3017,7 @@ export default function DesignLabContacts() {
                         editable
                         enableProfileEditMode
                         headerPaddingTop={12}
+                        onDeleted={() => setSelectedId(null)}
                         onDataChanged={() => {
                           void invalidateDesignLabQueries();
                         }}
@@ -3065,6 +3072,7 @@ export default function DesignLabContacts() {
                 editable
                 enableProfileEditMode
                 headerPaddingTop={12}
+                onDeleted={() => setSelectedId(null)}
                 onDataChanged={() => {
                   void invalidateDesignLabQueries();
                 }}

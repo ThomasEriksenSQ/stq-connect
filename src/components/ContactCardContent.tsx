@@ -170,6 +170,7 @@ interface ContactCardContentProps {
   onNavigateToFullPage?: () => void;
   defaultHidden?: DefaultHiddenConfig;
   onDataChanged?: () => void;
+  onDeleted?: (contactId: string) => void;
   headerPaddingTop?: number;
 }
 
@@ -652,6 +653,7 @@ export function ContactCardContent({
   onNavigateToFullPage,
   defaultHidden,
   onDataChanged,
+  onDeleted,
   headerPaddingTop = 0,
 }: ContactCardContentProps) {
   const { user } = useAuth();
@@ -1019,6 +1021,7 @@ export function ContactCardContent({
       if (error) throw error;
     },
     onSuccess: () => {
+      onDeleted?.(contactId);
       setEditSheetOpen(false);
       queryClient.removeQueries({ queryKey: crmQueryKeys.contacts.detail(contactId) });
       queryClient.invalidateQueries({ queryKey: crmQueryKeys.contacts.all() });
@@ -1032,7 +1035,7 @@ export function ContactCardContent({
       invalidateQueryGroup(queryClient, crmSummaryQueryKeys);
       notifyDataChanged();
       toast.success("Kontakt slettet");
-      navigate(getNavPath("contacts"));
+      if (!onDeleted) navigate(getNavPath("contacts"));
     },
     onError: () => toast.error("Kunne ikke slette kontakt"),
   });
