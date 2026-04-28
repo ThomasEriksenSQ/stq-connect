@@ -121,6 +121,9 @@ type CompanyPreview = {
   address: string | null;
   city: string | null;
   zip_code: string | null;
+  geo_areas: string[] | null;
+  geo_source: string | null;
+  geo_unresolved_places: string[] | null;
   status: string | null;
   ikke_relevant: boolean | null;
   owner_id: string | null;
@@ -545,7 +548,7 @@ export default function DesignLabContacts() {
       const { data, error } = await supabase
         .from("contacts")
         .select(
-          "id, first_name, last_name, title, email, phone, cv_email, call_list, ikke_aktuell_kontakt, teknologier, company_id, location, linkedin, department, notes, locations, mailchimp_status, owner_id, companies(id, name, address, city, zip_code, status, ikke_relevant, owner_id, profiles!companies_owner_id_fkey(id, full_name)), profiles!contacts_owner_id_fkey(id, full_name)",
+          "id, first_name, last_name, title, email, phone, cv_email, call_list, ikke_aktuell_kontakt, teknologier, company_id, location, linkedin, department, notes, locations, mailchimp_status, owner_id, companies(id, name, address, city, zip_code, geo_areas, geo_source, geo_unresolved_places, status, ikke_relevant, owner_id, profiles!companies_owner_id_fkey(id, full_name)), profiles!contacts_owner_id_fkey(id, full_name)",
         )
         .order("updated_at", { ascending: false })
         .limit(2000);
@@ -624,7 +627,7 @@ export default function DesignLabContacts() {
       const { data, error } = await supabase
         .from("foresporsler")
         .select(
-          "id, selskap_id, kontakt_id, selskap_navn, sted, mottatt_dato, frist_dato, status, teknologier, companies!foresporsler_selskap_id_fkey(id, name, address, city, zip_code, status, ikke_relevant, owner_id, profiles!companies_owner_id_fkey(id, full_name)), contacts!foresporsler_kontakt_id_fkey(id, first_name, last_name, title)",
+          "id, selskap_id, kontakt_id, selskap_navn, sted, mottatt_dato, frist_dato, status, teknologier, companies!foresporsler_selskap_id_fkey(id, name, address, city, zip_code, geo_areas, geo_source, geo_unresolved_places, status, ikke_relevant, owner_id, profiles!companies_owner_id_fkey(id, full_name)), contacts!foresporsler_kontakt_id_fkey(id, first_name, last_name, title)",
         )
         .not("kontakt_id", "is", null)
         .not("selskap_id", "is", null)
@@ -677,7 +680,7 @@ export default function DesignLabContacts() {
       const { data, error } = await supabase
         .from("company_tech_profile")
         .select(
-          "company_id, sist_fra_finn, teknologier, companies!company_tech_profile_company_id_fkey(id, name, address, city, zip_code, status, ikke_relevant, owner_id, profiles!companies_owner_id_fkey(id, full_name))",
+          "company_id, sist_fra_finn, teknologier, companies!company_tech_profile_company_id_fkey(id, name, address, city, zip_code, geo_areas, geo_source, geo_unresolved_places, status, ikke_relevant, owner_id, profiles!companies_owner_id_fkey(id, full_name))",
         )
         .not("company_id", "is", null)
         .limit(5000);
@@ -759,7 +762,7 @@ export default function DesignLabContacts() {
       const { data, error } = await supabase
         .from("contacts")
         .select(
-          "*, companies(id, name, address, city, zip_code, status, ikke_relevant, owner_id, profiles!companies_owner_id_fkey(id, full_name)), profiles!contacts_owner_id_fkey(id, full_name)",
+          "*, companies(id, name, address, city, zip_code, geo_areas, geo_source, geo_unresolved_places, status, ikke_relevant, owner_id, profiles!companies_owner_id_fkey(id, full_name)), profiles!contacts_owner_id_fkey(id, full_name)",
         )
         .order("updated_at", { ascending: false })
         .limit(2000);
@@ -782,14 +785,14 @@ export default function DesignLabContacts() {
         supabase
           .from("company_tech_profile")
           .select(
-            "company_id, sist_fra_finn, teknologier, companies!company_tech_profile_company_id_fkey(id, name, address, city, zip_code, status, ikke_relevant, owner_id, profiles!companies_owner_id_fkey(id, full_name))",
+            "company_id, sist_fra_finn, teknologier, companies!company_tech_profile_company_id_fkey(id, name, address, city, zip_code, geo_areas, geo_source, geo_unresolved_places, status, ikke_relevant, owner_id, profiles!companies_owner_id_fkey(id, full_name))",
           )
           .not("company_id", "is", null)
           .limit(5000),
         supabase
           .from("foresporsler")
           .select(
-            "id, selskap_id, kontakt_id, selskap_navn, sted, mottatt_dato, frist_dato, status, teknologier, companies!foresporsler_selskap_id_fkey(id, name, address, city, zip_code, status, ikke_relevant, owner_id, profiles!companies_owner_id_fkey(id, full_name)), contacts!foresporsler_kontakt_id_fkey(id, first_name, last_name, title)",
+            "id, selskap_id, kontakt_id, selskap_navn, sted, mottatt_dato, frist_dato, status, teknologier, companies!foresporsler_selskap_id_fkey(id, name, address, city, zip_code, geo_areas, geo_source, geo_unresolved_places, status, ikke_relevant, owner_id, profiles!companies_owner_id_fkey(id, full_name)), contacts!foresporsler_kontakt_id_fkey(id, first_name, last_name, title)",
           )
           .not("kontakt_id", "is", null)
           .not("selskap_id", "is", null)

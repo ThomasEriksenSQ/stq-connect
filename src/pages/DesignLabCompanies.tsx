@@ -29,8 +29,19 @@ import {
   companyMatchesGeoFilter,
   getGeoFilterDescription,
   normalizeGeoFilter,
+  resolveCompanyGeoAreas,
   type GeoFilter,
 } from "@/lib/companyGeoAreas";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
   DesignLabEntitySheet,
 } from "@/components/designlab/DesignLabEntitySheet";
@@ -105,6 +116,8 @@ const TYPE_LABEL_TO_VALUE: Record<string, string> = {
   "Ikke relevant selskap": "churned",
 };
 
+const GEO_OVERRIDE_OPTIONS = GEO_FILTERS.filter((option): option is Exclude<GeoFilter, "Alle"> => option !== "Alle");
+
 const IKKE_RELEVANT_COMPANY_TAG_COLORS = {
   background: SIGNAL_COLORS["Ikke aktuelt"].bg,
   color: SIGNAL_COLORS["Ikke aktuelt"].color,
@@ -151,7 +164,7 @@ function OrgNrInput({
 }: {
   value: string;
   onChange: (v: string) => void;
-  onLookup: (name: string | null, city: string | null) => void;
+  onLookup: (result: { name: string | null; city: string | null; zip_code: string | null; address: string | null; industry: string | null }) => void;
   className?: string;
   style?: CSSProperties;
 }) {
@@ -170,7 +183,15 @@ function OrgNrInput({
     timerRef.current = setTimeout(async () => {
       setLoading(true);
       const r = await lookupByOrgNr(cleaned);
-      if (r) onLookupRef.current(r.navn, r.forretningsadresse?.kommune || null);
+      if (r) {
+        onLookupRef.current({
+          name: r.navn,
+          city: r.forretningsadresse?.poststed || r.forretningsadresse?.kommune || null,
+          zip_code: r.forretningsadresse?.postnummer || null,
+          address: r.forretningsadresse?.adresse?.filter(Boolean).join(", ") || null,
+          industry: r.naeringskode1?.beskrivelse || null,
+        });
+      }
       setLoading(false);
     }, 400);
     return () => clearTimeout(timerRef.current);
@@ -222,12 +243,17 @@ export default function DesignLabCompanies() {
     name: "",
     org_number: "",
     city: "",
+    zip_code: "",
+    address: "",
+    industry: "",
     website: "",
     linkedin: "",
     status: "prospect",
     owner_id: "",
   });
   const [createLocations, setCreateLocations] = useState<string[]>([""]);
+  const [createGeoOverride, setCreateGeoOverride] = useState<GeoFilter | "">("");
+  const [confirmCreateWithoutOrgOpen, setConfirmCreateWithoutOrgOpen] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -258,6 +284,9 @@ export default function DesignLabCompanies() {
             name: prefillCompanyName,
             org_number: "",
             city: "",
+            zip_code: "",
+            address: "",
+            industry: "",
             website: "",
             linkedin: "",
             status: "prospect",
@@ -397,26 +426,64 @@ export default function DesignLabCompanies() {
       name: "",
       org_number: "",
       city: "",
+      zip_code: "",
+      address: "",
+      industry: "",
       website: "",
       linkedin: "",
       status: "prospect",
       owner_id: "",
     });
     setCreateLocations([""]);
+    setCreateGeoOverride("");
+    setConfirmCreateWithoutOrgOpen(false);
   }, []);
+
+  const getCreateCompanyGeoResolution = useCallback(() => {
+    const finalLocations = createLocations.map((location) => location.trim()).filter(Boolean);
+    if (createGeoOverride) {
+      return {
+        cityValue: finalLocations.length > 0 ? finalLocations.join(", ") : createForm.city || null,
+        areas: [createGeoOverride],
+        source: "manual",
+        unresolvedPlaces: [],
+      };
+    }
+
+    const cityValue = finalLocations.length > 0 ? finalLocations.join(", ") : createForm.city || null;
+    const resolution = resolveCompanyGeoAreas({
+      city: cityValue,
+      address: createForm.address,
+      zip_code: createForm.zip_code,
+      locations: finalLocations,
+    });
+
+    return {
+      cityValue,
+      areas: resolution.areas,
+      source: resolution.source,
+      unresolvedPlaces: resolution.unresolvedPlaces,
+    };
+  }, [createForm.address, createForm.city, createForm.zip_code, createGeoOverride, createLocations]);
 
   const createMutation = useMutation({
     mutationFn: async () => {
-      const finalLocations = createLocations.map((location) => location.trim()).filter(Boolean);
-      const cityValue = finalLocations.length > 0 ? finalLocations.join(", ") : createForm.city || null;
+      const geoResolution = getCreateCompanyGeoResolution();
       const { data, error } = await supabase
         .from("companies")
         .insert({
           name: createForm.name,
           org_number: createForm.org_number || null,
-          city: cityValue,
+          address: createForm.address || null,
+          city: geoResolution.cityValue,
+          zip_code: createForm.zip_code || null,
+          industry: createForm.industry || null,
           website: createForm.website || null,
           linkedin: createForm.linkedin || null,
+          geo_areas: geoResolution.areas,
+          geo_source: geoResolution.source,
+          geo_unresolved_places: geoResolution.unresolvedPlaces,
+          geo_updated_at: new Date().toISOString(),
           created_by: user?.id,
           status: createForm.status,
           owner_id: createForm.owner_id || null,
@@ -428,6 +495,7 @@ export default function DesignLabCompanies() {
     },
     onSuccess: (createdCompany) => {
       queryClient.invalidateQueries({ queryKey: crmQueryKeys.companies.all() });
+      setConfirmCreateWithoutOrgOpen(false);
       if (createdCompany?.id) {
         setSelectedId(createdCompany.id);
         const nextParams = new URLSearchParams(searchParams);
@@ -448,6 +516,25 @@ export default function DesignLabCompanies() {
       toast.error("Kunne ikke opprette selskap");
     },
   });
+
+  const handleCreateCompanySubmit = useCallback(() => {
+    if (!createForm.name.trim() || createMutation.isPending) return;
+    const cleanedOrgNumber = createForm.org_number.replace(/\D/g, "");
+    const geoResolution = getCreateCompanyGeoResolution();
+
+    if (!cleanedOrgNumber) {
+      if (geoResolution.areas.includes("Ukjent sted") && !createGeoOverride) {
+        toast.warning("Velg GEO-område før du oppretter et selskap uten organisasjonsnummer.");
+        return;
+      }
+      setConfirmCreateWithoutOrgOpen(true);
+      return;
+    }
+
+    createMutation.mutate();
+  }, [createForm.name, createForm.org_number, createGeoOverride, createMutation, getCreateCompanyGeoResolution]);
+
+  const createGeoPreview = getCreateCompanyGeoResolution();
 
   const toggleSort = useCallback((field: SortField) => {
     setSort((p) => p.field === field ? { field, dir: p.dir === "asc" ? "desc" : "asc" } : { field, dir: field === "last_activity" ? "desc" : "asc" });
@@ -874,6 +961,9 @@ export default function DesignLabCompanies() {
                     name: result.name,
                     org_number: result.org_number,
                     city: result.city,
+                    zip_code: result.zip_code,
+                    address: result.address,
+                    industry: result.industry,
                   }))
                 }
                 showSearchIcon={false}
@@ -887,11 +977,14 @@ export default function DesignLabCompanies() {
               <OrgNrInput
                 value={createForm.org_number}
                 onChange={(org_number) => setCreateForm((prev) => ({ ...prev, org_number }))}
-                onLookup={(name, city) =>
+                onLookup={(result) =>
                   setCreateForm((prev) => ({
                     ...prev,
-                    name: name || prev.name,
-                    city: city || prev.city,
+                    name: result.name || prev.name,
+                    city: result.city || prev.city,
+                    zip_code: result.zip_code || prev.zip_code,
+                    address: result.address || prev.address,
+                    industry: result.industry || prev.industry,
                   }))
                 }
                 className="text-[0.875rem]"
@@ -929,7 +1022,7 @@ export default function DesignLabCompanies() {
           className="space-y-5"
           onSubmit={(e) => {
             e.preventDefault();
-            createMutation.mutate();
+            handleCreateCompanySubmit();
           }}
         >
           <div>
@@ -966,6 +1059,30 @@ export default function DesignLabCompanies() {
                 <Plus className="h-3.5 w-3.5" />
                 Legg til sted
               </button>
+            </div>
+          </div>
+
+          <div>
+            <AktivOppdragLabel>GEO-filter</AktivOppdragLabel>
+            <div className="space-y-2 rounded-lg border border-border bg-muted/20 p-3">
+              <div className="flex flex-wrap gap-1.5">
+                {GEO_OVERRIDE_OPTIONS.map((option) => (
+                  <AktivOppdragChip
+                    key={option}
+                    onClick={() => setCreateGeoOverride((current) => (current === option ? "" : option))}
+                    active={createGeoOverride === option}
+                  >
+                    {option}
+                  </AktivOppdragChip>
+                ))}
+              </div>
+              <p className="text-[0.8125rem] text-muted-foreground">
+                {createGeoOverride
+                  ? `Manuelt satt til ${createGeoOverride}.`
+                  : createGeoPreview.areas.includes("Ukjent sted")
+                    ? "Stedet fanges ikke automatisk. Velg riktig GEO-område før du oppretter selskap uten org.nr."
+                    : `Fanges automatisk av ${createGeoPreview.areas.join(", ")}.`}
+              </p>
             </div>
           </div>
 
@@ -1030,6 +1147,29 @@ export default function DesignLabCompanies() {
           )}
         </form>
       </AktivOppdragStyleSheet>
+
+      <AlertDialog open={confirmCreateWithoutOrgOpen} onOpenChange={setConfirmCreateWithoutOrgOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Opprett selskap uten organisasjonsnummer?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Selskapet kan ikke vaskes automatisk mot BRREG uten organisasjonsnummer. GEO lagres nå som{" "}
+              {createGeoPreview.areas.join(", ")}, og kan justeres senere.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Avbryt</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                setConfirmCreateWithoutOrgOpen(false);
+                createMutation.mutate();
+              }}
+            >
+              Opprett uten org.nr
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <CommandPalette
         open={cmdOpen}

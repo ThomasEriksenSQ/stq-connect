@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useState } from "react";
 import { Mail, Loader2, CheckCircle2, XCircle, RefreshCw } from "lucide-react";
@@ -11,6 +11,7 @@ import { useDesignVersion } from "@/context/DesignVersionContext";
 import { DesignLabPageShell } from "@/components/designlab/DesignLabPageShell";
 import { DesignLabPrimaryAction, DesignLabSecondaryAction } from "@/components/designlab/system/actions";
 import { C } from "@/theme";
+import { crmQueryKeys } from "@/lib/queryKeys";
 
 const SENT_CV_SYNC_OPTIONS = [
   { value: "7", label: "7 dager" },
@@ -33,6 +34,29 @@ type SentCvSyncResult = {
     matched_rows: number;
     error?: string;
   }>;
+};
+
+type BrregWashAction = "preview" | "execute";
+
+type BrregWashResult = {
+  action: BrregWashAction;
+  scanned: number;
+  updated: number;
+  unchanged: number;
+  missingOrg: number;
+  invalidOrg: number;
+  deleted: number;
+  notFound: number;
+  errors: number;
+  unresolvedGeo: number;
+  hasMore?: boolean;
+  nextOffset?: number;
+  rows?: Array<unknown>;
+};
+
+type BrregWashAggregate = BrregWashResult & {
+  batches: number;
+  rows: Array<unknown>;
 };
 
 function useSentCvSync() {
@@ -84,6 +108,97 @@ function useSentCvSync() {
   };
 }
 
+function emptyBrregWashAggregate(action: BrregWashAction): BrregWashAggregate {
+  return {
+    action,
+    scanned: 0,
+    updated: 0,
+    unchanged: 0,
+    missingOrg: 0,
+    invalidOrg: 0,
+    deleted: 0,
+    notFound: 0,
+    errors: 0,
+    unresolvedGeo: 0,
+    hasMore: false,
+    nextOffset: 0,
+    batches: 0,
+    rows: [],
+  };
+}
+
+function mergeBrregWashResult(current: BrregWashAggregate, next: BrregWashResult): BrregWashAggregate {
+  return {
+    action: current.action,
+    scanned: current.scanned + next.scanned,
+    updated: current.updated + next.updated,
+    unchanged: current.unchanged + next.unchanged,
+    missingOrg: current.missingOrg + next.missingOrg,
+    invalidOrg: current.invalidOrg + next.invalidOrg,
+    deleted: current.deleted + next.deleted,
+    notFound: current.notFound + next.notFound,
+    errors: current.errors + next.errors,
+    unresolvedGeo: current.unresolvedGeo + next.unresolvedGeo,
+    hasMore: next.hasMore,
+    nextOffset: next.nextOffset,
+    batches: current.batches + 1,
+    rows: [...current.rows, ...(next.rows || [])].slice(0, 50),
+  };
+}
+
+function useBrregCompanyWash() {
+  const queryClient = useQueryClient();
+  const [brregRunningAction, setBrregRunningAction] = useState<BrregWashAction | null>(null);
+  const [brregResult, setBrregResult] = useState<BrregWashAggregate | null>(null);
+
+  const handleRunBrregWash = async (action: BrregWashAction) => {
+    setBrregRunningAction(action);
+    setBrregResult(null);
+    try {
+      let offset = 0;
+      let aggregate = emptyBrregWashAggregate(action);
+
+      while (true) {
+        const { data, error } = await supabase.functions.invoke<BrregWashResult>("brreg-company-wash", {
+          body: { action, offset, limit: 150 },
+        });
+
+        if (error) throw error;
+        if (!data) throw new Error("Ingen respons fra BRREG-vask");
+
+        aggregate = mergeBrregWashResult(aggregate, data);
+        setBrregResult(aggregate);
+
+        if (!data.hasMore || data.scanned === 0) break;
+        offset = data.nextOffset ?? offset + 150;
+      }
+
+      if (action === "execute") {
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: crmQueryKeys.companies.all() }),
+          queryClient.invalidateQueries({ queryKey: crmQueryKeys.contacts.all() }),
+        ]);
+      }
+
+      toast.success(
+        action === "execute"
+          ? `BRREG-vask fullført. ${aggregate.updated} selskaper oppdatert av ${aggregate.scanned} skannet.`
+          : `Forhåndsvisning klar. ${aggregate.updated} selskaper vil oppdateres av ${aggregate.scanned} skannet.`,
+      );
+    } catch (e) {
+      toast.error(`BRREG-vask feilet: ${(e as Error).message}`);
+    } finally {
+      setBrregRunningAction(null);
+    }
+  };
+
+  return {
+    brregRunningAction,
+    brregResult,
+    handleRunBrregWash,
+  };
+}
+
 export default function Innstillinger() {
   const { isV2Active } = useDesignVersion();
   return isV2Active ? <InnstillingerV2 /> : <InnstillingerV1 />;
@@ -100,6 +215,11 @@ function InnstillingerV1() {
     sentCvResult,
     handleRunSentCvSync,
   } = useSentCvSync();
+  const {
+    brregRunningAction,
+    brregResult,
+    handleRunBrregWash,
+  } = useBrregCompanyWash();
 
   const { data: outlookStatus, isLoading: outlookLoading } = useQuery({
     queryKey: ["outlook-status"],
@@ -283,6 +403,58 @@ function InnstillingerV1() {
         </div>
       </div>
 
+      {/* BRREG company wash section */}
+      <div className="mb-8">
+        <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground mb-3">
+          BRREG-vask
+        </p>
+        <div className="border border-border rounded-xl bg-card p-6 shadow-[0_1px_3px_rgba(0,0,0,0.07)] max-w-md">
+          <div className="flex items-start gap-4">
+            <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+              <RefreshCw className="h-5 w-5 text-primary" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-[0.9375rem] font-semibold text-foreground">Vask selskaper mot BRREG</p>
+              <p className="text-[0.8125rem] text-muted-foreground mt-1">
+                Oppdaterer selskapsinformasjon, markerer slettede enheter og fyller GEO fra postnummer eller sted.
+              </p>
+              {brregResult ? (
+                <div className="mt-3 text-[0.8125rem]">
+                  <span className="text-emerald-600 font-medium">{brregResult.updated} oppdateres</span>
+                  <span className="text-muted-foreground ml-2">{brregResult.scanned} skannet</span>
+                  {brregResult.deleted > 0 && <span className="text-amber-600 ml-2">{brregResult.deleted} slettet i BRREG</span>}
+                  {brregResult.unresolvedGeo > 0 && <span className="text-amber-600 ml-2">{brregResult.unresolvedGeo} ukjent GEO</span>}
+                  {brregResult.errors > 0 && <span className="text-red-600 ml-2">{brregResult.errors} feil</span>}
+                </div>
+              ) : (
+                <div className="mt-3 text-[0.8125rem] text-muted-foreground">
+                  Ingen BRREG-vask kjørt i denne økten.
+                </div>
+              )}
+
+              <div className="mt-4 flex flex-wrap gap-2">
+                <button
+                  onClick={() => handleRunBrregWash("preview")}
+                  disabled={Boolean(brregRunningAction)}
+                  className="inline-flex items-center justify-center gap-2 border border-border bg-card text-foreground h-9 px-4 rounded-lg text-[0.8125rem] font-medium hover:bg-secondary disabled:opacity-50"
+                >
+                  {brregRunningAction === "preview" ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+                  Forhåndsvis
+                </button>
+                <button
+                  onClick={() => handleRunBrregWash("execute")}
+                  disabled={Boolean(brregRunningAction)}
+                  className="inline-flex items-center justify-center gap-2 bg-primary text-primary-foreground h-9 px-4 rounded-lg text-[0.8125rem] font-medium hover:opacity-90 disabled:opacity-50"
+                >
+                  {brregRunningAction === "execute" ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+                  Kjør vask
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Mailchimp section */}
       <div className="mb-8">
         <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground mb-3">
@@ -398,6 +570,11 @@ export function InnstillingerV2() {
     sentCvResult,
     handleRunSentCvSync,
   } = useSentCvSync();
+  const {
+    brregRunningAction,
+    brregResult,
+    handleRunBrregWash,
+  } = useBrregCompanyWash();
 
   const { data: outlookStatus, isLoading: outlookLoading } = useQuery({
     queryKey: ["outlook-status"],
@@ -567,6 +744,54 @@ export function InnstillingerV2() {
                 </>
               )}
             </DesignLabSecondaryAction>
+          </div>
+        </SectionCard>
+
+        <SectionCard
+          title="Vask selskaper mot BRREG"
+          description="Oppdater selskapsinformasjon, marker slettede enheter og fyll GEO fra postnummer eller sted."
+        >
+          {brregResult ? (
+            <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", fontSize: 13 }}>
+              <span style={{ color: C.success, fontWeight: 500 }}>{brregResult.updated} oppdateres</span>
+              <span style={{ color: C.textMuted }}>{brregResult.scanned} skannet</span>
+              {brregResult.deleted > 0 && <span style={{ color: C.warning }}>{brregResult.deleted} slettet i BRREG</span>}
+              {brregResult.unresolvedGeo > 0 && <span style={{ color: C.warning }}>{brregResult.unresolvedGeo} ukjent GEO</span>}
+              {brregResult.errors > 0 && <span style={{ color: "#C2410C" }}>{brregResult.errors} feil</span>}
+            </div>
+          ) : brregRunningAction ? (
+            <StatusDot tone="loading" label="Kjører BRREG-vask..." />
+          ) : (
+            <StatusDot tone="muted" label="Ingen BRREG-vask kjørt i denne økten" />
+          )}
+
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+            <DesignLabSecondaryAction onClick={() => handleRunBrregWash("preview")} disabled={Boolean(brregRunningAction)}>
+              {brregRunningAction === "preview" ? (
+                <>
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  Forhåndsviser...
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="h-3.5 w-3.5" />
+                  Forhåndsvis
+                </>
+              )}
+            </DesignLabSecondaryAction>
+            <DesignLabPrimaryAction onClick={() => handleRunBrregWash("execute")} disabled={Boolean(brregRunningAction)}>
+              {brregRunningAction === "execute" ? (
+                <>
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  Kjører vask...
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="h-3.5 w-3.5" />
+                  Kjør vask
+                </>
+              )}
+            </DesignLabPrimaryAction>
           </div>
         </SectionCard>
 

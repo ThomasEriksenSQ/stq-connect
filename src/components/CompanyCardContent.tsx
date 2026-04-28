@@ -118,6 +118,7 @@ import {
   sanitizeContactCvEmail,
 } from "@/lib/contactCvEligibility";
 import { getSortedTechnologyEntries, mergeTechnologyTags } from "@/lib/technologyTags";
+import { resolveCompanyGeoAreas } from "@/lib/companyGeoAreas";
 import { crmQueryKeys, crmSummaryQueryKeys, invalidateQueryGroup } from "@/lib/queryKeys";
 import {
   CATEGORIES as SIGNAL_CATEGORIES,
@@ -509,7 +510,7 @@ export function CompanyCardContent({
     lookupByOrgNr(cleaned).then((r) => {
       if (r) {
         if (!editForm.name) setEditForm((prev) => ({ ...prev, name: r.navn }));
-        const city = r.forretningsadresse?.kommune || null;
+        const city = r.forretningsadresse?.poststed || r.forretningsadresse?.kommune || null;
         if (city && editForm.locations.length === 0) {
           setEditForm((prev) => ({ ...prev, locations: [city] }));
         }
@@ -685,13 +686,14 @@ export function CompanyCardContent({
   });
 
   const updateMutation = useMutation({
-    mutationFn: async (updates: Record<string, string | null>) => {
+    mutationFn: async (updates: Record<string, unknown>) => {
       const { error } = await supabase.from("companies").update(updates as any).eq("id", companyId);
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: crmQueryKeys.companies.detail(companyId) });
       queryClient.invalidateQueries({ queryKey: crmQueryKeys.companies.all() });
+      queryClient.invalidateQueries({ queryKey: crmQueryKeys.contacts.all() });
       toast.success("Oppdatert");
     },
     onError: () => toast.error("Kunne ikke oppdatere"),
@@ -1800,12 +1802,22 @@ export function CompanyCardContent({
                       : editForm.locations;
                     setNewLocation("");
                     const cityValue = finalLocations.length > 0 ? finalLocations.join(", ") : editForm.city;
+                    const geoResolution = resolveCompanyGeoAreas({
+                      city: cityValue,
+                      address: company?.address,
+                      zip_code: company?.zip_code,
+                      locations: finalLocations,
+                    });
                     updateMutation.mutate({
                       name: editForm.name,
                       org_number: editForm.org_number || null,
                       city: cityValue || null,
                       website: editForm.website || null,
                       linkedin: editForm.linkedin || null,
+                      geo_areas: geoResolution.areas,
+                      geo_source: geoResolution.source,
+                      geo_unresolved_places: geoResolution.unresolvedPlaces,
+                      geo_updated_at: new Date().toISOString(),
                     });
                     setEditCompanyOpen(false);
                   }}

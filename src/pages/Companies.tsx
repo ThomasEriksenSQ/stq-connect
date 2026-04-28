@@ -33,6 +33,7 @@ import {
   companyMatchesGeoFilter,
   getGeoFilterDescription,
   normalizeGeoFilter,
+  resolveCompanyGeoAreas,
   type GeoFilter,
 } from "@/lib/companyGeoAreas";
 
@@ -123,7 +124,7 @@ const OrgNrInput = ({
 }: {
   value: string;
   onChange: (v: string) => void;
-  onLookup: (name: string | null, city: string | null) => void;
+  onLookup: (result: { name: string | null; city: string | null; zip_code: string | null; address: string | null; industry: string | null }) => void;
   className?: string;
   style?: CSSProperties;
 }) => {
@@ -137,7 +138,15 @@ const OrgNrInput = ({
     timerRef.current = setTimeout(async () => {
       setLoading(true);
       const r = await lookupByOrgNr(cleaned);
-      if (r) onLookup(r.navn, r.forretningsadresse?.kommune || null);
+      if (r) {
+        onLookup({
+          name: r.navn,
+          city: r.forretningsadresse?.poststed || r.forretningsadresse?.kommune || null,
+          zip_code: r.forretningsadresse?.postnummer || null,
+          address: r.forretningsadresse?.adresse?.filter(Boolean).join(", ") || null,
+          industry: r.naeringskode1?.beskrivelse || null,
+        });
+      }
       setLoading(false);
     }, 400);
     return () => clearTimeout(timerRef.current);
@@ -170,6 +179,9 @@ const Companies = () => {
     name: "",
     org_number: "",
     city: "",
+    zip_code: "",
+    address: "",
+    industry: "",
     website: "",
     linkedin: "",
     status: "prospect",
@@ -204,6 +216,9 @@ const Companies = () => {
             name: prefillCompanyName,
             org_number: "",
             city: "",
+            zip_code: "",
+            address: "",
+            industry: "",
             website: "",
             linkedin: "",
             status: "prospect",
@@ -339,12 +354,25 @@ const Companies = () => {
     mutationFn: async () => {
       const finalLocations = locations.map((location) => location.trim()).filter(Boolean);
       const cityValue = finalLocations.length > 0 ? finalLocations.join(", ") : form.city || null;
+      const geoResolution = resolveCompanyGeoAreas({
+        city: cityValue,
+        address: form.address,
+        zip_code: form.zip_code,
+        locations: finalLocations,
+      });
       const { error } = await supabase.from("companies").insert({
         name: form.name,
         org_number: form.org_number || null,
+        address: form.address || null,
         city: cityValue,
+        zip_code: form.zip_code || null,
+        industry: form.industry || null,
         website: form.website || null,
         linkedin: form.linkedin || null,
+        geo_areas: geoResolution.areas,
+        geo_source: geoResolution.source,
+        geo_unresolved_places: geoResolution.unresolvedPlaces,
+        geo_updated_at: new Date().toISOString(),
         created_by: user?.id,
         status: form.status,
         owner_id: form.owner_id || null,
@@ -354,7 +382,18 @@ const Companies = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: crmQueryKeys.companies.all() });
       setOpen(false);
-      setForm({ name: "", org_number: "", city: "", website: "", linkedin: "", status: "prospect", owner_id: "" });
+      setForm({
+        name: "",
+        org_number: "",
+        city: "",
+        zip_code: "",
+        address: "",
+        industry: "",
+        website: "",
+        linkedin: "",
+        status: "prospect",
+        owner_id: "",
+      });
       setLocations([""]);
       if (prefillCompanyName) {
         const nextParams = new URLSearchParams(searchParams);
@@ -511,6 +550,29 @@ const Companies = () => {
     }
   };
 
+  const handleCreateSubmit = () => {
+    if (!form.name.trim() || createMutation.isPending) return;
+    const cleanedOrgNumber = form.org_number.replace(/\D/g, "");
+    if (!cleanedOrgNumber) {
+      const finalLocations = locations.map((location) => location.trim()).filter(Boolean);
+      const cityValue = finalLocations.length > 0 ? finalLocations.join(", ") : form.city || null;
+      const geoResolution = resolveCompanyGeoAreas({
+        city: cityValue,
+        address: form.address,
+        zip_code: form.zip_code,
+        locations: finalLocations,
+      });
+      const confirmed = window.confirm(
+        geoResolution.areas.includes("Ukjent sted")
+          ? "Vil du opprette selskap uten organisasjonsnummer og uten kjent GEO-område?"
+          : `Vil du opprette selskap uten organisasjonsnummer? GEO lagres som ${geoResolution.areas.join(", ")}.`,
+      );
+      if (!confirmed) return;
+    }
+
+    createMutation.mutate();
+  };
+
   const mobileSortValue = `${sort.field}:${sort.dir}`;
 
   const handleMobileSortChange = (value: string) => {
@@ -546,7 +608,7 @@ const Companies = () => {
         <DesignLabModalForm
           onSubmit={(e) => {
             e.preventDefault();
-            createMutation.mutate();
+            handleCreateSubmit();
           }}
         >
           <DesignLabModalField>
@@ -554,7 +616,17 @@ const Companies = () => {
             <BrregSearch
               value={form.name}
               onChange={(name) => setForm((f) => ({ ...f, name }))}
-              onSelect={(r) => setForm((f) => ({ ...f, name: r.name, org_number: r.org_number, city: r.city }))}
+              onSelect={(r) =>
+                setForm((f) => ({
+                  ...f,
+                  name: r.name,
+                  org_number: r.org_number,
+                  city: r.city,
+                  zip_code: r.zip_code,
+                  address: r.address,
+                  industry: r.industry,
+                }))
+              }
               showSearchIcon={false}
               inputClassName="focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-[#5E6AD2] focus-visible:shadow-[0_0_0_2px_rgba(94,106,210,0.15)]"
               inputStyle={getDesignLabModalInputStyle(modalScale)}
@@ -574,7 +646,16 @@ const Companies = () => {
             <OrgNrInput
               value={form.org_number}
               onChange={(org_number) => setForm((f) => ({ ...f, org_number }))}
-              onLookup={(name, city) => setForm((f) => ({ ...f, name: name || f.name, city: city || f.city }))}
+              onLookup={(result) =>
+                setForm((f) => ({
+                  ...f,
+                  name: result.name || f.name,
+                  city: result.city || f.city,
+                  zip_code: result.zip_code || f.zip_code,
+                  address: result.address || f.address,
+                  industry: result.industry || f.industry,
+                }))
+              }
               className="focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 focus:border-[#5E6AD2] focus-visible:shadow-[0_0_0_2px_rgba(94,106,210,0.15)]"
               style={getDesignLabModalInputStyle(modalScale)}
             />

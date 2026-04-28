@@ -72,7 +72,17 @@ type HuntConsultant = Pick<
 type OwnerPreview = { id: string; full_name: string } | null;
 type CompanyPreview = Pick<
   Database["public"]["Tables"]["companies"]["Row"],
-  "id" | "name" | "address" | "city" | "zip_code" | "status" | "ikke_relevant" | "owner_id"
+  | "id"
+  | "name"
+  | "address"
+  | "city"
+  | "zip_code"
+  | "geo_areas"
+  | "geo_source"
+  | "geo_unresolved_places"
+  | "status"
+  | "ikke_relevant"
+  | "owner_id"
 > & {
   profiles: OwnerPreview;
 };
@@ -296,7 +306,7 @@ const Contacts = () => {
       const { data, error, count } = await supabase
         .from("contacts")
         .select(
-          "*, companies(id, name, address, city, zip_code, status, ikke_relevant, owner_id, profiles!companies_owner_id_fkey(id, full_name)), profiles!contacts_owner_id_fkey(id, full_name)",
+          "*, companies(id, name, address, city, zip_code, geo_areas, geo_source, geo_unresolved_places, status, ikke_relevant, owner_id, profiles!companies_owner_id_fkey(id, full_name)), profiles!contacts_owner_id_fkey(id, full_name)",
           { count: "exact" },
         )
         .order("first_name")
@@ -320,14 +330,14 @@ const Contacts = () => {
         supabase
           .from("company_tech_profile")
           .select(
-            "company_id, sist_fra_finn, teknologier, companies!company_tech_profile_company_id_fkey(id, name, address, city, zip_code, status, ikke_relevant, owner_id, profiles!companies_owner_id_fkey(id, full_name))",
+            "company_id, sist_fra_finn, teknologier, companies!company_tech_profile_company_id_fkey(id, name, address, city, zip_code, geo_areas, geo_source, geo_unresolved_places, status, ikke_relevant, owner_id, profiles!companies_owner_id_fkey(id, full_name))",
           )
           .not("company_id", "is", null)
           .limit(5000),
         supabase
           .from("foresporsler")
           .select(
-            "id, selskap_id, kontakt_id, selskap_navn, sted, mottatt_dato, frist_dato, status, teknologier, companies!foresporsler_selskap_id_fkey(id, name, address, city, zip_code, status, ikke_relevant, owner_id, profiles!companies_owner_id_fkey(id, full_name)), contacts!foresporsler_kontakt_id_fkey(id, first_name, last_name, title)",
+            "id, selskap_id, kontakt_id, selskap_navn, sted, mottatt_dato, frist_dato, status, teknologier, companies!foresporsler_selskap_id_fkey(id, name, address, city, zip_code, geo_areas, geo_source, geo_unresolved_places, status, ikke_relevant, owner_id, profiles!companies_owner_id_fkey(id, full_name)), contacts!foresporsler_kontakt_id_fkey(id, first_name, last_name, title)",
           )
           .not("kontakt_id", "is", null)
           .not("selskap_id", "is", null)

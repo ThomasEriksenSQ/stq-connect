@@ -8,8 +8,10 @@ interface BrregResult {
   navn: string;
   organisasjonsnummer: string;
   forretningsadresse?: {
+    adresse?: string[];
     kommune?: string;
     postnummer?: string;
+    poststed?: string;
   };
   naeringskode1?: {
     beskrivelse?: string;
@@ -19,7 +21,14 @@ interface BrregResult {
 interface BrregSearchProps {
   value: string;
   onChange: (name: string) => void;
-  onSelect: (result: { name: string; org_number: string; city: string }) => void;
+  onSelect: (result: {
+    name: string;
+    org_number: string;
+    city: string;
+    zip_code: string;
+    address: string;
+    industry: string;
+  }) => void;
   placeholder?: string;
   showSearchIcon?: boolean;
   inputClassName?: string;
@@ -134,7 +143,10 @@ export const BrregSearch = ({
     onSelect({
       name: r.navn,
       org_number: r.organisasjonsnummer,
-      city: r.forretningsadresse?.kommune || "",
+      city: r.forretningsadresse?.poststed || r.forretningsadresse?.kommune || "",
+      zip_code: r.forretningsadresse?.postnummer || "",
+      address: r.forretningsadresse?.adresse?.filter(Boolean).join(", ") || "",
+      industry: r.naeringskode1?.beskrivelse || "",
     });
     setShowDropdown(false);
     setResults([]);

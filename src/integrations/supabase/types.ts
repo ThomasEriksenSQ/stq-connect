@@ -136,10 +136,18 @@ export type Database = {
       companies: {
         Row: {
           address: string | null
+          brreg_deleted_at: string | null
+          brreg_last_error: string | null
+          brreg_status: string | null
+          brreg_synced_at: string | null
           city: string | null
           created_at: string
           created_by: string | null
           email: string | null
+          geo_areas: string[] | null
+          geo_source: string | null
+          geo_unresolved_places: string[] | null
+          geo_updated_at: string | null
           id: string
           ikke_relevant: boolean | null
           industry: string | null
@@ -157,10 +165,18 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          brreg_deleted_at?: string | null
+          brreg_last_error?: string | null
+          brreg_status?: string | null
+          brreg_synced_at?: string | null
           city?: string | null
           created_at?: string
           created_by?: string | null
           email?: string | null
+          geo_areas?: string[] | null
+          geo_source?: string | null
+          geo_unresolved_places?: string[] | null
+          geo_updated_at?: string | null
           id?: string
           ikke_relevant?: boolean | null
           industry?: string | null
@@ -178,10 +194,18 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          brreg_deleted_at?: string | null
+          brreg_last_error?: string | null
+          brreg_status?: string | null
+          brreg_synced_at?: string | null
           city?: string | null
           created_at?: string
           created_by?: string | null
           email?: string | null
+          geo_areas?: string[] | null
+          geo_source?: string | null
+          geo_unresolved_places?: string[] | null
+          geo_updated_at?: string | null
           id?: string
           ikke_relevant?: boolean | null
           industry?: string | null

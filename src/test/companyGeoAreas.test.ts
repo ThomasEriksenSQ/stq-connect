@@ -8,6 +8,7 @@ import {
   getContactGeoAreas,
   getGeoFilterDescription,
   normalizeGeoFilter,
+  resolveCompanyGeoAreas,
 } from "@/lib/companyGeoAreas";
 
 describe("companyGeoAreas", () => {
@@ -69,15 +70,15 @@ describe("companyGeoAreas", () => {
     expect(contactMatchesGeoFilter(contact, "Trondheim+")).toBe(true);
   });
 
-  it("keeps contacts with unmapped own geography in unknown even when company is known", () => {
+  it("falls back to company geography when contact own geography is unmapped", () => {
     const contact = {
       location: "Atlantis",
       company: { city: "Oslo" },
     };
 
-    expect(getContactGeoAreas(contact)).toEqual(["Ukjent sted"]);
-    expect(contactMatchesGeoFilter(contact, "Ukjent sted")).toBe(true);
-    expect(contactMatchesGeoFilter(contact, "Oslo+")).toBe(false);
+    expect(getContactGeoAreas(contact)).toEqual(["Oslo+"]);
+    expect(contactMatchesGeoFilter(contact, "Ukjent sted")).toBe(false);
+    expect(contactMatchesGeoFilter(contact, "Oslo+")).toBe(true);
   });
 
   it("maps broader region labels instead of leaving them unknown", () => {
@@ -113,5 +114,21 @@ describe("companyGeoAreas", () => {
     expect(normalizeGeoFilter("Sørlandet/Telemark ellers")).toBe("Sørlandet");
     expect(getCompanyGeoAreas({ zip_code: "7010" })).toEqual(["Trondheim+"]);
     expect(getCompanyGeoAreas({ zip_code: "3050" })).toEqual(["Kongsberg+"]);
+  });
+
+  it("uses persisted geo areas before text fallback", () => {
+    expect(getCompanyGeoAreas({ city: "Atlantis", geo_areas: ["Vestlandet"] })).toEqual(["Vestlandet"]);
+    expect(resolveCompanyGeoAreas({ city: "Atlantis", geo_areas: ["Oslo+"], geo_source: "manual" })).toMatchObject({
+      areas: ["Oslo+"],
+      source: "manual",
+    });
+  });
+
+  it("reports unresolved place names when nothing maps", () => {
+    expect(resolveCompanyGeoAreas({ city: "Atlantis" })).toMatchObject({
+      areas: ["Ukjent sted"],
+      source: "unknown",
+      unresolvedPlaces: ["Atlantis"],
+    });
   });
 });
