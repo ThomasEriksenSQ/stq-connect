@@ -48,6 +48,26 @@ describe("companyGeoAreas", () => {
     expect(companyMatchesGeoFilter({ locations: ["Oslo", "Bergen"] }, "Bergen+")).toBe(true);
   });
 
+  it("keeps all mapped locations even when one postal code is present", () => {
+    const resolution = resolveCompanyGeoAreas({
+      city: "Oslo, Bergen",
+      zip_code: "0150",
+      locations: ["Oslo", "Bergen"],
+    });
+
+    expect(resolution.areas).toEqual(["Oslo+", "Bergen+"]);
+    expect(resolution.source).toBe("hybrid");
+    expect(companyMatchesGeoFilter({ city: "Oslo, Bergen", zip_code: "0150" }, "Bergen+")).toBe(true);
+  });
+
+  it("keeps unknown location parts visible while storing mapped areas", () => {
+    expect(resolveCompanyGeoAreas({ city: "Oslo, Atlantis" })).toMatchObject({
+      areas: ["Oslo+"],
+      source: "place",
+      unresolvedPlaces: ["Atlantis"],
+    });
+  });
+
   it("lets contact geography override company geography", () => {
     const contact = {
       locations: ["Bergen"],

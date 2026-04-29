@@ -117,7 +117,18 @@ const TYPE_LABEL_TO_VALUE: Record<string, string> = {
   "Ikke relevant selskap": "churned",
 };
 
-const GEO_OVERRIDE_OPTIONS = GEO_FILTERS.filter((option): option is Exclude<GeoFilter, "Alle"> => option !== "Alle");
+type GeoArea = Exclude<GeoFilter, "Alle">;
+type ManualGeoArea = Exclude<GeoArea, "Ukjent sted">;
+type CreateCompanyGeoResolution = {
+  cityValue: string | null;
+  areas: GeoArea[];
+  source: string;
+  unresolvedPlaces: string[];
+};
+
+const GEO_MANUAL_OPTIONS = GEO_FILTERS.filter(
+  (option): option is ManualGeoArea => option !== "Alle" && option !== "Ukjent sted",
+);
 
 const IKKE_RELEVANT_COMPANY_TAG_COLORS = {
   background: SIGNAL_COLORS["Ikke aktuelt"].bg,
@@ -253,7 +264,7 @@ export default function DesignLabCompanies() {
     owner_id: "",
   });
   const [createLocations, setCreateLocations] = useState<string[]>([""]);
-  const [createGeoOverride, setCreateGeoOverride] = useState<GeoFilter | "">("");
+  const [createGeoOverrides, setCreateGeoOverrides] = useState<ManualGeoArea[]>([]);
   const [confirmCreateWithoutOrgOpen, setConfirmCreateWithoutOrgOpen] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
   const assigningMissingOwnersRef = useRef(false);
@@ -491,22 +502,23 @@ export default function DesignLabCompanies() {
       owner_id: "",
     });
     setCreateLocations([""]);
-    setCreateGeoOverride("");
+    setCreateGeoOverrides([]);
     setConfirmCreateWithoutOrgOpen(false);
   }, []);
 
-  const getCreateCompanyGeoResolution = useCallback(() => {
+  const getCreateCompanyGeoResolution = useCallback((): CreateCompanyGeoResolution => {
     const finalLocations = createLocations.map((location) => location.trim()).filter(Boolean);
-    if (createGeoOverride) {
+    const cityValue = finalLocations.length > 0 ? finalLocations.join(", ") : createForm.city || null;
+
+    if (createGeoOverrides.length > 0) {
       return {
-        cityValue: finalLocations.length > 0 ? finalLocations.join(", ") : createForm.city || null,
-        areas: [createGeoOverride],
+        cityValue,
+        areas: createGeoOverrides,
         source: "manual",
         unresolvedPlaces: [],
       };
     }
 
-    const cityValue = finalLocations.length > 0 ? finalLocations.join(", ") : createForm.city || null;
     const resolution = resolveCompanyGeoAreas({
       city: cityValue,
       address: createForm.address,
@@ -520,7 +532,7 @@ export default function DesignLabCompanies() {
       source: resolution.source,
       unresolvedPlaces: resolution.unresolvedPlaces,
     };
-  }, [createForm.address, createForm.city, createForm.zip_code, createGeoOverride, createLocations]);
+  }, [createForm.address, createForm.city, createForm.zip_code, createGeoOverrides, createLocations]);
 
   const createMutation = useMutation({
     mutationFn: async () => {
@@ -583,19 +595,29 @@ export default function DesignLabCompanies() {
     const cleanedOrgNumber = createForm.org_number.replace(/\D/g, "");
     const geoResolution = getCreateCompanyGeoResolution();
 
+    if (geoResolution.areas.includes("Ukjent sted")) {
+      toast.warning("Legg til et sted som fanges av GEO, eller velg riktig GEO-filter.");
+      return;
+    }
+
     if (!cleanedOrgNumber) {
-      if (geoResolution.areas.includes("Ukjent sted") && !createGeoOverride) {
-        toast.warning("Velg GEO-område før du oppretter et selskap uten organisasjonsnummer.");
-        return;
-      }
       setConfirmCreateWithoutOrgOpen(true);
       return;
     }
 
     createMutation.mutate();
-  }, [createForm.name, createForm.org_number, createForm.owner_id, createGeoOverride, createMutation, getCreateCompanyGeoResolution]);
+  }, [createForm.name, createForm.org_number, createForm.owner_id, createMutation, getCreateCompanyGeoResolution]);
 
   const createGeoPreview = getCreateCompanyGeoResolution();
+  const hasCreateGeoOverride = createGeoOverrides.length > 0;
+  const createGeoIsUnknown = createGeoPreview.areas.includes("Ukjent sted");
+  const toggleCreateGeoOverride = useCallback((option: ManualGeoArea) => {
+    setCreateGeoOverrides((current) =>
+      current.includes(option)
+        ? current.filter((item) => item !== option)
+        : [...current, option],
+    );
+  }, []);
 
   const toggleSort = useCallback((field: SortField) => {
     setSort((p) => p.field === field ? { field, dir: p.dir === "asc" ? "desc" : "asc" } : { field, dir: field === "last_activity" ? "desc" : "asc" });
@@ -1018,7 +1040,8 @@ export default function DesignLabCompanies() {
               <BrregSearch
                 value={createForm.name}
                 onChange={(name) => setCreateForm((prev) => ({ ...prev, name }))}
-                onSelect={(result) =>
+                onSelect={(result) => {
+                  setCreateGeoOverrides([]);
                   setCreateForm((prev) => ({
                     ...prev,
                     name: result.name,
@@ -1027,8 +1050,8 @@ export default function DesignLabCompanies() {
                     zip_code: result.zip_code,
                     address: result.address,
                     industry: result.industry,
-                  }))
-                }
+                  }));
+                }}
                 showSearchIcon={false}
                 inputClassName={cn(
                   "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-[0.875rem] ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
@@ -1040,7 +1063,8 @@ export default function DesignLabCompanies() {
               <OrgNrInput
                 value={createForm.org_number}
                 onChange={(org_number) => setCreateForm((prev) => ({ ...prev, org_number }))}
-                onLookup={(result) =>
+                onLookup={(result) => {
+                  setCreateGeoOverrides([]);
                   setCreateForm((prev) => ({
                     ...prev,
                     name: result.name || prev.name,
@@ -1048,8 +1072,8 @@ export default function DesignLabCompanies() {
                     zip_code: result.zip_code || prev.zip_code,
                     address: result.address || prev.address,
                     industry: result.industry || prev.industry,
-                  }))
-                }
+                  }));
+                }}
                 className="text-[0.875rem]"
               />
             </div>
@@ -1126,26 +1150,50 @@ export default function DesignLabCompanies() {
           </div>
 
           <div>
-            <AktivOppdragLabel>GEO-filter</AktivOppdragLabel>
-            <div className="space-y-2 rounded-lg border border-border bg-muted/20 p-3">
+            <AktivOppdragLabel>GEO-plassering</AktivOppdragLabel>
+            <div
+              className={cn(
+                "space-y-2 rounded-lg border p-3",
+                createGeoIsUnknown ? "border-amber-300 bg-amber-50/70" : "border-border bg-muted/20",
+              )}
+            >
+              <p className="text-[0.8125rem] font-medium text-foreground">
+                {hasCreateGeoOverride
+                  ? `Manuell GEO: ${createGeoPreview.areas.join(", ")}.`
+                  : createGeoIsUnknown
+                    ? "Fant ikke GEO automatisk."
+                    : `Automatisk GEO: ${createGeoPreview.areas.join(", ")}.`}
+              </p>
+              {createGeoPreview.unresolvedPlaces.length > 0 && !hasCreateGeoOverride && (
+                <p className="text-[0.75rem] text-muted-foreground">
+                  Ikke plassert: {createGeoPreview.unresolvedPlaces.join(", ")}.
+                </p>
+              )}
               <div className="flex flex-wrap gap-1.5">
-                {GEO_OVERRIDE_OPTIONS.map((option) => (
+                {GEO_MANUAL_OPTIONS.map((option) => (
                   <AktivOppdragChip
                     key={option}
-                    onClick={() => setCreateGeoOverride((current) => (current === option ? "" : option))}
-                    active={createGeoOverride === option}
+                    onClick={() => toggleCreateGeoOverride(option)}
+                    active={createGeoOverrides.includes(option)}
                   >
                     {option}
                   </AktivOppdragChip>
                 ))}
               </div>
-              <p className="text-[0.8125rem] text-muted-foreground">
-                {createGeoOverride
-                  ? `Manuelt satt til ${createGeoOverride}.`
-                  : createGeoPreview.areas.includes("Ukjent sted")
-                    ? "Stedet fanges ikke automatisk. Velg riktig GEO-område før du oppretter selskap uten org.nr."
-                    : `Fanges automatisk av ${createGeoPreview.areas.join(", ")}.`}
-              </p>
+              {hasCreateGeoOverride && (
+                <button
+                  type="button"
+                  onClick={() => setCreateGeoOverrides([])}
+                  className="text-[0.75rem] font-medium text-muted-foreground hover:text-foreground"
+                >
+                  Bruk automatikk
+                </button>
+              )}
+              {createGeoIsUnknown && !hasCreateGeoOverride && (
+                <p className="text-[0.75rem] text-amber-700">
+                  Legg til et mer presist sted, eller velg ett eller flere GEO-filter.
+                </p>
+              )}
             </div>
           </div>
 

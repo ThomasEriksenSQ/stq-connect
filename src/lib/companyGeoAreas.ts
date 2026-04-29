@@ -38,7 +38,7 @@ type GeoAreaDefinition = {
   places: string[];
 };
 
-export type CompanyGeoResolutionSource = "persisted" | "manual" | "postal" | "place" | "unknown";
+export type CompanyGeoResolutionSource = "persisted" | "manual" | "postal" | "place" | "hybrid" | "unknown";
 
 export type CompanyGeoResolution = {
   areas: Exclude<GeoFilter, "Alle">[];
@@ -544,15 +544,47 @@ function splitLocationText(value: string | null | undefined): string[] {
     .filter(Boolean);
 }
 
+type GeoPartSource = "location" | "city" | "address" | "postal";
+
+type GeoPart = {
+  value: string;
+  source: GeoPartSource;
+};
+
+function uniqueGeoParts(parts: GeoPart[]): GeoPart[] {
+  const seen = new Set<string>();
+  const result: GeoPart[] = [];
+
+  parts.forEach((part) => {
+    const trimmed = part.value.trim();
+    const key = `${part.source}:${normalizeGeoText(trimmed)}`;
+    if (!trimmed || !key || seen.has(key)) return;
+    seen.add(key);
+    result.push({ ...part, value: trimmed });
+  });
+
+  return result;
+}
+
 function getLocationParts(input: CompanyGeoAreaInput) {
-  const values = [input.city, input.address, ...(input.locations || [])].flatMap(splitLocationText);
+  const parts: GeoPart[] = [
+    ...(input.locations || []).flatMap((location) =>
+      splitLocationText(location).map((value) => ({ value, source: "location" as const })),
+    ),
+    ...splitLocationText(input.city).map((value) => ({ value, source: "city" as const })),
+    ...splitLocationText(input.address).map((value) => ({ value, source: "address" as const })),
+  ];
   const zip = String(input.zip_code || "").trim();
-  if (zip) values.push(zip);
-  return values;
+  if (zip) parts.push({ value: zip, source: "postal" });
+  return uniqueGeoParts(parts);
 }
 
 function getContactLocationParts(input: ContactGeoAreaInput) {
-  return [input.location, ...(input.locations || [])].flatMap(splitLocationText);
+  return uniqueGeoParts(
+    [input.location, ...(input.locations || [])].flatMap((location) =>
+      splitLocationText(location).map((value) => ({ value, source: "location" as const })),
+    ),
+  );
 }
 
 function findPostalCode(value: string | null | undefined): string | null {
@@ -596,30 +628,50 @@ function geoAreaFromPostalCode(postalCode: string | null): Exclude<GeoFilter, "A
   return null;
 }
 
-function getGeoResolutionFromParts(parts: string[]): CompanyGeoResolution {
+function getGeoResolutionFromParts(parts: GeoPart[]): CompanyGeoResolution {
   if (parts.length === 0) {
     return { areas: ["Ukjent sted"], source: "unknown", unresolvedPlaces: [] };
   }
 
-  const postalArea = geoAreaFromPostalCode(parts.map(findPostalCode).find(Boolean) || null);
-  if (postalArea) {
-    return { areas: [postalArea], source: "postal", unresolvedPlaces: [] };
-  }
-
   const matches = new Set<Exclude<GeoFilter, "Alle">>();
+  const sourceMatches = new Set<Exclude<CompanyGeoResolutionSource, "persisted" | "manual" | "hybrid" | "unknown">>();
+  const unresolvedPlaces = new Map<string, string>();
+
   parts.forEach((part) => {
+    const postalArea = geoAreaFromPostalCode(findPostalCode(part.value));
+    let matched = false;
+    if (postalArea) {
+      matches.add(postalArea);
+      sourceMatches.add("postal");
+      matched = true;
+    }
+
     AREA_PLACE_KEYS.forEach((definition) => {
-      if (definition.placeKeys.some((placeKey) => partMatchesPlace(part, placeKey))) {
+      if (definition.placeKeys.some((placeKey) => partMatchesPlace(part.value, placeKey))) {
         matches.add(definition.label);
+        sourceMatches.add("place");
+        matched = true;
       }
     });
+
+    if (!matched && (part.source === "location" || part.source === "city")) {
+      unresolvedPlaces.set(normalizeGeoText(part.value), part.value);
+    }
   });
 
   if (matches.size > 0) {
-    return { areas: [...matches], source: "place", unresolvedPlaces: [] };
+    const areas = GEO_FILTERS.filter(
+      (filter): filter is Exclude<GeoFilter, "Alle"> => filter !== "Alle" && matches.has(filter),
+    );
+    const source = sourceMatches.size > 1 ? "hybrid" : sourceMatches.has("postal") ? "postal" : "place";
+    return { areas, source, unresolvedPlaces: [...unresolvedPlaces.values()] };
   }
 
-  return { areas: ["Ukjent sted"], source: "unknown", unresolvedPlaces: parts };
+  return {
+    areas: ["Ukjent sted"],
+    source: "unknown",
+    unresolvedPlaces: [...unresolvedPlaces.values()],
+  };
 }
 
 export function normalizeGeoFilter(value: string | null | undefined): GeoFilter {

@@ -189,6 +189,12 @@ const AREA_PLACE_KEYS: Array<{ area: GeoArea; places: string[] }> = [
 ];
 
 const VALID_GEO_AREAS = new Set<GeoArea>(AREA_PLACE_KEYS.map((entry) => entry.area).concat("Ukjent sted"));
+const GEO_AREA_ORDER: GeoArea[] = AREA_PLACE_KEYS.map((entry) => entry.area);
+
+type GeoPart = {
+  value: string;
+  source: "city" | "address" | "postal";
+};
 
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -200,6 +206,9 @@ function jsonResponse(body: unknown, status = 200) {
 function normalizeGeoText(value: unknown) {
   return String(value || "")
     .toLowerCase()
+    .replace(/æ/g, "ae")
+    .replace(/ø/g, "o")
+    .replace(/å/g, "a")
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .replace(/[^a-z0-9]+/g, " ")
@@ -211,6 +220,23 @@ function splitLocationText(value: unknown): string[] {
     .split(/[,;\n/]+|\s+\bog\b\s+/gi)
     .map((part) => part.trim())
     .filter(Boolean);
+}
+
+function uniqueLocationValues(values: unknown[]): string[] {
+  const seen = new Set<string>();
+  const result: string[] = [];
+  values.flatMap(splitLocationText).forEach((value) => {
+    const key = normalizeGeoText(value);
+    if (!key || seen.has(key)) return;
+    seen.add(key);
+    result.push(value.trim());
+  });
+  return result;
+}
+
+function mergeLocationText(...values: unknown[]) {
+  const locations = uniqueLocationValues(values);
+  return locations.length > 0 ? locations.join(", ") : null;
 }
 
 function cleanOrgNumber(value: unknown) {
@@ -254,6 +280,19 @@ function normalizeStoredGeoAreas(values: string[] | null | undefined): GeoArea[]
   return [...seen];
 }
 
+function uniqueGeoParts(parts: GeoPart[]): GeoPart[] {
+  const seen = new Set<string>();
+  const result: GeoPart[] = [];
+  parts.forEach((part) => {
+    const value = part.value.trim();
+    const key = `${part.source}:${normalizeGeoText(value)}`;
+    if (!value || seen.has(key)) return;
+    seen.add(key);
+    result.push({ ...part, value });
+  });
+  return result;
+}
+
 function resolveGeo(input: {
   city?: string | null;
   address?: string | null;
@@ -266,23 +305,51 @@ function resolveGeo(input: {
     return { areas: manualAreas, source: "manual", unresolvedPlaces: [] as string[] };
   }
 
-  const parts = [input.city, input.address].flatMap(splitLocationText);
-  const zip = String(input.zip_code || "").trim() || parts.map(findPostalCode).find(Boolean) || null;
-  const postalArea = geoAreaFromPostalCode(zip);
-  if (postalArea) return { areas: [postalArea], source: "brreg_postal", unresolvedPlaces: [] as string[] };
-
+  const parts = uniqueGeoParts([
+    ...splitLocationText(input.city).map((value) => ({ value, source: "city" as const })),
+    ...splitLocationText(input.address).map((value) => ({ value, source: "address" as const })),
+    ...(String(input.zip_code || "").trim() ? [{ value: String(input.zip_code || "").trim(), source: "postal" as const }] : []),
+  ]);
   const matched = new Set<GeoArea>();
+  const sourceMatches = new Set<"postal" | "place">();
+  const unresolvedPlaces = new Map<string, string>();
+
   parts.forEach((part) => {
-    const normalizedPart = normalizeGeoText(part);
+    const postalArea = geoAreaFromPostalCode(findPostalCode(part.value));
+    let matchedPart = false;
+    if (postalArea) {
+      matched.add(postalArea);
+      sourceMatches.add("postal");
+      matchedPart = true;
+    }
+
+    const normalizedPart = normalizeGeoText(part.value);
     AREA_PLACE_KEYS.forEach((entry) => {
-      if (entry.places.some((place) => normalizedPart === place || normalizedPart.includes(` ${place} `) || normalizedPart.startsWith(`${place} `) || normalizedPart.endsWith(` ${place}`))) {
+      if (entry.places.some((place) => {
+        const normalizedPlace = normalizeGeoText(place);
+        return normalizedPart === normalizedPlace ||
+          normalizedPart.includes(` ${normalizedPlace} `) ||
+          normalizedPart.startsWith(`${normalizedPlace} `) ||
+          normalizedPart.endsWith(` ${normalizedPlace}`);
+      })) {
         matched.add(entry.area);
+        sourceMatches.add("place");
+        matchedPart = true;
       }
     });
+
+    if (!matchedPart && part.source === "city") {
+      unresolvedPlaces.set(normalizeGeoText(part.value), part.value);
+    }
   });
 
-  if (matched.size > 0) return { areas: [...matched], source: "brreg_place", unresolvedPlaces: [] as string[] };
-  return { areas: ["Ukjent sted" as GeoArea], source: "unknown", unresolvedPlaces: parts };
+  if (matched.size > 0) {
+    const areas = GEO_AREA_ORDER.filter((area) => matched.has(area));
+    const source = sourceMatches.size > 1 ? "brreg_hybrid" : sourceMatches.has("postal") ? "brreg_postal" : "brreg_place";
+    return { areas, source, unresolvedPlaces: [...unresolvedPlaces.values()] };
+  }
+
+  return { areas: ["Ukjent sted" as GeoArea], source: "unknown", unresolvedPlaces: [...unresolvedPlaces.values()] };
 }
 
 function brregStatus(entity: BrregEntity) {
@@ -469,10 +536,13 @@ Deno.serve(async (req) => {
           summary.orgNumberReview++;
         }
 
+        const nextAddress = orgNumberNeedsReview ? company.address : fields.address || company.address;
+        const nextCity = orgNumberNeedsReview ? company.city : mergeLocationText(company.city, fields.city);
+        const nextZipCode = orgNumberNeedsReview ? company.zip_code : fields.zip_code || company.zip_code;
         const geo = resolveGeo({
-          city: orgNumberNeedsReview ? company.city : fields.city || company.city,
-          address: orgNumberNeedsReview ? company.address : fields.address || company.address,
-          zip_code: orgNumberNeedsReview ? company.zip_code : fields.zip_code || company.zip_code,
+          city: nextCity,
+          address: nextAddress,
+          zip_code: nextZipCode,
           existingAreas: company.geo_areas,
           existingSource: company.geo_source,
         });
@@ -493,9 +563,9 @@ Deno.serve(async (req) => {
           : {
               name: fields.name || company.name,
               org_number: fields.org_number || orgNumber,
-              address: fields.address || company.address,
-              city: fields.city || company.city,
-              zip_code: fields.zip_code || company.zip_code,
+              address: nextAddress,
+              city: nextCity,
+              zip_code: nextZipCode,
               industry: fields.industry || company.industry,
               geo_areas: geo.areas,
               geo_source: geo.source,
