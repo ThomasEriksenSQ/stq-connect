@@ -358,6 +358,7 @@ serve(async (req) => {
       supabase
         .from("contacts")
         .select("id, email, first_name, last_name, title, company_id")
+        .neq("status", "deleted")
         .not("email", "is", null),
       supabase.from("companies").select("id, name"),
       supabase.from("stacq_ansatte").select("id, navn"),

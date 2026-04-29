@@ -573,6 +573,7 @@ export function CompanyCardContent({
         .from("contacts")
         .select("*, profiles!contacts_owner_id_fkey(full_name)")
         .eq("company_id", companyId)
+        .neq("status", "deleted")
         .order("first_name");
       if (error) throw error;
       return data;
@@ -2925,7 +2926,11 @@ function CompanyDnaPanel({ companyId }: { companyId: string }) {
   const { data: contactTags = [] } = useQuery({
     queryKey: ["company-contact-tags", companyId],
     queryFn: async () => {
-      const { data } = await supabase.from("contacts").select("teknologier").eq("company_id", companyId);
+      const { data } = await supabase
+        .from("contacts")
+        .select("teknologier")
+        .eq("company_id", companyId)
+        .neq("status", "deleted");
       if (!data) return [];
       const all: string[] = [];
       data.forEach((c) => {

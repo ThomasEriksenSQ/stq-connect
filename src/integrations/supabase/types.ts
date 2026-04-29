@@ -437,6 +437,7 @@ export type Database = {
           owner_id: string | null
           phone: string | null
           sf_contact_id: string | null
+          status: string
           teknologier: string[] | null
           title: string | null
           updated_at: string
@@ -462,6 +463,7 @@ export type Database = {
           owner_id?: string | null
           phone?: string | null
           sf_contact_id?: string | null
+          status?: string
           teknologier?: string[] | null
           title?: string | null
           updated_at?: string
@@ -487,6 +489,7 @@ export type Database = {
           owner_id?: string | null
           phone?: string | null
           sf_contact_id?: string | null
+          status?: string
           teknologier?: string[] | null
           title?: string | null
           updated_at?: string

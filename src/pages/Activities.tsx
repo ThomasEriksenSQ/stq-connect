@@ -54,7 +54,11 @@ const Activities = () => {
   const { data: contacts = [] } = useQuery({
     queryKey: ["contacts"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("contacts").select("id, first_name, last_name").order("first_name");
+      const { data, error } = await supabase
+        .from("contacts")
+        .select("id, first_name, last_name")
+        .neq("status", "deleted")
+        .order("first_name");
       if (error) throw error;
       return data;
     },

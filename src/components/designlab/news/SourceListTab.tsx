@@ -74,6 +74,7 @@ async function fetchSourceData(): Promise<ContactsFullData> {
     .select(
       "id, company_id, call_list, ikke_aktuell_kontakt, companies(id, name, status, ikke_relevant, org_number, website, linkedin)",
     )
+    .neq("status", "deleted")
     .limit(2000);
   if (error) throw error;
 

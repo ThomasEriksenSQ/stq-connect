@@ -728,6 +728,7 @@ export function ContactCardContent({
         .from("contacts")
         .select("*, companies(id, name, city, status, ikke_relevant), profiles!contacts_owner_id_fkey(full_name)")
         .eq("id", contactId)
+        .neq("status", "deleted")
         .single();
       if (error) throw error;
       return data;

@@ -62,6 +62,7 @@ import {
   normalizeGeoFilter,
   type GeoFilter,
 } from "@/lib/companyGeoAreas";
+import { shouldSoftDeleteUnknownUnlinkedTitlelessContact } from "@/lib/contactStatus";
 import { isEmployeeEndDatePassed } from "@/lib/employeeStatus";
 import {
   MATCH_OWNER_FILTER_NONE,
@@ -548,8 +549,9 @@ export default function DesignLabContacts() {
       const { data, error } = await supabase
         .from("contacts")
         .select(
-          "id, first_name, last_name, title, email, phone, cv_email, call_list, ikke_aktuell_kontakt, teknologier, company_id, location, linkedin, department, notes, locations, mailchimp_status, owner_id, companies(id, name, address, city, zip_code, geo_areas, geo_source, geo_unresolved_places, status, ikke_relevant, owner_id, profiles!companies_owner_id_fkey(id, full_name)), profiles!contacts_owner_id_fkey(id, full_name)",
+          "id, first_name, last_name, title, email, phone, cv_email, call_list, ikke_aktuell_kontakt, teknologier, company_id, location, linkedin, department, notes, locations, mailchimp_status, owner_id, status, companies(id, name, address, city, zip_code, geo_areas, geo_source, geo_unresolved_places, status, ikke_relevant, owner_id, profiles!companies_owner_id_fkey(id, full_name)), profiles!contacts_owner_id_fkey(id, full_name)",
         )
+        .neq("status", "deleted")
         .order("updated_at", { ascending: false })
         .limit(2000);
       if (error) throw error;
@@ -764,6 +766,7 @@ export default function DesignLabContacts() {
         .select(
           "*, companies(id, name, address, city, zip_code, geo_areas, geo_source, geo_unresolved_places, status, ikke_relevant, owner_id, profiles!companies_owner_id_fkey(id, full_name)), profiles!contacts_owner_id_fkey(id, full_name)",
         )
+        .neq("status", "deleted")
         .order("updated_at", { ascending: false })
         .limit(2000);
       if (error) throw error;
@@ -1113,6 +1116,52 @@ export default function DesignLabContacts() {
     () => (parityContacts.length > 0 || (rawContacts.length === 0 && !isLoadingParity) ? parityContacts : fallbackContacts),
     [fallbackContacts, isLoadingParity, parityContacts, rawContacts.length],
   );
+  const softDeletingUnknownContactsRef = useRef(false);
+
+  useEffect(() => {
+    const loadedContacts = [...rawContacts, ...parityContacts];
+    if (
+      (isLoading || isLoadingParity) ||
+      softDeletingUnknownContactsRef.current ||
+      loadedContacts.length === 0
+    ) {
+      return;
+    }
+
+    const uniqueContacts = [...new Map(loadedContacts.map((contact: any) => [contact.id, contact])).values()];
+    const contactsToSoftDelete = uniqueContacts.filter(shouldSoftDeleteUnknownUnlinkedTitlelessContact);
+    if (contactsToSoftDelete.length === 0) return;
+
+    softDeletingUnknownContactsRef.current = true;
+
+    const softDeleteContacts = async () => {
+      try {
+        let updated = 0;
+
+        for (let i = 0; i < contactsToSoftDelete.length; i += 100) {
+          const batchIds = contactsToSoftDelete.slice(i, i + 100).map((contact: any) => contact.id);
+          const { error } = await supabase
+            .from("contacts")
+            .update({ status: "deleted", updated_at: new Date().toISOString() })
+            .in("id", batchIds);
+          if (error) throw error;
+          updated += batchIds.length;
+        }
+
+        if (updated > 0) {
+          toast.success(`Fjernet ${updated} kontakter uten selskap, sted og stilling`);
+          await invalidateDesignLabQueries();
+        }
+      } catch (error) {
+        console.error("Could not soft-delete unknown unlinked contacts:", error);
+        toast.error("Kunne ikke fjerne kontakter uten selskap, sted og stilling");
+      } finally {
+        softDeletingUnknownContactsRef.current = false;
+      }
+    };
+
+    void softDeleteContacts();
+  }, [invalidateDesignLabQueries, isLoading, isLoadingParity, parityContacts, rawContacts]);
 
   useEffect(() => {
     if (!selectedId || isLoading || isLoadingParity) return;

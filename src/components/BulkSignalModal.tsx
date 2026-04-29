@@ -41,6 +41,7 @@ export function BulkSignalModal({ open, onClose }: BulkSignalModalProps) {
     const { data: contacts } = await supabase
       .from("contacts")
       .select("id, first_name, last_name, company_id, companies(name)")
+      .neq("status", "deleted")
       .order("updated_at", { ascending: false })
       .limit(20);
 

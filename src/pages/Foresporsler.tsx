@@ -393,6 +393,7 @@ export function NyForesporselModal({
         .from("contacts")
         .select("id, first_name, last_name, title")
         .eq("company_id", selskapId!)
+        .neq("status", "deleted")
         .order("first_name");
       if (error) throw error;
       return data || [];

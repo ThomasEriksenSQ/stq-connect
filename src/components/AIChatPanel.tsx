@@ -147,6 +147,7 @@ export function AIChatPanel() {
         supabase
           .from("contacts")
           .select("id, first_name, last_name, title, company_id, companies(name), activities(created_at, subject, description), tasks(id, title, due_date, status, created_at, description)")
+          .neq("status", "deleted")
           .limit(60),
         supabase
           .from("foresporsler")
@@ -503,6 +504,7 @@ Returner BARE JSON, ingen annen tekst.`,
     searchTimer.current = setTimeout(async () => {
       const { data } = await supabase.from("contacts")
         .select("id, first_name, last_name, title, companies(name)")
+        .neq("status", "deleted")
         .or(`first_name.ilike.%${query}%,last_name.ilike.%${query}%`)
         .limit(6);
       if (data) setEpostContactResults(data);

@@ -62,6 +62,7 @@ import {
   normalizeGeoFilter,
   type GeoFilter,
 } from "@/lib/companyGeoAreas";
+import { shouldSoftDeleteUnknownUnlinkedTitlelessContact } from "@/lib/contactStatus";
 
 type SortField = "name" | "company" | "title" | "signal" | "owner" | "last_activity" | "priority";
 type SortDir = "asc" | "desc";
@@ -309,6 +310,7 @@ const Contacts = () => {
           "*, companies(id, name, address, city, zip_code, geo_areas, geo_source, geo_unresolved_places, status, ikke_relevant, owner_id, profiles!companies_owner_id_fkey(id, full_name)), profiles!contacts_owner_id_fkey(id, full_name)",
           { count: "exact" },
         )
+        .neq("status", "deleted")
         .order("first_name")
         .limit(2000);
       if (error) throw error;
@@ -549,6 +551,44 @@ const Contacts = () => {
   const contacts = useMemo(() => contactsResult?.rows ?? [], [contactsResult]);
   const companyTechProfiles = useMemo(() => contactsResult?.companyTechProfiles ?? [], [contactsResult]);
   const requests = useMemo(() => contactsResult?.requests ?? [], [contactsResult]);
+  const softDeletingUnknownContactsRef = useRef(false);
+
+  useEffect(() => {
+    if (isLoading || softDeletingUnknownContactsRef.current || contacts.length === 0) return;
+
+    const contactsToSoftDelete = contacts.filter(shouldSoftDeleteUnknownUnlinkedTitlelessContact);
+    if (contactsToSoftDelete.length === 0) return;
+
+    softDeletingUnknownContactsRef.current = true;
+
+    const softDeleteContacts = async () => {
+      try {
+        let updated = 0;
+
+        for (let i = 0; i < contactsToSoftDelete.length; i += 100) {
+          const batchIds = contactsToSoftDelete.slice(i, i + 100).map((contact) => contact.id);
+          const { error } = await supabase
+            .from("contacts")
+            .update({ status: "deleted", updated_at: new Date().toISOString() })
+            .in("id", batchIds);
+          if (error) throw error;
+          updated += batchIds.length;
+        }
+
+        if (updated > 0) {
+          toast.success(`Fjernet ${updated} kontakter uten selskap, sted og stilling`);
+          queryClient.invalidateQueries({ queryKey: crmQueryKeys.contacts.all() });
+        }
+      } catch (error) {
+        console.error("Could not soft-delete unknown unlinked contacts:", error);
+        toast.error("Kunne ikke fjerne kontakter uten selskap, sted og stilling");
+      } finally {
+        softDeletingUnknownContactsRef.current = false;
+      }
+    };
+
+    void softDeleteContacts();
+  }, [contacts, isLoading, queryClient]);
   const totalCount = contactsResult?.totalCount ?? 0;
   const capped = contactsResult?.capped ?? false;
   const selectedConsultant = useMemo(

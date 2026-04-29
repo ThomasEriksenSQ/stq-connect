@@ -51,6 +51,7 @@ export async function loadHomeQueueData(userId: string | null): Promise<HomeQueu
   let q = supabase
     .from("contacts")
     .select("*, companies(id, name), profiles:owner_id(full_name)")
+    .neq("status", "deleted")
     .or("ikke_aktuell_kontakt.is.null,ikke_aktuell_kontakt.eq.false");
   if (userId) q = q.eq("owner_id", userId);
 

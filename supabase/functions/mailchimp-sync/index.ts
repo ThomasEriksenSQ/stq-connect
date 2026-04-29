@@ -156,6 +156,7 @@ async function syncContactToMailchimp(
     .from("contacts")
     .select("*, companies(name, status)")
     .eq("id", contactId)
+    .neq("status", "deleted")
     .single();
   if (error || !contact) throw new Error("Kontakt ikke funnet");
   if (!contact.email) throw new Error("Kontakt mangler e-post");
@@ -229,6 +230,7 @@ async function syncAllToMailchimp(
     .from("contacts")
     .select("id, first_name, last_name, email, phone, title, owner_id, cv_email, companies(name, status)")
     .eq("cv_email", true)
+    .neq("status", "deleted")
     .not("email", "is", null);
   if (err1) throw err1;
 
@@ -237,6 +239,7 @@ async function syncAllToMailchimp(
     .from("contacts")
     .select("id, first_name, last_name, email, phone, title, owner_id, cv_email, companies(name, status)")
     .eq("cv_email", false)
+    .neq("status", "deleted")
     .not("email", "is", null);
   if (err2) throw err2;
 
@@ -346,6 +349,7 @@ async function handleWebhook(req: Request, supabaseAdmin: ReturnType<typeof crea
     const { data: contacts } = await supabaseAdmin
       .from("contacts")
       .select("id")
+      .neq("status", "deleted")
       .ilike("email", email);
 
     if (contacts && contacts.length > 0) {
@@ -363,6 +367,7 @@ async function handleWebhook(req: Request, supabaseAdmin: ReturnType<typeof crea
     const { data: contacts } = await supabaseAdmin
       .from("contacts")
       .select("id")
+      .neq("status", "deleted")
       .ilike("email", email);
 
     if (contacts && contacts.length > 0) {

@@ -281,6 +281,7 @@ Deno.serve(async (req: Request) => {
       const { data, error } = await supabase
         .from("contacts")
         .select("id, company_id, ikke_aktuell_kontakt, call_list")
+        .neq("status", "deleted")
         .in("company_id", chunk);
       if (error) console.error(`[contacts chunk ${i}] error:`, error.message);
       if (data) allContacts.push(...data);

@@ -366,6 +366,7 @@ export function AnsattDetailSheet({ open, onClose, ansatt, openInEditMode, autoR
       const { data: kontakter } = await supabase
         .from("contacts")
         .select("id, first_name, last_name, title, company_id, call_list, teknologier, companies(name)")
+        .neq("status", "deleted")
         .not("teknologier", "eq", "{}")
         .limit(200);
 

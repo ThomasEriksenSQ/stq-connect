@@ -257,6 +257,7 @@ const DailyBrief = ({ designLabMode = false }: DailyBriefProps) => {
       let q = supabase
         .from("contacts")
         .select("*, companies(id, name, city)")
+        .neq("status", "deleted")
         .or("ikke_aktuell_kontakt.is.null,ikke_aktuell_kontakt.eq.false");
       if (ownerFilter && ownerFilter !== "alle") q = q.eq("owner_id", ownerFilter);
       const { data: contacts, error } = await q.limit(2000);

@@ -340,6 +340,7 @@ function MissingContactBanner({ row }: { row: any }) {
         .from("contacts")
         .select("id, first_name, last_name, title")
         .eq("company_id", row.selskap_id)
+        .neq("status", "deleted")
         .ilike("first_name", `%${q}%`)
         .limit(8);
       setResults(data || []);
@@ -583,6 +584,7 @@ export function ForespørselSheet({
         .from("contacts")
         .select("id, first_name, last_name, title")
         .eq("company_id", selskapId!)
+        .neq("status", "deleted")
         .order("first_name");
       return data || [];
     },
