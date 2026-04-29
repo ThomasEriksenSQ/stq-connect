@@ -87,7 +87,8 @@ const SIGNAL_ORDER: Record<Signal, number> = {
   "Behov nå": 0, "Får fremtidig behov": 1, "Får kanskje behov": 2, "Ukjent om behov": 3, "Ikke aktuelt": 4,
 };
 
-const OWNERS = ["Alle", "Jon Richard Nygaard", "Thomas Eriksen", "Uten eier"];
+const CRM_COMPANY_OWNER_NAMES = ["Jon Richard Nygaard", "Thomas Eriksen"] as const;
+const OWNERS = ["Alle", ...CRM_COMPANY_OWNER_NAMES, "Uten eier"];
 const TYPE_FILTERS = ["Alle", "Potensiell kunde", "Kunde", "Partner", "Ikke relevant selskap"] as const;
 const SHOW_GEO_MAP_ACTION = false;
 type TypeFilter = typeof TYPE_FILTERS[number];
@@ -255,6 +256,7 @@ export default function DesignLabCompanies() {
   const [createGeoOverride, setCreateGeoOverride] = useState<GeoFilter | "">("");
   const [confirmCreateWithoutOrgOpen, setConfirmCreateWithoutOrgOpen] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
+  const assigningMissingOwnersRef = useRef(false);
 
   useEffect(() => {
     const companyFromUrl = searchParams.get("company");
@@ -393,7 +395,7 @@ export default function DesignLabCompanies() {
         signal: signalMap[c.id] || "",
         contactCount: (c.contacts || []).length,
         ownerName: (c.profiles as any)?.full_name || "",
-        ownerId: (c.profiles as any)?.id || null,
+        ownerId: (c.profiles as any)?.id || c.owner_id || null,
       }));
     },
   });
@@ -420,6 +422,60 @@ export default function DesignLabCompanies() {
       setCreateForm((prev) => ({ ...prev, owner_id: user.id }));
     }
   }, [allProfiles, createForm.owner_id, createOpen, user?.id]);
+
+  useEffect(() => {
+    if (isLoading || assigningMissingOwnersRef.current || companies.length === 0 || allProfiles.length === 0) return;
+
+    const crmOwners = CRM_COMPANY_OWNER_NAMES.map((name) => allProfiles.find((profile) => profile.full_name === name));
+    if (crmOwners.some((owner) => !owner)) return;
+
+    const unownedCompanies = companies.filter((company: any) => !company.owner_id);
+    if (unownedCompanies.length === 0) return;
+
+    const owners = crmOwners as Array<{ id: string; full_name: string }>;
+    const shuffled = [...unownedCompanies].sort(() => Math.random() - 0.5);
+    const ownerOffset = Math.floor(Math.random() * owners.length);
+
+    assigningMissingOwnersRef.current = true;
+
+    const assignMissingOwners = async () => {
+      try {
+        let updated = 0;
+
+        for (let ownerIndex = 0; ownerIndex < owners.length; ownerIndex += 1) {
+          const owner = owners[(ownerIndex + ownerOffset) % owners.length];
+          const ids = shuffled
+            .filter((_, companyIndex) => companyIndex % owners.length === ownerIndex)
+            .map((company: any) => company.id);
+
+          for (let i = 0; i < ids.length; i += 100) {
+            const batchIds = ids.slice(i, i + 100);
+            if (batchIds.length === 0) continue;
+
+            const { error } = await supabase
+              .from("companies")
+              .update({ owner_id: owner.id })
+              .in("id", batchIds);
+
+            if (error) throw error;
+            updated += batchIds.length;
+          }
+        }
+
+        if (updated > 0) {
+          toast.success(`Fordelte ${updated} selskaper uten eier`);
+          queryClient.invalidateQueries({ queryKey: crmQueryKeys.companies.all() });
+        }
+      } catch (error) {
+        console.error("Could not assign missing company owners:", error);
+        toast.error("Kunne ikke fordele selskaper uten eier");
+      } finally {
+        assigningMissingOwnersRef.current = false;
+      }
+    };
+
+    void assignMissingOwners();
+  }, [allProfiles, companies, isLoading, queryClient]);
 
   const resetCreateForm = useCallback(() => {
     setCreateForm({

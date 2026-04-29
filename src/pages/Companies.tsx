@@ -415,7 +415,7 @@ const Companies = () => {
     onError: () => toast.error("Kunne ikke opprette selskap"),
   });
 
-  const getOwnerId = (company: any) => (company.profiles as any)?.id || null;
+  const getOwnerId = (company: any) => (company.profiles as any)?.id || company.owner_id || null;
 
   const ownerList = allProfiles
     .filter((profile) => Boolean(profile.full_name))
