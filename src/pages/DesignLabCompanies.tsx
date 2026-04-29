@@ -89,7 +89,7 @@ const SIGNAL_ORDER: Record<Signal, number> = {
 
 const CRM_COMPANY_OWNER_NAMES = ["Jon Richard Nygaard", "Thomas Eriksen"] as const;
 const OWNERS = ["Alle", ...CRM_COMPANY_OWNER_NAMES, "Uten eier"];
-const TYPE_FILTERS = ["Alle", "Potensiell kunde", "Kunde", "Partner", "Ikke relevant selskap"] as const;
+const TYPE_FILTERS = ["Alle", "Potensiell kunde", "Kunde", "Partner", "Aldri kontaktet", "Ikke relevant selskap"] as const;
 const SHOW_GEO_MAP_ACTION = false;
 type TypeFilter = typeof TYPE_FILTERS[number];
 
@@ -614,7 +614,9 @@ export default function DesignLabCompanies() {
     }
     if (ownerFilter === "Uten eier") list = list.filter((c: any) => !c.ownerId);
     else if (ownerFilter !== "Alle") list = list.filter((c: any) => c.ownerName === ownerFilter);
-    if (typeFilter !== "Alle") {
+    if (typeFilter === "Aldri kontaktet") {
+      list = list.filter((c: any) => (c.contactCount || 0) === 0 || !c.lastActivity);
+    } else if (typeFilter !== "Alle") {
       const dbValue = TYPE_LABEL_TO_VALUE[typeFilter];
       if (dbValue) list = list.filter((c: any) => c.status === dbValue || (dbValue === "customer" && c.status === "kunde"));
     }

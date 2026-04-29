@@ -462,7 +462,9 @@ const Companies = () => {
     const matchSearch =
       !q || c.name.toLowerCase().includes(q) || c.org_number?.includes(q) || c.industry?.toLowerCase().includes(q);
     const matchOwner = ownerFilter === "all" || getOwnerId(c) === ownerFilter;
-    const matchStatus = statusFilter === "all" || c.status === statusFilter;
+    const matchStatus =
+      statusFilter === "all" ||
+      (statusFilter === "__never_contacted__" ? ((c.contacts || []).length === 0 || !c.lastActivity) : c.status === statusFilter);
     const matchGeo = companyMatchesGeoFilter(c, effectiveGeoFilter);
     return matchSearch && matchOwner && matchStatus && matchGeo;
   });
@@ -824,6 +826,7 @@ const Companies = () => {
               { value: "prospect", label: "Potensiell kunde" },
               { value: "customer", label: "Kunde" },
               { value: "partner", label: "Partner" },
+              { value: "__never_contacted__", label: "Aldri kontaktet" },
               { value: "churned", label: "Ikke relevant selskap" },
             ].map((o) => (
               <button
