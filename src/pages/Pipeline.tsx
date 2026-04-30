@@ -15,6 +15,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 
 import { DesignLabMobileNavButton, DesignLabSidebar } from "@/components/designlab/DesignLabSidebar";
 import { CommandPalette } from "@/components/designlab/CommandPalette";
@@ -25,14 +27,8 @@ import {
   DesignLabFilterRow,
   DesignLabPrimaryAction,
   DesignLabReadonlyChip,
-  DesignLabSecondaryAction,
 } from "@/components/designlab/system";
-import {
-  DesignLabFormSheet,
-  DesignLabFormSheetBody,
-  DesignLabFormSheetFooter,
-  DesignLabFormSheetHeader,
-} from "@/components/designlab/DesignLabEntitySheet";
+import { DesignLabEntitySheet } from "@/components/designlab/DesignLabEntitySheet";
 import { usePersistentState } from "@/hooks/usePersistentState";
 import { useAuth } from "@/hooks/useAuth";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -193,10 +189,7 @@ const SOURCE_FILTER_OPTIONS = ["Alle", "Forespørsler", "Muligheter"] as const;
 const PIPELINE_TABLE_COLUMNS = "minmax(210px,1.35fr) minmax(72px,0.45fr) minmax(104px,0.55fr) minmax(104px,0.55fr) minmax(136px,0.8fr) minmax(88px,0.55fr)";
 
 const SELECT_CLASS =
-  "h-[var(--dl-modal-control-height,32px)] w-full min-w-0 rounded-md border border-[#D7DCE3] bg-white px-2.5 text-[var(--dl-modal-font-size,13px)] text-[#1F2328] outline-none focus:border-[#5E6AD2] focus:shadow-[0_0_0_2px_rgba(94,106,210,0.15)]";
-
-const TEXTAREA_CLASS =
-  "min-h-[112px] w-full min-w-0 resize-none rounded-md border border-[#D7DCE3] bg-white px-2.5 py-2 text-[var(--dl-modal-font-size,13px)] text-[#1F2328] outline-none focus:border-[#5E6AD2] focus:shadow-[0_0_0_2px_rgba(94,106,210,0.15)]";
+  "h-10 w-full min-w-0 rounded-lg border border-border bg-background px-3 text-[0.875rem] text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50";
 
 function statusFilterValue(label: string): StatusFilter {
   if (label === "Alle") return "alle";
@@ -1297,10 +1290,18 @@ function NewOpportunitySheet({
   };
 
   return (
-    <DesignLabFormSheet open={open} onOpenChange={handleOpenChange} maxWidth={560}>
-      <DesignLabFormSheetHeader title="Ny mulighet" subtitle="Når det er en mulighet uten direkte forespørsel" />
-      <form onSubmit={createOpportunity} className="flex min-h-0 flex-1 flex-col">
-        <DesignLabFormSheetBody>
+    <DesignLabEntitySheet
+      open={open}
+      onOpenChange={handleOpenChange}
+      contentClassName="px-6 py-6"
+    >
+      <form onSubmit={createOpportunity} className="flex min-h-full flex-col">
+        <div className="-mx-6 -mt-6 mb-5 border-b border-border px-6 pb-4 pt-5">
+          <h2 className="text-[1.125rem] font-bold text-foreground">Ny mulighet</h2>
+          <p className="mt-1 text-[0.875rem] text-muted-foreground">Når det er en mulighet uten direkte forespørsel</p>
+        </div>
+
+        <div className="flex-1 space-y-4">
           <SheetField>
             <FieldLabel required>Konsulenttype</FieldLabel>
             <select
@@ -1425,8 +1426,7 @@ function NewOpportunitySheet({
 
           <SheetField>
             <FieldLabel required>Tittel</FieldLabel>
-            <input
-              className={SELECT_CLASS}
+            <Input
               value={title}
               required
               aria-required="true"
@@ -1437,28 +1437,40 @@ function NewOpportunitySheet({
 
           <SheetField>
             <FieldLabel>Notat</FieldLabel>
-            <textarea
+            <Textarea
               value={note}
               onChange={(event) => setNote(event.target.value)}
-              className={TEXTAREA_CLASS}
+              rows={3}
+              className="resize-none text-[0.875rem]"
               placeholder="Kort kontekst, hva kunden vurderer, neste steg..."
             />
           </SheetField>
-        </DesignLabFormSheetBody>
+        </div>
 
-        <DesignLabFormSheetFooter>
-          <DesignLabSecondaryAction type="button" onClick={() => handleOpenChange(false)} disabled={saving}>Avbryt</DesignLabSecondaryAction>
-          <DesignLabPrimaryAction type="submit" disabled={saving}>
+        <div className="mt-6 flex items-center justify-between border-t border-border pt-4">
+          <button
+            type="button"
+            onClick={() => handleOpenChange(false)}
+            disabled={saving}
+            className="text-[0.8125rem] text-muted-foreground transition-colors hover:text-foreground disabled:opacity-50"
+          >
+            Avbryt
+          </button>
+          <button
+            type="submit"
+            disabled={saving}
+            className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-primary px-4 text-[0.8125rem] font-medium text-primary-foreground transition-colors hover:opacity-90 disabled:opacity-50"
+          >
             {saving ? "Oppretter..." : "Opprett mulighet"}
-          </DesignLabPrimaryAction>
-        </DesignLabFormSheetFooter>
+          </button>
+        </div>
       </form>
-    </DesignLabFormSheet>
+    </DesignLabEntitySheet>
   );
 }
 
 function SheetField({ children }: { children: ReactNode }) {
-  return <div className="grid min-w-0 gap-1.5">{children}</div>;
+  return <div className="grid min-w-0 gap-1">{children}</div>;
 }
 
 type SearchSelectOption = {
@@ -1572,9 +1584,9 @@ function SearchSelect({
 
 function FieldLabel({ children, required = false }: { children: ReactNode; required?: boolean }) {
   return (
-    <label style={{ fontSize: 11, color: C.textFaint, fontWeight: 650, letterSpacing: "0.08em", textTransform: "uppercase" }}>
+    <label className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
       {children}
-      {required ? <span style={{ color: C.danger, marginLeft: 3 }}>*</span> : null}
+      {required ? <span className="ml-1 text-destructive">*</span> : null}
     </label>
   );
 }
