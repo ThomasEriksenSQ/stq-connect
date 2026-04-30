@@ -975,10 +975,10 @@ function PipelineGroupRow({ group, active, onClick }: { group: PipelineGroup; ac
         <ConsultantTypeTag type={group.consultantType} />
       </div>
       <div className="min-w-0 overflow-hidden">
-        <DesignLabReadonlyChip active={false}>{group.requestCount} foresp.</DesignLabReadonlyChip>
+        <span style={{ fontSize: 13, color: C.textMuted }}>{group.requestCount}</span>
       </div>
       <div className="min-w-0 overflow-hidden">
-        <DesignLabReadonlyChip active={false}>{group.opportunityCount} mul.</DesignLabReadonlyChip>
+        <span style={{ fontSize: 13, color: C.textMuted }}>{group.opportunityCount}</span>
       </div>
       <div className="min-w-0 overflow-hidden">
         {hasPipelineItems ? (
