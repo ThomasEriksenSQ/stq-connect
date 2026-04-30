@@ -1256,7 +1256,7 @@ function NewOpportunitySheet({
 
   return (
     <DesignLabFormSheet open={open} onOpenChange={handleOpenChange} maxWidth={560}>
-      <DesignLabFormSheetHeader title="Ny mulighet" subtitle="Når det er en mulighet uten direkte forespørsel" />
+      <DesignLabFormSheetHeader title="Ny mulighet" subtitle="F.eks. Kunden vurderer kandidaten" />
       <form onSubmit={createOpportunity} className="flex min-h-0 flex-1 flex-col">
         <DesignLabFormSheetBody>
           <SheetField>
