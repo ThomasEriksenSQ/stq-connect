@@ -29,7 +29,6 @@ import {
   DesignLabFilterRow,
   DesignLabGhostAction,
   DesignLabPrimaryAction,
-  DesignLabReadonlyChip,
   DesignLabSignalBadge,
 } from "@/components/designlab/system";
 import { getEffectiveSignal, getSignalRank } from "@/lib/categoryUtils";
@@ -71,29 +70,6 @@ function relTime(days: number): string {
   if (days < 365) return `${Math.floor(days / 30)}m`;
   return `${Math.floor(days / 365)}å`;
 }
-
-function getVisibleTechnologies(tags: unknown): { visible: string[]; hiddenCount: number } {
-  const normalized = Array.isArray(tags)
-    ? tags
-        .map((tag) => (typeof tag === "string" ? tag.trim() : ""))
-        .filter(Boolean)
-    : [];
-
-  const visible: string[] = [];
-  let charBudget = 18;
-
-  for (const tag of normalized) {
-    const nextCost = tag.length + (visible.length > 0 ? 2 : 0);
-    if (visible.length >= 2 || nextCost > charBudget) break;
-    visible.push(tag);
-    charBudget -= nextCost;
-  }
-
-  return { visible, hiddenCount: Math.max(0, normalized.length - visible.length) };
-}
-
-
-
 
 /* ═══════════════════════════════════════════════════════════
    PIPELINE
@@ -602,7 +578,7 @@ export default function DesignLabForesporsler() {
    ═══════════════════════════════════════════════════════════ */
 
 function TableHeader({ sort, onSort }: { sort: { field: SortField; dir: SortDir }; onSort: (f: SortField) => void }) {
-  const cols = "minmax(160px,1.2fr) 120px minmax(160px,1.2fr) 108px minmax(160px,1.1fr) minmax(170px,1.2fr) minmax(110px,0.8fr) 88px";
+  const cols = "minmax(160px,1.2fr) 120px minmax(160px,1.2fr) 108px minmax(170px,1.2fr) minmax(110px,0.8fr) 88px";
 
   return (
     <div
@@ -625,7 +601,6 @@ function TableHeader({ sort, onSort }: { sort: { field: SortField; dir: SortDir 
       <DesignLabColumnHeader label="Signal" field="signal" sort={sort} onSort={onSort} />
       <DesignLabColumnHeader label="Selskap" field="selskap_navn" sort={sort} onSort={onSort} />
       <span style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: C.textMuted }}>Type</span>
-      <span style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: C.textMuted }}>Teknologier</span>
       <span style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: C.textMuted }}>Konsulent</span>
       <DesignLabColumnHeader label="Status" field="sendt_count" sort={sort} onSort={onSort} />
       <DesignLabColumnHeader label="Mottatt" field="mottatt_dato" sort={sort} onSort={onSort} />
@@ -650,9 +625,8 @@ function ForespRow({
   const days = getDaysAgo(row.mottatt_dato);
   const kontaktNavn = row.contacts ? `${row.contacts.first_name} ${row.contacts.last_name}`.trim() : "";
   const sendt = row.foresporsler_konsulenter || [];
-  const technologies = getVisibleTechnologies(row.teknologier);
   const signal = row.contacts?.id ? signalByContactId.get(row.contacts.id) || null : null;
-  const cols = "minmax(160px,1.2fr) 120px minmax(160px,1.2fr) 108px minmax(160px,1.1fr) minmax(170px,1.2fr) minmax(110px,0.8fr) 88px";
+  const cols = "minmax(160px,1.2fr) 120px minmax(160px,1.2fr) 108px minmax(170px,1.2fr) minmax(110px,0.8fr) 88px";
 
   return (
     <div
@@ -699,24 +673,6 @@ function ForespRow({
       {/* Type */}
       <div style={{ paddingTop: 1 }}>
         <TypeChip type={row.type} />
-      </div>
-      {/* Teknologier */}
-      <div className="min-w-0 pr-4" style={{ overflow: "hidden" }}>
-        <div className="flex items-center gap-1.5 flex-nowrap" style={{ minWidth: 0, overflow: "hidden" }}>
-          {technologies.visible.map((t) => (
-            <DesignLabReadonlyChip key={t} active={false}>
-              {t}
-            </DesignLabReadonlyChip>
-          ))}
-          {technologies.hiddenCount > 0 && (
-            <span className="shrink-0" style={{ fontSize: 11, color: C.textGhost }}>
-              +{technologies.hiddenCount}
-            </span>
-          )}
-          {technologies.visible.length === 0 && technologies.hiddenCount === 0 ? (
-            <span style={{ fontSize: 12, color: C.textGhost }}>—</span>
-          ) : null}
-        </div>
       </div>
       {/* Konsulent */}
       <div className="flex flex-col items-start gap-2 pr-8 min-w-0" style={{ paddingTop: 2, overflow: "hidden" }}>
