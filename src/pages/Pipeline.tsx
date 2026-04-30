@@ -872,6 +872,27 @@ export default function Pipeline() {
         }}
         onFilterByCompany={() => undefined}
       />
+
+      <AlertDialog open={!!pendingDelete} onOpenChange={(open) => { if (!open) setPendingDelete(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Er du sikker?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Slette muligheten "{pendingDelete?.title}"? Dette kan ikke angres.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deletingOpportunity}>Avbryt</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => { e.preventDefault(); void confirmDeleteOpportunity(); }}
+              disabled={deletingOpportunity}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Ja, slett
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
