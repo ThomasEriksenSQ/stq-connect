@@ -745,19 +745,12 @@ export default function Pipeline() {
             value={statusFilter === "alle" ? "Alle" : PIPELINE_STATUS_META[statusFilter].label}
             onChange={(value) => setStatusFilter(statusFilterValue(value))}
           />
-          <div className="flex items-center justify-between">
-            <DesignLabFilterRow
-              label="TYPE"
-              options={TYPE_FILTER_OPTIONS}
-              value={typeFilterLabel(typeFilter)}
-              onChange={(value) => setTypeFilter(typeFilterValue(value))}
-            />
-            {(selectionFilter !== "tilgjengelige" || statusFilter !== "alle" || typeFilter !== "alle" || sourceFilter !== "alle") && (
-              <DesignLabGhostAction onClick={resetFilters}>
-                <X style={{ width: 12, height: 12 }} /> Nullstill
-              </DesignLabGhostAction>
-            )}
-          </div>
+          <DesignLabFilterRow
+            label="TYPE"
+            options={TYPE_FILTER_OPTIONS}
+            value={typeFilterLabel(typeFilter)}
+            onChange={(value) => setTypeFilter(typeFilterValue(value))}
+          />
           <DesignLabFilterRow
             label="KILDE"
             options={SOURCE_FILTER_OPTIONS}
