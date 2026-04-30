@@ -1037,7 +1037,6 @@ function PipelineDetail({
                   {item.requestType && <DesignLabReadonlyChip active={false}>{item.requestType}</DesignLabReadonlyChip>}
                 </div>
                 <p className="mt-2 truncate" style={{ fontSize: 13, color: C.text, fontWeight: 600 }}>{item.companyName}</p>
-                <p className="truncate" style={{ fontSize: 12, color: C.textMuted }}>{item.title}</p>
                 {item.contactName && (
                   <p className="mt-1 truncate" style={{ fontSize: 12, color: C.textFaint }}>
                     {item.contactName}{item.contactTitle ? ` · ${item.contactTitle}` : ""}
