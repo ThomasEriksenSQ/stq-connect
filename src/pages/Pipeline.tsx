@@ -1,10 +1,15 @@
 import { Fragment, useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { Plus, Trash2, X } from "lucide-react";
-import { formatDistanceToNowStrict } from "date-fns";
+import { format, formatDistanceToNowStrict } from "date-fns";
 import { nb } from "date-fns/locale";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -39,6 +44,8 @@ import { crmQueryKeys } from "@/lib/queryKeys";
 import { getInitials } from "@/lib/utils";
 import { hasConsultantAvailability, sortHuntConsultants, getConsultantAvailabilityMeta } from "@/lib/contactHunt";
 import { isEmployeeEndDatePassed } from "@/lib/employeeStatus";
+import { createOppdragFormState } from "@/lib/oppdragForm";
+import { createOppdrag, invalidateOppdragQueries } from "@/lib/oppdragPersistence";
 import {
   getPipelineStatusMeta,
   isOpenPipelineStatus,
@@ -190,6 +197,7 @@ const PIPELINE_TABLE_COLUMNS = "minmax(210px,1.35fr) minmax(72px,0.45fr) minmax(
 
 const SELECT_CLASS =
   "h-10 w-full min-w-0 rounded-lg border border-border bg-background px-3 text-[0.875rem] text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50";
+const LABEL = "text-[13px] font-medium text-foreground";
 
 function statusFilterValue(label: string): StatusFilter {
   if (label === "Alle") return "alle";
@@ -356,6 +364,21 @@ export default function Pipeline() {
   const [savingStatusId, setSavingStatusId] = useState<string | null>(null);
   const [pendingDelete, setPendingDelete] = useState<PipelineItem | null>(null);
   const [deletingOpportunity, setDeletingOpportunity] = useState(false);
+  const [oppdragModalOpen, setOppdragModalOpen] = useState(false);
+  const [oppdragKonsulentNavn, setOppdragKonsulentNavn] = useState("");
+  const [oppdragUtpris, setOppdragUtpris] = useState("");
+  const [oppdragInnpris, setOppdragInnpris] = useState("");
+  const [oppdragStartDato, setOppdragStartDato] = useState("");
+  const [oppdragFornyDato, setOppdragFornyDato] = useState("");
+  const [oppdragKommentar, setOppdragKommentar] = useState("");
+  const [oppdragSubmitting, setOppdragSubmitting] = useState(false);
+  const [oppdragLopende, setOppdragLopende] = useState(false);
+  const [oppdragAnsattId, setOppdragAnsattId] = useState<number | null>(null);
+  const [oppdragEksternId, setOppdragEksternId] = useState<string | null>(null);
+  const [oppdragErAnsatt, setOppdragErAnsatt] = useState(true);
+  const [oppdragCompanyId, setOppdragCompanyId] = useState<string | null>(null);
+  const [oppdragCompanyName, setOppdragCompanyName] = useState<string | null>(null);
+  const [oppdragDealType, setOppdragDealType] = useState("DIR");
 
   const { data: requestLinks = [], isLoading: isLoadingRequestLinks } = useQuery({
     queryKey: ["pipeline-request-links-v1"],
@@ -659,6 +682,34 @@ export default function Pipeline() {
     ]);
   };
 
+  const fireConfetti = () => {
+    import("canvas-confetti").then(({ default: confetti }) => {
+      confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 }, colors: ["#22c55e", "#3b82f6", "#f59e0b", "#ec4899", "#8b5cf6"] });
+      setTimeout(() => {
+        confetti({ particleCount: 60, angle: 60, spread: 55, origin: { x: 0 }, colors: ["#22c55e", "#f59e0b"] });
+        confetti({ particleCount: 60, angle: 120, spread: 55, origin: { x: 1 }, colors: ["#3b82f6", "#8b5cf6"] });
+      }, 300);
+    });
+  };
+
+  const openOppdragModalForWonItem = (item: PipelineItem) => {
+    const isIntern = item.consultantType === "intern";
+    setOppdragKonsulentNavn(item.consultantName || "");
+    setOppdragUtpris("");
+    setOppdragInnpris("");
+    setOppdragStartDato("");
+    setOppdragFornyDato("");
+    setOppdragKommentar("");
+    setOppdragLopende(false);
+    setOppdragAnsattId(isIntern ? Number(item.consultantId) || null : null);
+    setOppdragEksternId(isIntern ? null : item.consultantId || null);
+    setOppdragErAnsatt(isIntern);
+    setOppdragCompanyId(item.companyId || null);
+    setOppdragCompanyName(item.companyName || null);
+    setOppdragDealType(item.requestType || "DIR");
+    setTimeout(() => setOppdragModalOpen(true), 600);
+  };
+
   const updateStatus = async (item: PipelineItem, status: PipelineStatus) => {
     if (status === item.status) return;
     setSavingStatusId(item.id);
@@ -671,12 +722,48 @@ export default function Pipeline() {
           : await supabase.from("pipeline_muligheter").update(statusPatch).eq("id", rawId);
       if (error) throw error;
       await invalidatePipelineQueries();
-      toast.success(`${item.consultantName}: ${getPipelineStatusMeta(status).label}`);
+      if (status === "vunnet") {
+        fireConfetti();
+        openOppdragModalForWonItem(item);
+      } else {
+        toast.success(`${item.consultantName}: ${getPipelineStatusMeta(status).label}`);
+      }
     } catch (error) {
       console.error(error);
       toast.error("Kunne ikke oppdatere status");
     } finally {
       setSavingStatusId(null);
+    }
+  };
+
+  const handleCreateOppdrag = async () => {
+    setOppdragSubmitting(true);
+    try {
+      await createOppdrag(
+        createOppdragFormState({
+          kandidat: oppdragKonsulentNavn,
+          personType: oppdragErAnsatt ? "ansatt" : "ekstern",
+          ansattId: oppdragErAnsatt ? oppdragAnsattId : null,
+          eksternId: oppdragErAnsatt ? null : oppdragEksternId,
+          status: "Oppstart",
+          dealType: oppdragDealType || "DIR",
+          utpris: oppdragUtpris,
+          tilKonsulent: oppdragInnpris,
+          startDato: oppdragStartDato ? new Date(oppdragStartDato) : undefined,
+          fornyDato: oppdragFornyDato ? new Date(oppdragFornyDato) : undefined,
+          kommentar: oppdragKommentar,
+          selskapId: oppdragCompanyId,
+          selskapNavn: oppdragCompanyName,
+          isLopende: oppdragLopende,
+        }),
+      );
+      await invalidateOppdragQueries(queryClient);
+      toast.success("Oppdrag opprettet");
+      setOppdragModalOpen(false);
+    } catch {
+      toast.error("Kunne ikke opprette oppdrag");
+    } finally {
+      setOppdragSubmitting(false);
     }
   };
 
@@ -853,6 +940,123 @@ export default function Pipeline() {
         }}
         onFilterByCompany={() => undefined}
       />
+
+      <Dialog open={oppdragModalOpen} onOpenChange={setOppdragModalOpen}>
+        <DialogContent className="max-w-md rounded-xl p-6 gap-0" hideCloseButton>
+          <DialogTitle className="text-[1.125rem] font-bold text-foreground mb-5">Opprett oppdrag</DialogTitle>
+
+          <div className="space-y-4">
+            <div>
+              <p className={LABEL}>Konsulent</p>
+              <p className="text-[0.875rem] font-medium text-foreground mt-0.5 mb-3">{oppdragKonsulentNavn}</p>
+            </div>
+            <div>
+              <p className={LABEL}>Kunde</p>
+              <p className="text-[0.875rem] font-medium text-foreground mt-0.5 mb-3">{oppdragCompanyName}</p>
+            </div>
+            <div>
+              <p className={LABEL}>Type</p>
+              <p className="text-[0.875rem] font-medium text-foreground mt-0.5 mb-3">{oppdragDealType === "VIA" ? "Partner" : "Direkte"}</p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className={LABEL}>Utpris / time</label>
+                <Input
+                  type="number"
+                  value={oppdragUtpris}
+                  onChange={(e) => setOppdragUtpris(e.target.value)}
+                  placeholder="f.eks. 1500"
+                  className="mt-1 text-[0.875rem]"
+                />
+              </div>
+              <div>
+                <label className={LABEL}>Innpris / time</label>
+                <Input
+                  type="number"
+                  value={oppdragInnpris}
+                  onChange={(e) => setOppdragInnpris(e.target.value)}
+                  placeholder="f.eks. 1050"
+                  className="mt-1 text-[0.875rem]"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className={LABEL}>Startdato</label>
+                <Input
+                  type="date"
+                  value={oppdragStartDato}
+                  onChange={(e) => setOppdragStartDato(e.target.value)}
+                  className="mt-1 text-[0.875rem]"
+                />
+              </div>
+              <div>
+                <label className={LABEL}>Fornyelsesdato</label>
+                <Input
+                  type="date"
+                  value={oppdragFornyDato}
+                  onChange={(e) => setOppdragFornyDato(e.target.value)}
+                  className="mt-1 text-[0.875rem]"
+                  disabled={oppdragLopende}
+                />
+                <div className="flex items-center gap-2 mt-2">
+                  <input
+                    type="checkbox"
+                    id="lopende-pipeline"
+                    checked={oppdragLopende}
+                    onChange={(e) => {
+                      setOppdragLopende(e.target.checked);
+                      if (e.target.checked) {
+                        const d = new Date();
+                        d.setDate(d.getDate() + 30);
+                        setOppdragFornyDato(d.toISOString().slice(0, 10));
+                      } else {
+                        setOppdragFornyDato("");
+                      }
+                    }}
+                    className="h-4 w-4 rounded border-border"
+                  />
+                  <label htmlFor="lopende-pipeline" className="text-[0.8125rem] text-muted-foreground cursor-pointer select-none">
+                    Løpende 30 dager
+                  </label>
+                </div>
+                {oppdragLopende && oppdragFornyDato && (
+                  <p className="text-[0.75rem] text-muted-foreground ml-6 mt-1">
+                    Utløper: {format(new Date(oppdragFornyDato), "d. MMMM yyyy", { locale: nb })}
+                  </p>
+                )}
+              </div>
+            </div>
+            <div>
+              <label className={LABEL}>Kommentar</label>
+              <Textarea
+                value={oppdragKommentar}
+                onChange={(e) => setOppdragKommentar(e.target.value)}
+                placeholder="Notater om oppdraget..."
+                rows={3}
+                className="mt-1 text-[0.875rem]"
+              />
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between mt-6 pt-4 border-t border-border">
+            <button
+              onClick={() => setOppdragModalOpen(false)}
+              className="text-[0.8125rem] text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Avbryt
+            </button>
+            <button
+              onClick={() => handleCreateOppdrag()}
+              disabled={oppdragSubmitting}
+              className="inline-flex items-center gap-1.5 h-9 px-4 text-[0.8125rem] font-medium rounded-lg bg-primary text-primary-foreground hover:opacity-90 disabled:opacity-50 transition-colors"
+            >
+              {oppdragSubmitting ? "Oppretter..." : "Opprett oppdrag"}
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <AlertDialog open={!!pendingDelete} onOpenChange={(open) => { if (!open) setPendingDelete(null); }}>
         <AlertDialogContent>
