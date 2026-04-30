@@ -64,6 +64,7 @@ import {
 } from "@/lib/companyGeoAreas";
 import { shouldSoftDeleteUnknownUnlinkedTitlelessContact } from "@/lib/contactStatus";
 import { isEmployeeEndDatePassed } from "@/lib/employeeStatus";
+import { updateLatestContactActivityDate } from "@/lib/contactActivityDates";
 import {
   MATCH_OWNER_FILTER_NONE,
   buildMatchLeadOwnerCandidate,
@@ -301,6 +302,7 @@ const DL_QUERY_KEYS = {
   contacts: ["dl-contacts-v9"] as const,
   contactsParity: ["dl-contacts-parity-v10"] as const,
   activities: ["dl-activities-v9"] as const,
+  sentCvLogs: ["dl-sent-cv-log-v1"] as const,
   tasks: ["dl-tasks-v9"] as const,
   foresporsler: ["dl-foresporsler-v9"] as const,
   techProfiles: ["dl-tech-profiles-v9"] as const,
@@ -328,7 +330,7 @@ function relTime(days: number): string {
   if (days === 1) return "1d";
   if (days < 7) return `${days}d`;
   if (days < 30) return `${Math.floor(days / 7)}u`;
-  if (days < 365) return `${Math.floor(days / 30)}m`;
+  if (days < 365) return `${Math.floor(days / 30)}mnd`;
   return `${Math.floor(days / 365)}å`;
 }
 
@@ -466,12 +468,18 @@ export default function DesignLabContacts() {
       queryClient.invalidateQueries({ queryKey: DL_QUERY_KEYS.contacts }),
       queryClient.invalidateQueries({ queryKey: DL_QUERY_KEYS.contactsParity }),
       queryClient.invalidateQueries({ queryKey: DL_QUERY_KEYS.activities }),
+      queryClient.invalidateQueries({ queryKey: DL_QUERY_KEYS.sentCvLogs }),
       queryClient.invalidateQueries({ queryKey: DL_QUERY_KEYS.tasks }),
       queryClient.invalidateQueries({ queryKey: DL_QUERY_KEYS.foresporsler }),
       queryClient.invalidateQueries({ queryKey: DL_QUERY_KEYS.techProfiles }),
       queryClient.invalidateQueries({ queryKey: DL_QUERY_KEYS.consultants }),
     ]);
   }, [queryClient]);
+
+  const contactCardSentCvInvalidateKeys = useMemo(
+    () => [DL_QUERY_KEYS.sentCvLogs, DL_QUERY_KEYS.contactsParity],
+    [],
+  );
 
   const updateCachedContactFields = useCallback(
     (contactId: string, updates: Record<string, any>) => {
@@ -585,6 +593,32 @@ export default function DesignLabContacts() {
     });
     return map;
   }, [allActivities, contactIds]);
+
+  const { data: sentCvLogs = [] } = useQuery({
+    queryKey: DL_QUERY_KEYS.sentCvLogs,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("sent_cv_log")
+        .select("contact_id, sent_at")
+        .not("contact_id", "is", null)
+        .order("sent_at", { ascending: false })
+        .limit(5000);
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: rawContacts.length > 0,
+  });
+
+  const sentCvLastActivityMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    const now = new Date();
+    sentCvLogs.forEach((row) => {
+      if (row.contact_id && contactIds.has(row.contact_id)) {
+        updateLatestContactActivityDate(map, row.contact_id, row.sent_at, now);
+      }
+    });
+    return map;
+  }, [contactIds, sentCvLogs]);
 
   const { data: allTasks = [] } = useQuery({
     queryKey: DL_QUERY_KEYS.tasks,
@@ -773,12 +807,24 @@ export default function DesignLabContacts() {
 
       const contactIdSet = new Set(data.map((contact) => contact.id));
 
-      const [{ data: acts }, { data: tasks }, { data: companyTechProfiles }, { data: requestRows }] = await Promise.all([
+      const [
+        { data: acts },
+        { data: sentCvRows },
+        { data: tasks },
+        { data: companyTechProfiles },
+        { data: requestRows },
+      ] = await Promise.all([
         supabase
           .from("activities")
           .select("contact_id, created_at, description, subject")
           .not("contact_id", "is", null)
           .order("created_at", { ascending: false })
+          .limit(5000),
+        supabase
+          .from("sent_cv_log")
+          .select("contact_id, sent_at")
+          .not("contact_id", "is", null)
+          .order("sent_at", { ascending: false })
           .limit(5000),
         supabase
           .from("tasks")
@@ -804,7 +850,6 @@ export default function DesignLabContacts() {
       ]);
 
       const now = new Date();
-      const nowIso = now.toISOString();
       const lastActMap: Record<string, string> = {};
       const contactActsMap: Record<string, NonNullable<typeof acts>> = {};
       const contactTasksMap: Record<string, NonNullable<typeof tasks>> = {};
@@ -813,10 +858,12 @@ export default function DesignLabContacts() {
 
       (acts || []).forEach((activity) => {
         if (!activity.contact_id || !contactIdSet.has(activity.contact_id)) return;
-        if (activity.created_at <= nowIso && !lastActMap[activity.contact_id]) {
-          lastActMap[activity.contact_id] = activity.created_at;
-        }
+        updateLatestContactActivityDate(lastActMap, activity.contact_id, activity.created_at, now);
         (contactActsMap[activity.contact_id] ??= []).push(activity);
+      });
+      (sentCvRows || []).forEach((row) => {
+        if (!row.contact_id || !contactIdSet.has(row.contact_id)) return;
+        updateLatestContactActivityDate(lastActMap, row.contact_id, row.sent_at, now);
       });
 
       (tasks || []).forEach((task) => {
@@ -1017,7 +1064,11 @@ export default function DesignLabContacts() {
       const signal = effectiveSignal ? mapToSignal(effectiveSignal) : "";
       const pastActivities = acts.filter((activity: any) => activity.created_at <= nowIso);
       const lastAct = pastActivities[0] || null;
-      const daysSince = lastAct ? differenceInDays(now, new Date(lastAct.created_at)) : 999;
+      const lastActivityMap: Record<string, string> = {};
+      updateLatestContactActivityDate(lastActivityMap, c.id, lastAct?.created_at, now);
+      updateLatestContactActivityDate(lastActivityMap, c.id, sentCvLastActivityMap[c.id], now);
+      const lastActivityAt = lastActivityMap[c.id] || null;
+      const daysSince = lastActivityAt ? differenceInDays(now, new Date(lastActivityAt)) : 999;
       const company = ((c as any).companies || null) as CompanyPreview | null;
       const owner = (((c as any).profiles || null) as OwnerPreview);
       const openTasks = tasks.reduce(
@@ -1048,7 +1099,7 @@ export default function DesignLabContacts() {
         return SIGNALS.includes(normalizedSubject as Signal);
       });
       const signalSetAt = signalAct ? new Date(signalAct.created_at) : null;
-      const lastActDate = lastAct ? new Date(lastAct.created_at) : null;
+      const lastActDate = lastActivityAt ? new Date(lastActivityAt) : null;
       const kes = Boolean(signalSetAt && lastActDate && lastActDate > signalSetAt);
 
       const heatResult = getHeatResult({
@@ -1091,7 +1142,7 @@ export default function DesignLabContacts() {
         ikkeAktuell: c.ikke_aktuell_kontakt ?? false,
         teknologier: c.teknologier || [],
         daysSince,
-        lastActivityAt: lastAct?.created_at || null,
+        lastActivityAt,
         lastActivitySubject: lastAct?.subject || "",
         activities: acts,
         tasks,
@@ -1110,7 +1161,7 @@ export default function DesignLabContacts() {
         requestTechnologyTags,
       };
     });
-  }, [rawContacts, activitiesMap, tasksMap, foresporslerMap, techProfileMap]);
+  }, [rawContacts, activitiesMap, sentCvLastActivityMap, tasksMap, foresporslerMap, techProfileMap]);
 
   const contacts = useMemo(
     () => (parityContacts.length > 0 || (rawContacts.length === 0 && !isLoadingParity) ? parityContacts : fallbackContacts),
@@ -3066,6 +3117,7 @@ export default function DesignLabContacts() {
                         editable
                         enableProfileEditMode
                         headerPaddingTop={12}
+                        additionalSentCvInvalidateKeys={contactCardSentCvInvalidateKeys}
                         onDeleted={() => setSelectedId(null)}
                         onDataChanged={() => {
                           void invalidateDesignLabQueries();
@@ -3121,6 +3173,7 @@ export default function DesignLabContacts() {
                 editable
                 enableProfileEditMode
                 headerPaddingTop={12}
+                additionalSentCvInvalidateKeys={contactCardSentCvInvalidateKeys}
                 onDeleted={() => setSelectedId(null)}
                 onDataChanged={() => {
                   void invalidateDesignLabQueries();

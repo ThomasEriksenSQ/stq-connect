@@ -11,7 +11,7 @@ import {
 } from "@/components/designlab/controls";
 import { AiSignalBanner } from "@/components/AiSignalBanner";
 import { Link, useNavigate } from "react-router-dom";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient, type QueryKey } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useConsultantCache } from "@/hooks/useConsultantCache";
 import { useAuth } from "@/hooks/useAuth";
@@ -170,6 +170,7 @@ interface ContactCardContentProps {
   onNavigateToFullPage?: () => void;
   defaultHidden?: DefaultHiddenConfig;
   onDataChanged?: () => void;
+  additionalSentCvInvalidateKeys?: readonly QueryKey[];
   onDeleted?: (contactId: string) => void;
   headerPaddingTop?: number;
 }
@@ -644,6 +645,8 @@ const MODERN_CHECKBOX_LABEL_CLASS = "text-[12px] text-[#5C636E]";
 const MODERN_CHECKBOX_ROW_CLASS =
   "flex w-fit items-center gap-1.5 cursor-pointer select-none rounded-[6px] px-2 py-1 transition-colors hover:bg-[#F8F9FB]";
 
+const EMPTY_QUERY_KEYS: readonly QueryKey[] = [];
+
 export function ContactCardContent({
   contactId,
   editable = false,
@@ -653,6 +656,7 @@ export function ContactCardContent({
   onNavigateToFullPage,
   defaultHidden,
   onDataChanged,
+  additionalSentCvInvalidateKeys = EMPTY_QUERY_KEYS,
   onDeleted,
   headerPaddingTop = 0,
 }: ContactCardContentProps) {
@@ -920,8 +924,8 @@ export function ContactCardContent({
   });
 
   const sentCvInvalidateKeys = useMemo(
-    () => [crmQueryKeys.sentCv.contact(contactId)],
-    [contactId],
+    () => [crmQueryKeys.sentCv.contact(contactId), crmQueryKeys.contacts.all(), ...additionalSentCvInvalidateKeys],
+    [additionalSentCvInvalidateKeys, contactId],
   );
 
   useSentCvLiveSync({

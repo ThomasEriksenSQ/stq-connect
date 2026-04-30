@@ -47,6 +47,7 @@ import {
 } from "@/lib/contactMatchScore";
 import { getConsultantMatchScoreColor } from "@/lib/consultantMatches";
 import { isEmployeeEndDatePassed } from "@/lib/employeeStatus";
+import { updateLatestContactActivityDate } from "@/lib/contactActivityDates";
 import {
   MATCH_OWNER_FILTER_NONE,
   buildMatchLeadOwnerCandidate,
@@ -317,12 +318,24 @@ const Contacts = () => {
 
       const contactIds = new Set(data.map((c) => c.id));
 
-      const [{ data: acts }, { data: tasks }, { data: companyTechProfiles }, { data: requestRows }] = await Promise.all([
+      const [
+        { data: acts },
+        { data: sentCvRows },
+        { data: tasks },
+        { data: companyTechProfiles },
+        { data: requestRows },
+      ] = await Promise.all([
         supabase
           .from("activities")
           .select("contact_id, created_at, description, subject")
           .not("contact_id", "is", null)
           .order("created_at", { ascending: false })
+          .limit(5000),
+        supabase
+          .from("sent_cv_log")
+          .select("contact_id, sent_at")
+          .not("contact_id", "is", null)
+          .order("sent_at", { ascending: false })
           .limit(5000),
         supabase
           .from("tasks")
@@ -349,9 +362,12 @@ const Contacts = () => {
 
       // Last activity date map — only past activities count
       const lastActMap: Record<string, string> = {};
-      const now = new Date().toISOString();
+      const now = new Date();
       (acts || []).forEach((a) => {
-        if (a.contact_id && a.created_at <= now && !lastActMap[a.contact_id]) lastActMap[a.contact_id] = a.created_at;
+        updateLatestContactActivityDate(lastActMap, a.contact_id, a.created_at, now);
+      });
+      (sentCvRows || []).forEach((row) => {
+        updateLatestContactActivityDate(lastActMap, row.contact_id, row.sent_at, now);
       });
 
       // Signal: effective (expiry-aware) signal per contact
