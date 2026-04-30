@@ -1035,7 +1035,7 @@ function PipelineDetail({
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
                   <DesignLabReadonlyChip active={item.source === "foresporsel"}>{sourceLabel(item.source)}</DesignLabReadonlyChip>
-                  {item.requestType && <DesignLabReadonlyChip active={false}>{item.requestType}</DesignLabReadonlyChip>}
+                  {item.requestType && <DealTypeTag type={item.requestType} />}
                 </div>
                 <p className="mt-2 truncate" style={{ fontSize: 13, color: C.text, fontWeight: 600 }}>{item.companyName}</p>
                 {item.contactName && (
