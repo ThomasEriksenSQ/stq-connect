@@ -111,7 +111,7 @@ export function DesignLabFormSheetHeader({ title, subtitle }: { title: string; s
         paddingBottom: "var(--dl-modal-header-padding-bottom, 16px)",
       }}
     >
-      <div className="min-w-0 flex flex-col gap-0.5">
+      <div className="min-w-0 flex flex-col gap-1">
         <h2
           className="font-semibold"
           style={{
