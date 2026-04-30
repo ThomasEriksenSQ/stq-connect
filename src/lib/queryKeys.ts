@@ -17,11 +17,15 @@ export const crmQueryKeys = {
     detail: (companyId: string) => ["company", companyId] as const,
     contacts: (companyId: string) => ["company-contacts", companyId] as const,
     activities: (companyId: string) => ["company-activities-direct", companyId] as const,
-    contactActivities: (companyId: string, contactIds: unknown = []) =>
-      ["company-contact-activities", companyId, contactIds] as const,
+    contactActivities: (companyId: string, contactIds?: unknown) =>
+      contactIds === undefined
+        ? (["company-contact-activities", companyId] as const)
+        : (["company-contact-activities", companyId, contactIds] as const),
     tasks: (companyId: string) => ["company-tasks", companyId] as const,
-    contactTasks: (companyId: string, contactIds: unknown = []) =>
-      ["company-contact-tasks", companyId, contactIds] as const,
+    contactTasks: (companyId: string, contactIds?: unknown) =>
+      contactIds === undefined
+        ? (["company-contact-tasks", companyId] as const)
+        : (["company-contact-tasks", companyId, contactIds] as const),
     techProfile: (companyId: string) => ["company-tech-profile", companyId] as const,
     foresporslerTags: (companyId: string) => ["company-foresporsler-tags", companyId] as const,
     contactTags: (companyId: string) => ["company-contact-tags", companyId] as const,

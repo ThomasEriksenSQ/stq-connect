@@ -1093,9 +1093,14 @@ export function ContactCardContent({
       if (error) throw error;
     },
     onSuccess: () => {
+      const relatedCompanyId = coerceDisplayText(contact?.company_id);
       queryClient.invalidateQueries({ queryKey: crmQueryKeys.contacts.activities(contactId) });
       queryClient.invalidateQueries({ queryKey: crmQueryKeys.contacts.all() });
       queryClient.invalidateQueries({ queryKey: crmQueryKeys.companies.all() });
+      if (relatedCompanyId) {
+        queryClient.invalidateQueries({ queryKey: crmQueryKeys.companies.activities(relatedCompanyId) });
+        queryClient.invalidateQueries({ queryKey: crmQueryKeys.companies.contactActivities(relatedCompanyId) });
+      }
       notifyDataChanged();
       toast.success("Aktivitet registrert");
       closeForm();
@@ -1172,7 +1177,13 @@ export function ContactCardContent({
       if (error) throw error;
     },
     onSuccess: () => {
+      const relatedCompanyId = coerceDisplayText(contact?.company_id);
       queryClient.invalidateQueries({ queryKey: crmQueryKeys.contacts.activities(contactId) });
+      queryClient.invalidateQueries({ queryKey: crmQueryKeys.companies.all() });
+      if (relatedCompanyId) {
+        queryClient.invalidateQueries({ queryKey: crmQueryKeys.companies.activities(relatedCompanyId) });
+        queryClient.invalidateQueries({ queryKey: crmQueryKeys.companies.contactActivities(relatedCompanyId) });
+      }
       notifyDataChanged();
       toast.success("Aktivitet slettet");
     },
@@ -1184,7 +1195,13 @@ export function ContactCardContent({
       if (error) throw error;
     },
     onSuccess: () => {
+      const relatedCompanyId = coerceDisplayText(contact?.company_id);
       queryClient.invalidateQueries({ queryKey: crmQueryKeys.contacts.activities(contactId) });
+      queryClient.invalidateQueries({ queryKey: crmQueryKeys.companies.all() });
+      if (relatedCompanyId) {
+        queryClient.invalidateQueries({ queryKey: crmQueryKeys.companies.activities(relatedCompanyId) });
+        queryClient.invalidateQueries({ queryKey: crmQueryKeys.companies.contactActivities(relatedCompanyId) });
+      }
       notifyDataChanged();
       toast.success("Oppdatert");
     },

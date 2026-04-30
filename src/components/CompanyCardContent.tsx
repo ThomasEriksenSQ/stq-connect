@@ -53,6 +53,7 @@ import {
   DesignLabModalLabel,
   DesignLabPrimaryAction,
   DesignLabSectionLabel,
+  DesignLabStatusBadge,
 } from "@/components/designlab/system";
 import {
   DesignLabEntitySheet,
@@ -129,7 +130,7 @@ import {
   getSignalBadgeStyle,
   upsertTaskSignalDescription,
 } from "@/lib/categoryUtils";
-import { coerceDisplayText } from "@/lib/outlookMail";
+import { coerceDisplayText, normalizeOutlookMailItems } from "@/lib/outlookMail";
 import { C, SIGNAL_COLORS } from "@/theme";
 import { useCrmNavigation } from "@/lib/crmNavigation";
 
@@ -172,6 +173,23 @@ function CompanyActivityRowBody({
         "flex items-start gap-3 focus:outline-none focus-visible:ring-1 focus-visible:ring-primary/40 rounded-sm",
         editable && "cursor-pointer",
       )}
+    >
+      {children}
+    </div>
+  );
+}
+
+/** Wrapper for read-only company email rows — toggles expand but allows text selection. */
+function CompanyEmailRowBody({ onToggle, children }: { onToggle: () => void; children: React.ReactNode }) {
+  const handlers = useClickWithoutSelection<HTMLDivElement>(onToggle);
+  return (
+    <div
+      role="button"
+      tabIndex={0}
+      onMouseDown={handlers.onMouseDown}
+      onClick={handlers.onClick}
+      onKeyDown={activateOnEnterOrSpace(onToggle)}
+      className="min-w-0 cursor-pointer select-text focus:outline-none focus-visible:ring-1 focus-visible:ring-primary/40 rounded-sm"
     >
       {children}
     </div>
@@ -1272,6 +1290,7 @@ export function CompanyCardContent({
       <div className={cn((tasks.length > 0 || showTechDna) && "mt-5")}>
         <CompanyActivityTimeline
           activities={activities}
+          contacts={sanitizedContacts}
           profileMap={profileMapFull}
           companyId={companyId}
           editable={editable}
@@ -2565,25 +2584,147 @@ export function CompanyCardContent({
 }
 
 /* ── Company Activity Timeline ── */
+type CompanyContactEmailRef = {
+  id: string;
+  email: string;
+  first_name: string;
+  last_name: string;
+};
+
+function getCompanyContactEmailRefs(contacts: any[]): CompanyContactEmailRef[] {
+  const seenEmails = new Set<string>();
+
+  return contacts.flatMap((contact) => {
+    const id = safeText(contact?.id);
+    const email = safeText(contact?.email).toLowerCase();
+    if (!id || !email || seenEmails.has(email)) return [];
+
+    seenEmails.add(email);
+    return [{
+      id,
+      email,
+      first_name: safeText(contact?.first_name),
+      last_name: safeText(contact?.last_name),
+    }];
+  });
+}
+
+function splitEmailThread(bodyText: string): { latest: string; rest: string | null } {
+  const threadPatterns = [
+    /\n\s*(?:From|Fra)\s*:/i,
+    /\n\s*_{5,}/,
+    /\n\s*-{5,}/,
+    /\n\s*On .+ wrote:/i,
+    /\n\s*Den .+ skrev:/i,
+  ];
+  let splitIndex = -1;
+
+  for (const pattern of threadPatterns) {
+    const match = bodyText.match(pattern);
+    if (match && match.index !== undefined && match.index > 20) {
+      if (splitIndex === -1 || match.index < splitIndex) splitIndex = match.index;
+    }
+  }
+
+  if (splitIndex > 0) {
+    return { latest: bodyText.slice(0, splitIndex).trim(), rest: bodyText.slice(splitIndex).trim() };
+  }
+  return { latest: bodyText, rest: null };
+}
+
 function CompanyActivityTimeline({
   activities,
+  contacts,
   profileMap,
   companyId,
   editable,
 }: {
   activities: any[];
+  contacts: any[];
   profileMap: Record<string, string>;
   companyId: string;
   editable: boolean;
 }) {
   const navigate = useNavigate();
   const currentYear = getYear(new Date());
+  const contactEmailRefs = useMemo(() => getCompanyContactEmailRefs(contacts), [contacts]);
+  const contactEmailKey = useMemo(
+    () => contactEmailRefs.map((contact) => `${contact.id}:${contact.email}`).join("|"),
+    [contactEmailRefs],
+  );
+
+  const { data: outlookEmails = [] } = useQuery({
+    queryKey: ["company-outlook-emails", companyId, contactEmailKey],
+    queryFn: async () => {
+      const emailGroups = await Promise.all(
+        contactEmailRefs.map(async (contact) => {
+          const { data, error } = await supabase.functions.invoke("outlook-mail", {
+            body: { email: contact.email, top: 30 },
+          });
+          if (error) throw error;
+          if (data?.error === "no_outlook_connected") return [];
+
+          return normalizeOutlookMailItems(data?.emails)
+            .map((email) => {
+              const createdAt = email.receivedAt;
+              return {
+                id: `outlook-${contact.id}-${email.id}`,
+                outlook_id: email.id,
+                type: "email" as const,
+                subject: email.subject,
+                created_at: createdAt,
+                from: email.from,
+                from_name: email.fromName,
+                to: email.to,
+                preview: email.preview,
+                body_text: email.bodyText,
+                is_read: email.isRead,
+                contact_id: contact.id,
+                contacts: {
+                  first_name: contact.first_name,
+                  last_name: contact.last_name,
+                },
+              };
+            })
+            .filter((email) => parseValidDate(email.created_at));
+        }),
+      );
+
+      const seenMessages = new Set<string>();
+      return emailGroups.flat().filter((email) => {
+        const key = safeText(email.outlook_id) || email.id;
+        if (!key || seenMessages.has(key)) return false;
+        seenMessages.add(key);
+        return true;
+      });
+    },
+    enabled: contactEmailRefs.length > 0,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const [showEmails, setShowEmails] = useState(true);
+
+  const mergedItems = useMemo(() => {
+    const activityItems = activities.map((activity) => ({ ...activity, _source: "activity" as const }));
+    const emailItems = outlookEmails.map((email) => ({ ...email, _source: "email" as const }));
+
+    return [...activityItems, ...emailItems].sort((left, right) => {
+      const leftTime = parseValidDate(left.created_at)?.getTime() ?? 0;
+      const rightTime = parseValidDate(right.created_at)?.getTime() ?? 0;
+      return rightTime - leftTime;
+    });
+  }, [activities, outlookEmails]);
+
+  const filteredItems = useMemo(() => {
+    if (showEmails) return mergedItems;
+    return mergedItems.filter((item) => item._source !== "email");
+  }, [mergedItems, showEmails]);
 
   const grouped = useMemo(() => {
     const groups: { key: string; label: string; period: string; items: any[] }[] = [];
     let currentKey = "";
-    for (const act of activities) {
-      const d = parseValidDate(act.created_at);
+    for (const item of filteredItems) {
+      const d = parseValidDate(item.created_at);
       if (!d) continue;
       const monthKey = format(d, "yyyy-MM");
       if (monthKey !== currentKey) {
@@ -2595,18 +2736,30 @@ function CompanyActivityTimeline({
         else if (yr < currentYear - 1) period = `${currentYear - yr} år siden`;
         groups.push({ key: monthKey, label, period, items: [] });
       }
-      groups[groups.length - 1].items.push(act);
+      groups[groups.length - 1].items.push(item);
     }
     return groups;
-  }, [activities, currentYear]);
+  }, [filteredItems, currentYear]);
 
-  if (activities.length === 0) {
+  const hasEmails = outlookEmails.length > 0;
+  const totalCount = filteredItems.length;
+
+  if (totalCount === 0) {
     return (
       <div>
-        <div className="flex items-center" style={{ minHeight: 32 }}>
+        <div className="flex items-center justify-between" style={{ minHeight: 32 }}>
           <h3 className="text-[13px] font-medium" style={SECTION_TITLE_STYLE}>
             Aktiviteter <span className="font-normal" style={SECTION_COUNT_STYLE}>· 0</span>
           </h3>
+          {hasEmails && (
+            <DesignLabFilterButton
+              onClick={() => setShowEmails((value) => !value)}
+              active={showEmails}
+            >
+              <Mail className="w-3.5 h-3.5" />
+              {showEmails ? "Skjul e-post" : "Vis e-post"}
+            </DesignLabFilterButton>
+          )}
         </div>
         <p className="text-[0.8125rem] text-muted-foreground/60 py-2">Ingen aktiviteter</p>
       </div>
@@ -2615,10 +2768,19 @@ function CompanyActivityTimeline({
 
   return (
     <div>
-      <div className="flex items-center mb-3" style={{ minHeight: 32 }}>
+      <div className="flex items-center justify-between mb-3" style={{ minHeight: 32 }}>
         <h3 className="text-[13px] font-medium" style={SECTION_TITLE_STYLE}>
-          Aktiviteter <span className="font-normal" style={SECTION_COUNT_STYLE}>· {activities.length}</span>
+          Aktiviteter <span className="font-normal" style={SECTION_COUNT_STYLE}>· {totalCount}</span>
         </h3>
+        {hasEmails && (
+          <DesignLabFilterButton
+            onClick={() => setShowEmails((value) => !value)}
+            active={showEmails}
+          >
+            <Mail className="w-3.5 h-3.5" />
+            {showEmails ? "Skjul e-post" : "Vis e-post"}
+          </DesignLabFilterButton>
+        )}
       </div>
 
       {grouped.map((group, gi) => (
@@ -2634,20 +2796,126 @@ function CompanyActivityTimeline({
           <div className="relative pl-7">
             <div className="absolute left-[5px] top-[5px] bottom-0 w-[2px] bg-border" />
             <div className="space-y-6">
-              {group.items.map((activity) => (
-                <CompanyActivityRow
-                  key={activity.id}
-                  activity={activity}
-                  profileMap={profileMap}
-                  companyId={companyId}
-                  editable={editable}
-                  navigate={navigate}
-                />
-              ))}
+              {group.items.map((item) =>
+                item._source === "email" ? (
+                  <CompanyEmailRow key={item.id} email={item} />
+                ) : (
+                  <CompanyActivityRow
+                    key={item.id}
+                    activity={item}
+                    profileMap={profileMap}
+                    companyId={companyId}
+                    editable={editable}
+                    navigate={navigate}
+                  />
+                ),
+              )}
             </div>
           </div>
         </div>
       ))}
+    </div>
+  );
+}
+
+function CompanyEmailRow({ email }: { email: any }) {
+  const { getContactPath } = useCrmNavigation();
+  const [expanded, setExpanded] = useState(false);
+  const [showThread, setShowThread] = useState(false);
+  const parsedDate = parseValidDate(email.created_at);
+  const { latest, rest } = useMemo(() => splitEmailThread(safeText(email.body_text)), [email.body_text]);
+  const fromLabel = safeText(email.from_name || email.from) || "Ukjent avsender";
+  const toLabel = safeText(email.to) || "Ukjent mottaker";
+  const subject = safeText(email.subject) || "Uten emne";
+  const preview = safeText(email.preview);
+  const contactFirstName = safeText((email.contacts as any)?.first_name);
+  const contactLastName = safeText((email.contacts as any)?.last_name);
+  const contactName = [contactFirstName, contactLastName].filter(Boolean).join(" ").trim() || null;
+
+  return (
+    <div className="relative group">
+      <div className="absolute -left-7 top-[2px] w-[12px] h-[12px] flex items-center justify-center bg-background rounded-full">
+        <Mail className="h-3.5 w-3.5 text-primary" />
+      </div>
+
+      <CompanyEmailRowBody onToggle={() => setExpanded((value) => !value)}>
+        <div className="flex items-start gap-3">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-1.5">
+              <span className="text-[1.0625rem] font-bold text-foreground truncate">{subject}</span>
+              <ChevronDown
+                className={cn(
+                  "h-3.5 w-3.5 text-muted-foreground transition-transform flex-shrink-0",
+                  expanded && "rotate-180",
+                )}
+              />
+            </div>
+
+            {contactName && (
+              <a
+                href={email.contact_id ? getContactPath(email.contact_id) : undefined}
+                onClick={(event) => event.stopPropagation()}
+                className="text-[0.8125rem] font-semibold text-blue-600 hover:underline block mt-0.5"
+              >
+                → {contactName}
+              </a>
+            )}
+
+            <p className="text-[0.8125rem] text-muted-foreground mt-0.5">
+              {fromLabel} → {toLabel}
+            </p>
+
+            {!expanded && preview ? (
+              <p className="text-[0.9375rem] text-foreground/70 line-clamp-2 mt-0.5">{preview}</p>
+            ) : null}
+          </div>
+
+          <div className="flex flex-col items-end gap-1 flex-shrink-0 mt-0.5">
+            {parsedDate ? (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="text-[0.8125rem] text-muted-foreground">
+                    {format(parsedDate, "d. MMM yyyy", { locale: nb })}
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>{fullDate(parsedDate.toISOString())}</TooltipContent>
+              </Tooltip>
+            ) : (
+              <span className="text-[0.8125rem] text-muted-foreground/60">Ukjent dato</span>
+            )}
+            <DesignLabStatusBadge tone="signal">E-post</DesignLabStatusBadge>
+          </div>
+        </div>
+      </CompanyEmailRowBody>
+
+      {expanded && (
+        <div className="mt-2 border-t border-border pt-2 cursor-text select-text">
+          <p className="text-[0.9375rem] leading-relaxed whitespace-pre-wrap text-foreground/70">
+            {latest}
+          </p>
+          {rest && (
+            <>
+              <DesignLabActionButton
+                variant="ghost"
+                style={{ marginTop: 8, height: 32, fontSize: 12 }}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  setShowThread((value) => !value);
+                }}
+              >
+                {showThread ? "Skjul tråd ▴" : "Vis hele tråden ▾"}
+              </DesignLabActionButton>
+              {showThread && (
+                <div className="mt-2 bg-muted/30 rounded-lg p-3 select-text">
+                  <p className="text-[0.8125rem] leading-relaxed whitespace-pre-wrap text-muted-foreground">
+                    {rest}
+                  </p>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      )}
     </div>
   );
 }
