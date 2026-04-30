@@ -798,7 +798,9 @@ export default function Pipeline() {
                       onDeleteOpportunity={deleteOpportunity}
                     />
                   ) : (
-                    <EmptyState text="Trykk ⌘K for å søke." />
+                    <div className="flex h-full items-center justify-center">
+                      <p style={{ fontSize: 13, color: C.textFaint }}>Trykk ⌘K for å søke.</p>
+                    </div>
                   )}
                 </aside>
               </ResizablePanel>
