@@ -5,6 +5,16 @@ import { formatDistanceToNowStrict } from "date-fns";
 import { nb } from "date-fns/locale";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 import { DesignLabMobileNavButton, DesignLabSidebar } from "@/components/designlab/DesignLabSidebar";
 import { CommandPalette } from "@/components/designlab/CommandPalette";
@@ -351,6 +361,8 @@ export default function Pipeline() {
   const [selectedGroupKey, setSelectedGroupKey] = useState<string | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [savingStatusId, setSavingStatusId] = useState<string | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<PipelineItem | null>(null);
+  const [deletingOpportunity, setDeletingOpportunity] = useState(false);
 
   const { data: requestLinks = [], isLoading: isLoadingRequestLinks } = useQuery({
     queryKey: ["pipeline-request-links-v1"],
@@ -680,15 +692,24 @@ export default function Pipeline() {
     }
   };
 
-  const deleteOpportunity = async (item: PipelineItem) => {
+  const deleteOpportunity = (item: PipelineItem) => {
     if (item.source !== "mulighet") return;
-    const confirmed = window.confirm(`Slette muligheten "${item.title}"?`);
-    if (!confirmed) return;
-    const { error } = await supabase.from("pipeline_muligheter").delete().eq("id", item.sourceId as string);
+    setPendingDelete(item);
+  };
+
+  const confirmDeleteOpportunity = async () => {
+    if (!pendingDelete) return;
+    setDeletingOpportunity(true);
+    const { error } = await supabase
+      .from("pipeline_muligheter")
+      .delete()
+      .eq("id", pendingDelete.sourceId as string);
+    setDeletingOpportunity(false);
     if (error) {
       toast.error("Kunne ikke slette mulighet");
       return;
     }
+    setPendingDelete(null);
     await invalidatePipelineQueries();
     toast.success("Mulighet slettet");
   };
@@ -851,6 +872,27 @@ export default function Pipeline() {
         }}
         onFilterByCompany={() => undefined}
       />
+
+      <AlertDialog open={!!pendingDelete} onOpenChange={(open) => { if (!open) setPendingDelete(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Er du sikker?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Slette muligheten "{pendingDelete?.title}"? Dette kan ikke angres.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deletingOpportunity}>Avbryt</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => { e.preventDefault(); void confirmDeleteOpportunity(); }}
+              disabled={deletingOpportunity}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Ja, slett
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
