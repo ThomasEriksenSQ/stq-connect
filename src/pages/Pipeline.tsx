@@ -640,6 +640,8 @@ export default function Pipeline() {
       sentCv: pipelineItems.filter((item) => item.status === "sendt_cv").length,
       interviews: pipelineItems.filter((item) => item.status === "intervju").length,
       won: filteredItems.filter((item) => item.status === "vunnet").length,
+      rejected: filteredItems.filter((item) => item.status === "avslag").length,
+      lapsed: filteredItems.filter((item) => item.status === "bortfalt").length,
       direct: pipelineItems.filter((item) => item.source === "mulighet").length,
     };
   }, [availableEmployees, filteredItems, pipelineItems]);
@@ -739,10 +741,12 @@ export default function Pipeline() {
             onChange={(value) => setSourceFilter(sourceFilterValue(value))}
           />
 
-          <div className="grid gap-2 pt-3 sm:grid-cols-3">
+          <div className="grid gap-2 pt-3 sm:grid-cols-5">
             <PipelineStat label="Sendt CV" value={stats.sentCv} />
             <PipelineStat label="Intervju" value={stats.interviews} />
             <PipelineStat label="Vunnet" value={stats.won} />
+            <PipelineStat label="Avslag" value={stats.rejected} />
+            <PipelineStat label="Bortfalt" value={stats.lapsed} />
           </div>
         </div>
 

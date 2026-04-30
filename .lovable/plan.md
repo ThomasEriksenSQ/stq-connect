@@ -1,20 +1,13 @@
-## Problem
-
-På `/pipeline` viser stat-boksen "Vunnet" alltid 5, fordi den teller fra `pipelineItems` (alle data) i stedet for det filtrerte datasettet. Med standardfiltrene (Tilgjengelig / Alle / Alle) skal verdien være 0, fordi vunne løp ikke er inkludert i "Tilgjengelig"-visningen.
-
 ## Endring
 
-Fil: `src/pages/Pipeline.tsx` (linje ~632–645, `stats`-useMemo)
+Fil: `src/pages/Pipeline.tsx`
 
-Bytt kilden for `won` fra `pipelineItems` til `filteredItems`, slik at tellingen følger de aktive filterne (status, type, kilde).
+1. Utvid `stats`-useMemo (rundt linje 632–645) med to nye tellinger basert på `filteredItems`:
+   - `rejected`: `item.status === "avslag"`
+   - `lapsed`: `item.status === "bortfalt"`
 
-```ts
-won: filteredItems.filter((item) => item.status === "vunnet").length,
-```
+2. I stat-grid (rundt linje 742–746): endre fra `sm:grid-cols-3` til `sm:grid-cols-5` og legg til to nye `PipelineStat`-bokser etter "Vunnet":
+   - `<PipelineStat label="Avslag" value={stats.rejected} />`
+   - `<PipelineStat label="Bortfalt" value={stats.lapsed} />`
 
-Legg `filteredItems` til i dependency-arrayen.
-
-## Avgrensning
-
-- Kun `won` endres nå, siden det er den brukeren peker på. Andre stats (`sentCv`, `interviews`, `open`, `available`, `consultants`, `direct`) beholder dagens semantikk for ikke å endre annen oppførsel uten beskjed.
-- Resultat: ved default (Tilgjengelig, Alle, Alle) blir Vunnet = 0, fordi "Tilgjengelig"-filteret ekskluderer vunnet-status. Når brukeren f.eks. velger status "Vunnet" eller "Alle", reflekterer tallet det som faktisk vises.
+Begge boksene følger samme filter-logikk som "Vunnet" (reagerer på status/type/kilde-filtrene).
