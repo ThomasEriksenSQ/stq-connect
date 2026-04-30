@@ -969,7 +969,6 @@ function PipelineGroupRow({ group, active, onClick }: { group: PipelineGroup; ac
         )}
         <div className="min-w-0">
           <p className="truncate" style={{ fontSize: 13, color: C.text, fontWeight: 550 }}>{group.consultantName}</p>
-          {group.consultantStatus && <p className="truncate" style={{ fontSize: 11, color: C.textFaint }}>{group.consultantStatus}</p>}
         </div>
       </div>
       <div className="min-w-0 overflow-hidden">
