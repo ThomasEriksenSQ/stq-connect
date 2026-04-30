@@ -600,7 +600,7 @@ export default function Pipeline() {
         firstName: group.consultantName,
         lastName: "",
         company: "",
-        meta: `${group.items.length} løp`,
+        meta: `${group.openItems} aktive løp`,
         searchText: [
           group.consultantName,
           consultantTypeLabel(group.consultantType),
