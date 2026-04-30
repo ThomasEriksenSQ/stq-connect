@@ -59,6 +59,7 @@ type PipelineItem = {
   consultantStatus: string | null;
   consultantAvailableFrom: string | null;
   consultantEndDate: string | null;
+  consultantImageUrl: string | null;
   title: string;
   companyId: string | null;
   companyName: string;
@@ -81,6 +82,7 @@ type PipelineGroup = {
   consultantName: string;
   consultantStatus: string | null;
   consultantAvailableFrom: string | null;
+  consultantImageUrl: string | null;
   items: PipelineItem[];
   openItems: number;
   requestCount: number;
@@ -135,7 +137,7 @@ type RequestLinkRow = {
   created_at: string | null;
   status: string;
   status_updated_at: string;
-  stacq_ansatte: { id: number; navn: string; status: string | null; tilgjengelig_fra: string | null; slutt_dato: string | null } | null;
+  stacq_ansatte: { id: number; navn: string; status: string | null; tilgjengelig_fra: string | null; slutt_dato: string | null; bilde_url: string | null } | null;
   external_consultants: { id: string; navn: string | null; status: string | null; type: string | null; tilgjengelig_fra: string | null } | null;
   foresporsler: {
     id: number;
@@ -165,17 +167,17 @@ type OpportunityRow = {
   status_updated_at: string;
   created_at: string;
   updated_at: string;
-  stacq_ansatte: { id: number; navn: string; status: string | null; tilgjengelig_fra: string | null; slutt_dato: string | null } | null;
+  stacq_ansatte: { id: number; navn: string; status: string | null; tilgjengelig_fra: string | null; slutt_dato: string | null; bilde_url: string | null } | null;
   external_consultants: { id: string; navn: string | null; status: string | null; type: string | null; tilgjengelig_fra: string | null } | null;
   companies: { id: string; name: string } | null;
   contacts: ContactPreview | null;
 };
 
-const STATUS_FILTER_OPTIONS = ["Tilgjengelige", "Alle", ...PIPELINE_STATUS_VALUES.map((value) => PIPELINE_STATUS_META[value].label)] as const;
+const STATUS_FILTER_OPTIONS = ["Alle", "Tilgjengelige", ...PIPELINE_STATUS_VALUES.map((value) => PIPELINE_STATUS_META[value].label)] as const;
 const TYPE_FILTER_OPTIONS = ["Alle", "Ansatte", "Eksterne"] as const;
 const SOURCE_FILTER_OPTIONS = ["Alle", "Forespørsler", "Muligheter"] as const;
 
-const PIPELINE_TABLE_COLUMNS = "minmax(210px,1.45fr) minmax(72px,0.45fr) minmax(150px,0.9fr) minmax(136px,0.85fr) minmax(88px,0.55fr)";
+const PIPELINE_TABLE_COLUMNS = "minmax(210px,1.35fr) minmax(72px,0.45fr) minmax(104px,0.55fr) minmax(104px,0.55fr) minmax(136px,0.8fr) minmax(88px,0.55fr)";
 
 const SELECT_CLASS =
   "h-[var(--dl-modal-control-height,32px)] w-full min-w-0 rounded-md border border-[#D7DCE3] bg-white px-2.5 text-[var(--dl-modal-font-size,13px)] text-[#1F2328] outline-none focus:border-[#5E6AD2] focus:shadow-[0_0_0_2px_rgba(94,106,210,0.15)]";
@@ -317,6 +319,7 @@ function buildPipelineGroups(items: PipelineItem[]): PipelineGroup[] {
         consultantName: first.consultantName,
         consultantStatus: first.consultantStatus,
         consultantAvailableFrom: first.consultantAvailableFrom,
+        consultantImageUrl: first.consultantImageUrl,
         items: groupItems.sort(
           (left, right) => new Date(right.statusUpdatedAt).getTime() - new Date(left.statusUpdatedAt).getTime(),
         ),
@@ -359,7 +362,7 @@ export default function Pipeline() {
       const { data, error } = await supabase
         .from("foresporsler_konsulenter")
         .select(
-          "id, ansatt_id, ekstern_id, konsulent_type, created_at, status, status_updated_at, stacq_ansatte(id, navn, status, tilgjengelig_fra, slutt_dato), external_consultants(id, navn, status, type, tilgjengelig_fra), foresporsler(id, selskap_navn, selskap_id, kontakt_id, mottatt_dato, frist_dato, status, type, referanse, companies!foresporsler_selskap_id_fkey(id, name), contacts!foresporsler_kontakt_id_fkey(id, first_name, last_name, title, email))",
+          "id, ansatt_id, ekstern_id, konsulent_type, created_at, status, status_updated_at, stacq_ansatte(id, navn, status, tilgjengelig_fra, slutt_dato, bilde_url), external_consultants(id, navn, status, type, tilgjengelig_fra), foresporsler(id, selskap_navn, selskap_id, kontakt_id, mottatt_dato, frist_dato, status, type, referanse, companies!foresporsler_selskap_id_fkey(id, name), contacts!foresporsler_kontakt_id_fkey(id, first_name, last_name, title, email))",
         )
         .order("status_updated_at", { ascending: false });
       if (error) throw error;
@@ -373,7 +376,7 @@ export default function Pipeline() {
       const { data, error } = await supabase
         .from("pipeline_muligheter")
         .select(
-          "id, ansatt_id, ekstern_id, konsulent_type, company_id, contact_id, tittel, notat, status, status_updated_at, created_at, updated_at, stacq_ansatte(id, navn, status, tilgjengelig_fra, slutt_dato), external_consultants(id, navn, status, type, tilgjengelig_fra), companies!pipeline_muligheter_company_id_fkey(id, name), contacts!pipeline_muligheter_contact_id_fkey(id, first_name, last_name, title, email)",
+          "id, ansatt_id, ekstern_id, konsulent_type, company_id, contact_id, tittel, notat, status, status_updated_at, created_at, updated_at, stacq_ansatte(id, navn, status, tilgjengelig_fra, slutt_dato, bilde_url), external_consultants(id, navn, status, type, tilgjengelig_fra), companies!pipeline_muligheter_company_id_fkey(id, name), contacts!pipeline_muligheter_contact_id_fkey(id, first_name, last_name, title, email)",
         )
         .order("status_updated_at", { ascending: false });
       if (error) throw error;
@@ -477,6 +480,10 @@ export default function Pipeline() {
       const consultantId = consultantType === "intern" ? link.ansatt_id : link.ekstern_id;
       const consultantName = consultant?.navn || "Ukjent konsulent";
       const contactName = getContactName(request.contacts);
+      const consultantImageUrl =
+        consultantType === "intern" && link.ansatt_id
+          ? cvPortraitMap.get(link.ansatt_id) || link.stacq_ansatte?.bilde_url || null
+          : null;
 
       return {
         id: `foresporsel:${link.id}`,
@@ -489,6 +496,7 @@ export default function Pipeline() {
         consultantStatus: consultant?.status || null,
         consultantAvailableFrom: consultant?.tilgjengelig_fra || null,
         consultantEndDate: consultantType === "intern" ? link.stacq_ansatte?.slutt_dato || null : null,
+        consultantImageUrl,
         title: request.referanse || request.type ? `${request.referanse || "Forespørsel"} ${request.type ? `(${request.type})` : ""}` : "Forespørsel",
         companyId: request.selskap_id || null,
         companyName: request.companies?.name || request.selskap_navn || "Ukjent selskap",
@@ -509,6 +517,10 @@ export default function Pipeline() {
       const consultantType = opportunity.konsulent_type === "ekstern" ? "ekstern" : "intern";
       const consultant = consultantType === "intern" ? opportunity.stacq_ansatte : opportunity.external_consultants;
       const consultantId = consultantType === "intern" ? opportunity.ansatt_id : opportunity.ekstern_id;
+      const consultantImageUrl =
+        consultantType === "intern" && opportunity.ansatt_id
+          ? cvPortraitMap.get(opportunity.ansatt_id) || opportunity.stacq_ansatte?.bilde_url || null
+          : null;
 
       return {
         id: `mulighet:${opportunity.id}`,
@@ -521,6 +533,7 @@ export default function Pipeline() {
         consultantStatus: consultant?.status || null,
         consultantAvailableFrom: consultant?.tilgjengelig_fra || null,
         consultantEndDate: consultantType === "intern" ? opportunity.stacq_ansatte?.slutt_dato || null : null,
+        consultantImageUrl,
         title: opportunity.tittel || "Direkte mulighet",
         companyId: opportunity.company_id || null,
         companyName: opportunity.companies?.name || "Ukjent selskap",
@@ -535,7 +548,7 @@ export default function Pipeline() {
     });
 
     return [...requestItems.filter(Boolean), ...opportunityItems] as PipelineItem[];
-  }, [opportunities, requestLinks]);
+  }, [cvPortraitMap, opportunities, requestLinks]);
 
   const filteredItems = useMemo(() => {
     return pipelineItems.filter((item) => {
@@ -561,6 +574,7 @@ export default function Pipeline() {
         consultantName: employee.navn,
         consultantStatus: employee.status,
         consultantAvailableFrom: employee.tilgjengelig_fra || null,
+        consultantImageUrl: cvPortraitMap.get(employee.id) || employee.bilde_url || null,
         items: [],
         openItems: 0,
         requestCount: 0,
@@ -570,7 +584,7 @@ export default function Pipeline() {
       }));
 
     return [...pipelineGroups, ...benchGroups].sort(compareAvailableGroups);
-  }, [availableEmployees, filteredItems, sourceFilter, statusFilter, typeFilter]);
+  }, [availableEmployees, cvPortraitMap, filteredItems, sourceFilter, statusFilter, typeFilter]);
   const selectedGroup = useMemo(
     () => (selectedGroupKey ? groups.find((group) => group.consultantKey === selectedGroupKey) || null : null),
     [groups, selectedGroupKey],
@@ -724,13 +738,11 @@ export default function Pipeline() {
             onChange={(value) => setSourceFilter(sourceFilterValue(value))}
           />
 
-          <div className="grid gap-2 pt-3 sm:grid-cols-2 lg:grid-cols-6">
-            <PipelineStat label="Konsulenter" value={stats.consultants} />
+          <div className="grid gap-2 pt-3 sm:grid-cols-2 lg:grid-cols-4">
             <PipelineStat label="Tilgjengelige" value={stats.available} />
             <PipelineStat label="Sendt CV" value={stats.sentCv} />
             <PipelineStat label="Intervju" value={stats.interviews} />
             <PipelineStat label="Vunnet" value={stats.won} />
-            <PipelineStat label="Direkte" value={stats.direct} />
           </div>
         </div>
 
@@ -902,7 +914,7 @@ function PipelineStat({ label, value }: { label: string; value: number }) {
 }
 
 function PipelineTableHeader() {
-  const labels = ["Konsulent", "Type", "Pipeline", "Høyeste status", "Sist"];
+  const labels = ["Konsulent", "Type", "Forespørsler", "Muligheter", "Høyeste status", "Sist"];
   return (
     <div className="sticky top-0 z-10 grid items-center gap-3 border-b" style={{ gridTemplateColumns: PIPELINE_TABLE_COLUMNS, height: 32, paddingInline: 16, borderColor: C.borderLight, background: C.surfaceAlt }}>
       {labels.map((label) => (
@@ -943,9 +955,18 @@ function PipelineGroupRow({ group, active, onClick }: { group: PipelineGroup; ac
       }}
     >
       <div className="flex min-w-0 items-center gap-2 overflow-hidden">
-        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full" style={{ background: C.filterActiveBg, color: C.textPrimary, fontSize: 11, fontWeight: 650 }}>
-          {getInitials(group.consultantName)}
-        </div>
+        {group.consultantType === "intern" && group.consultantImageUrl ? (
+          <img
+            src={group.consultantImageUrl}
+            alt={group.consultantName}
+            className="h-7 w-7 shrink-0 rounded-full border object-cover"
+            style={{ borderColor: C.borderLight }}
+          />
+        ) : (
+          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full" style={{ background: C.filterActiveBg, color: C.textPrimary, fontSize: 11, fontWeight: 650 }}>
+            {getInitials(group.consultantName)}
+          </div>
+        )}
         <div className="min-w-0">
           <p className="truncate" style={{ fontSize: 13, color: C.text, fontWeight: 550 }}>{group.consultantName}</p>
           {group.consultantStatus && <p className="truncate" style={{ fontSize: 11, color: C.textFaint }}>{group.consultantStatus}</p>}
@@ -954,15 +975,11 @@ function PipelineGroupRow({ group, active, onClick }: { group: PipelineGroup; ac
       <div className="min-w-0 overflow-hidden">
         <ConsultantTypeTag type={group.consultantType} />
       </div>
-      <div className="flex min-w-0 flex-wrap items-center gap-1.5 overflow-hidden">
-        {hasPipelineItems ? (
-          <>
-            <DesignLabReadonlyChip active={false}>{group.requestCount} foresp.</DesignLabReadonlyChip>
-            {group.opportunityCount > 0 ? <DesignLabReadonlyChip active={false}>{group.opportunityCount} mul.</DesignLabReadonlyChip> : null}
-          </>
-        ) : (
-          <DesignLabReadonlyChip active={false}>0 løp</DesignLabReadonlyChip>
-        )}
+      <div className="min-w-0 overflow-hidden">
+        <DesignLabReadonlyChip active={false}>{group.requestCount} foresp.</DesignLabReadonlyChip>
+      </div>
+      <div className="min-w-0 overflow-hidden">
+        <DesignLabReadonlyChip active={false}>{group.opportunityCount} mul.</DesignLabReadonlyChip>
       </div>
       <div className="min-w-0 overflow-hidden">
         {hasPipelineItems ? (
