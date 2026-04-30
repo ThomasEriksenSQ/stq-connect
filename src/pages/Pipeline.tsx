@@ -325,7 +325,7 @@ function buildPipelineGroups(items: PipelineItem[]): PipelineGroup[] {
           (left, right) => new Date(right.statusUpdatedAt).getTime() - new Date(left.statusUpdatedAt).getTime(),
         ),
         openItems: groupItems.filter((item) => isOpenPipelineStatus(item.status)).length,
-        requestCount: groupItems.filter((item) => item.source === "foresporsel").length,
+        requestCount: groupItems.filter((item) => item.source === "foresporsel" && (item.status === "sendt_cv" || item.status === "intervju")).length,
         opportunityCount: groupItems.filter((item) => item.source === "mulighet").length,
         highestStatus: getHighestStatus(groupItems),
         latestAt,
