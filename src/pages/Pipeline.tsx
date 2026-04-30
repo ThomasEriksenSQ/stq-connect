@@ -361,6 +361,8 @@ export default function Pipeline() {
   const [selectedGroupKey, setSelectedGroupKey] = useState<string | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [savingStatusId, setSavingStatusId] = useState<string | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<PipelineItem | null>(null);
+  const [deletingOpportunity, setDeletingOpportunity] = useState(false);
 
   const { data: requestLinks = [], isLoading: isLoadingRequestLinks } = useQuery({
     queryKey: ["pipeline-request-links-v1"],
