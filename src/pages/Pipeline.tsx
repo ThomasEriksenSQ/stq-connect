@@ -1389,7 +1389,7 @@ function NewOpportunitySheet({
               required
               aria-required="true"
               onChange={(event) => setTitle(event.target.value)}
-              placeholder="F.eks. Embedded vurdering hos kunde"
+              placeholder="F.eks. Kunden vurderer kandidaten"
             />
           </SheetField>
 
