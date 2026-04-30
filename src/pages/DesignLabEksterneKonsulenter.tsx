@@ -422,7 +422,6 @@ export default function DesignLabEksterneKonsulenter() {
         open={modalOpen}
         onClose={() => setModalOpen(false)}
         editRow={editId ? (rows as any[]).find((r) => r.id === editId) : null}
-        userId={user?.id}
       />
 
       <AlertDialog open={cleanupOpen} onOpenChange={setCleanupOpen}>
