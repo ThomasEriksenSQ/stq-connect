@@ -325,7 +325,7 @@ function buildPipelineGroups(items: PipelineItem[]): PipelineGroup[] {
           (left, right) => new Date(right.statusUpdatedAt).getTime() - new Date(left.statusUpdatedAt).getTime(),
         ),
         openItems: groupItems.filter((item) => isOpenPipelineStatus(item.status)).length,
-        requestCount: groupItems.filter((item) => item.source === "foresporsel").length,
+        requestCount: groupItems.filter((item) => item.source === "foresporsel" && (item.status === "sendt_cv" || item.status === "intervju")).length,
         opportunityCount: groupItems.filter((item) => item.source === "mulighet").length,
         highestStatus: getHighestStatus(groupItems),
         latestAt,
@@ -914,7 +914,7 @@ function PipelineStat({ label, value }: { label: string; value: number }) {
 }
 
 function PipelineTableHeader() {
-  const labels = ["Konsulent", "Type", "Forespørsler", "Muligheter", "Høyeste status", "Sist"];
+  const labels = ["Konsulent", "Type", "Aktive", "Muligheter", "Høyeste status", "Sist"];
   return (
     <div className="sticky top-0 z-10 grid items-center gap-3 border-b" style={{ gridTemplateColumns: PIPELINE_TABLE_COLUMNS, height: 32, paddingInline: 16, borderColor: C.borderLight, background: C.surfaceAlt }}>
       {labels.map((label) => (
