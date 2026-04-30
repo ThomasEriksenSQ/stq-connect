@@ -692,15 +692,24 @@ export default function Pipeline() {
     }
   };
 
-  const deleteOpportunity = async (item: PipelineItem) => {
+  const deleteOpportunity = (item: PipelineItem) => {
     if (item.source !== "mulighet") return;
-    const confirmed = window.confirm(`Slette muligheten "${item.title}"?`);
-    if (!confirmed) return;
-    const { error } = await supabase.from("pipeline_muligheter").delete().eq("id", item.sourceId as string);
+    setPendingDelete(item);
+  };
+
+  const confirmDeleteOpportunity = async () => {
+    if (!pendingDelete) return;
+    setDeletingOpportunity(true);
+    const { error } = await supabase
+      .from("pipeline_muligheter")
+      .delete()
+      .eq("id", pendingDelete.sourceId as string);
+    setDeletingOpportunity(false);
     if (error) {
       toast.error("Kunne ikke slette mulighet");
       return;
     }
+    setPendingDelete(null);
     await invalidatePipelineQueries();
     toast.success("Mulighet slettet");
   };
