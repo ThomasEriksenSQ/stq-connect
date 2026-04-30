@@ -31,7 +31,7 @@ import { getDesignLabTextSizeStyle, type TextSize } from "@/components/designlab
 import { crmQueryKeys } from "@/lib/queryKeys";
 import { getInitials } from "@/lib/utils";
 import { hasConsultantAvailability, sortHuntConsultants, getConsultantAvailabilityMeta } from "@/lib/contactHunt";
-import { getEmployeeLifecycleStatus, isEmployeeEndDatePassed } from "@/lib/employeeStatus";
+import { isEmployeeEndDatePassed } from "@/lib/employeeStatus";
 import {
   getPipelineStatusMeta,
   isOpenPipelineStatus,
@@ -260,8 +260,8 @@ function isAvailableEmployee(employee: Pick<EmployeeOption, "status" | "tilgjeng
   );
 }
 
-function isActiveOpportunityEmployee(employee: EmployeeOption) {
-  return getEmployeeLifecycleStatus(employee) === "Aktiv";
+function isSearchableOpportunityEmployee(employee: EmployeeOption) {
+  return employee.status !== "SLUTTET" && !isEmployeeEndDatePassed(employee.slutt_dato);
 }
 
 function isActiveExternalConsultant(consultant: ExternalConsultantOption) {
@@ -1132,7 +1132,7 @@ function NewOpportunitySheet({
   const consultantOptions = useMemo(
     () =>
       consultantType === "intern"
-        ? employees.filter(isActiveOpportunityEmployee)
+        ? employees.filter(isSearchableOpportunityEmployee)
         : externalConsultants.filter(isActiveExternalConsultant),
     [consultantType, employees, externalConsultants],
   );
