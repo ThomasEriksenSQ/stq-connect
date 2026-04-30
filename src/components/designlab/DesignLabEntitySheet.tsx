@@ -99,7 +99,7 @@ export function DesignLabFormSheet({
   );
 }
 
-export function DesignLabFormSheetHeader({ title }: { title: string }) {
+export function DesignLabFormSheetHeader({ title, subtitle }: { title: string; subtitle?: string }) {
   return (
     <div
       className="shrink-0 flex items-center justify-between border-b"
@@ -111,17 +111,22 @@ export function DesignLabFormSheetHeader({ title }: { title: string }) {
         paddingBottom: "var(--dl-modal-header-padding-bottom, 16px)",
       }}
     >
-      <h2
-        className="font-semibold"
-        style={{
-          color: C.text,
-          fontSize: `calc(var(--dl-modal-font-size, 13px) * 1.45)`,
-          lineHeight: 1.2,
-          letterSpacing: "-0.005em",
-        }}
-      >
-        {title}
-      </h2>
+      <div className="min-w-0 flex flex-col gap-0.5">
+        <h2
+          className="font-semibold"
+          style={{
+            color: C.text,
+            fontSize: `calc(var(--dl-modal-font-size, 13px) * 1.45)`,
+            lineHeight: 1.2,
+            letterSpacing: "-0.005em",
+          }}
+        >
+          {title}
+        </h2>
+        {subtitle ? (
+          <p style={{ color: C.textMuted, fontSize: 12, lineHeight: 1.4 }}>{subtitle}</p>
+        ) : null}
+      </div>
       <SheetClose asChild>
         <DesignLabIconButton aria-label="Lukk">
           <X style={{ width: 16, height: 16 }} />
