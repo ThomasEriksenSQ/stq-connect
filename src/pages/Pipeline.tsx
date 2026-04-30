@@ -260,6 +260,13 @@ function isAvailableEmployee(employee: Pick<EmployeeOption, "status" | "tilgjeng
   );
 }
 
+function getErrorMessage(error: unknown) {
+  if (error && typeof error === "object" && "message" in error) {
+    return String((error as { message?: unknown }).message || "");
+  }
+  return "";
+}
+
 function isSearchableOpportunityEmployee(employee: EmployeeOption) {
   return employee.status !== "SLUTTET" && !isEmployeeEndDatePassed(employee.slutt_dato);
 }
@@ -1224,7 +1231,8 @@ function NewOpportunitySheet({
       onOpenChange(false);
     } catch (error) {
       console.error(error);
-      toast.error("Kunne ikke opprette mulighet");
+      const message = getErrorMessage(error);
+      toast.error(message ? `Kunne ikke opprette mulighet: ${message}` : "Kunne ikke opprette mulighet");
     } finally {
       setSaving(false);
     }
