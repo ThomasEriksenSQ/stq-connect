@@ -26,6 +26,11 @@ import { toast } from "@/components/ui/sonner";
 import { useCrmNavigation } from "@/lib/crmNavigation";
 import { fetchCompanyListActivitySummary } from "@/lib/companyListActivity";
 import {
+  fetchCompanyOutlookActivityMap,
+  getCompanyOutlookActivityCandidates,
+  getCompanyOutlookActivityLookupKey,
+} from "@/lib/companyOutlookActivity";
+import {
   GEO_FILTERS,
   companyMatchesGeoFilter,
   getGeoFilterDescription,
@@ -323,7 +328,7 @@ export default function DesignLabCompanies() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("companies")
-        .select("*, contacts(id), profiles!companies_owner_id_fkey(id, full_name)")
+        .select("*, contacts(id, email), profiles!companies_owner_id_fkey(id, full_name)")
         .neq("status", "deleted")
         .order("name");
       if (error) throw error;
@@ -546,6 +551,25 @@ export default function DesignLabCompanies() {
     setSort((p) => p.field === field ? { field, dir: p.dir === "asc" ? "desc" : "asc" } : { field, dir: field === "last_activity" ? "desc" : "asc" });
   }, []);
 
+  const outlookActivityCandidates = useMemo(
+    () => getCompanyOutlookActivityCandidates(companies as any[]),
+    [companies],
+  );
+  const outlookActivityLookupKey = useMemo(
+    () => getCompanyOutlookActivityLookupKey(companies as any[]),
+    [companies],
+  );
+  const { data: outlookActivityByCompany = {}, isLoading: isOutlookActivityLoading } = useQuery({
+    queryKey: ["companies-outlook-activity-map", outlookActivityLookupKey],
+    queryFn: () => fetchCompanyOutlookActivityMap(supabase, outlookActivityCandidates as any[]),
+    enabled: typeFilter === "Aldri kontaktet" && outlookActivityCandidates.length > 0,
+    staleTime: 5 * 60 * 1000,
+  });
+  const outlookActivityCandidateIds = useMemo(
+    () => new Set(outlookActivityCandidates.map((company) => company.id)),
+    [outlookActivityCandidates],
+  );
+
   // ── Filtering ──
   const filtered = useMemo(() => {
     let list = companies;
@@ -560,14 +584,33 @@ export default function DesignLabCompanies() {
     if (ownerFilter === "Uten eier") list = list.filter((c: any) => !c.ownerId);
     else if (ownerFilter !== "Alle") list = list.filter((c: any) => c.ownerName === ownerFilter);
     if (typeFilter === "Aldri kontaktet") {
-      list = list.filter((c: any) => (c.contactCount || 0) === 0 || ((c.activityCount || 0) === 0 && (c.taskCount || 0) === 0));
+      list = list.filter((c: any) => {
+        const hasStoredActivity = (c.activityCount || 0) > 0 || (c.taskCount || 0) > 0;
+        const needsOutlookActivityCheck = outlookActivityCandidateIds.has(c.id);
+        const hasOutlookActivity = Boolean(outlookActivityByCompany[c.id]);
+        const outlookActivityCheckPending = isOutlookActivityLoading && needsOutlookActivityCheck;
+
+        return (
+          (c.contactCount || 0) === 0 ||
+          (!hasStoredActivity && !hasOutlookActivity && !outlookActivityCheckPending)
+        );
+      });
     } else if (typeFilter !== "Alle") {
       const dbValue = TYPE_LABEL_TO_VALUE[typeFilter];
       if (dbValue) list = list.filter((c: any) => c.status === dbValue || (dbValue === "customer" && c.status === "kunde"));
     }
     if (effectiveGeoFilter !== "Alle") list = list.filter((c: any) => companyMatchesGeoFilter(c, effectiveGeoFilter));
     return list;
-  }, [companies, effectiveGeoFilter, search, ownerFilter, typeFilter]);
+  }, [
+    companies,
+    effectiveGeoFilter,
+    isOutlookActivityLoading,
+    outlookActivityByCompany,
+    outlookActivityCandidateIds,
+    ownerFilter,
+    search,
+    typeFilter,
+  ]);
 
   // ── Sorting ──
   const sorted = useMemo(() => {

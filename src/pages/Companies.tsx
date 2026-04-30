@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, type CSSProperties } from "react";
+import { useState, useEffect, useRef, useMemo, type CSSProperties } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -50,6 +50,11 @@ type CreateCompanyGeoResolution = {
 
 import { getEffectiveSignal } from "@/lib/categoryUtils";
 import { fetchCompanyListActivitySummary } from "@/lib/companyListActivity";
+import {
+  fetchCompanyOutlookActivityMap,
+  getCompanyOutlookActivityCandidates,
+  getCompanyOutlookActivityLookupKey,
+} from "@/lib/companyOutlookActivity";
 import {
   DesignLabGhostAction,
   DesignLabModalActions,
@@ -241,7 +246,7 @@ const Companies = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("companies")
-        .select("*, contacts(id), profiles!companies_owner_id_fkey(id, full_name)")
+        .select("*, contacts(id, email), profiles!companies_owner_id_fkey(id, full_name)")
         .neq("status", "deleted")
         .order("name");
       if (error) throw error;
@@ -356,6 +361,25 @@ const Companies = () => {
 
   const getOwnerId = (company: any) => (company.profiles as any)?.id || company.owner_id || null;
 
+  const outlookActivityCandidates = useMemo(
+    () => getCompanyOutlookActivityCandidates(companies as any[]),
+    [companies],
+  );
+  const outlookActivityLookupKey = useMemo(
+    () => getCompanyOutlookActivityLookupKey(companies as any[]),
+    [companies],
+  );
+  const { data: outlookActivityByCompany = {}, isLoading: isOutlookActivityLoading } = useQuery({
+    queryKey: ["companies-outlook-activity-map", outlookActivityLookupKey],
+    queryFn: () => fetchCompanyOutlookActivityMap(supabase, outlookActivityCandidates as any[]),
+    enabled: statusFilter === "__never_contacted__" && outlookActivityCandidates.length > 0,
+    staleTime: 5 * 60 * 1000,
+  });
+  const outlookActivityCandidateIds = useMemo(
+    () => new Set(outlookActivityCandidates.map((company) => company.id)),
+    [outlookActivityCandidates],
+  );
+
   const ownerList = allProfiles
     .filter((profile) => Boolean(profile.full_name))
     .map((profile) => [profile.id, profile.full_name] as const);
@@ -401,10 +425,15 @@ const Companies = () => {
     const matchSearch =
       !q || c.name.toLowerCase().includes(q) || c.org_number?.includes(q) || c.industry?.toLowerCase().includes(q);
     const matchOwner = ownerFilter === "all" || getOwnerId(c) === ownerFilter;
+    const hasStoredActivity = (c.activityCount || 0) > 0 || (c.taskCount || 0) > 0;
+    const needsOutlookActivityCheck = outlookActivityCandidateIds.has(c.id);
+    const hasOutlookActivity = Boolean(outlookActivityByCompany[c.id]);
+    const outlookActivityCheckPending = isOutlookActivityLoading && needsOutlookActivityCheck;
     const matchStatus =
       statusFilter === "all" ||
       (statusFilter === "__never_contacted__"
-        ? ((c.contacts || []).length === 0 || ((c.activityCount || 0) === 0 && (c.taskCount || 0) === 0))
+        ? ((c.contacts || []).length === 0 ||
+          (!hasStoredActivity && !hasOutlookActivity && !outlookActivityCheckPending))
         : c.status === statusFilter);
     const matchGeo = companyMatchesGeoFilter(c, effectiveGeoFilter);
     return matchSearch && matchOwner && matchStatus && matchGeo;
