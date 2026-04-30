@@ -41,16 +41,12 @@ type SortField = "name" | "type" | "city" | "last_activity" | "tasks";
 type SortDir = "asc" | "desc";
 const SHOW_GEO_MAP_ACTION = false;
 type GeoArea = Exclude<GeoFilter, "Alle">;
-type ManualGeoArea = Exclude<GeoArea, "Ukjent sted">;
 type CreateCompanyGeoResolution = {
   cityValue: string | null;
   areas: GeoArea[];
   source: string;
   unresolvedPlaces: string[];
 };
-const GEO_MANUAL_OPTIONS = GEO_FILTERS.filter(
-  (option): option is ManualGeoArea => option !== "Alle" && option !== "Ukjent sted",
-);
 
 import { getEffectiveSignal } from "@/lib/categoryUtils";
 import {
@@ -199,7 +195,6 @@ const Companies = () => {
     owner_id: "",
   });
   const [locations, setLocations] = useState<string[]>([""]);
-  const [geoOverrides, setGeoOverrides] = useState<ManualGeoArea[]>([]);
   const [searchParams, setSearchParams] = useSearchParams();
   useEffect(() => {
     const primaryLocation = getPrimaryLocation(form.city);
@@ -238,7 +233,6 @@ const Companies = () => {
           },
     );
     setLocations([""]);
-    setGeoOverrides([]);
   }, [prefillCompanyName]);
 
   const { data: companies = [], isLoading } = useQuery({
@@ -376,15 +370,6 @@ const Companies = () => {
     const finalLocations = locations.map((location) => location.trim()).filter(Boolean);
     const cityValue = finalLocations.length > 0 ? finalLocations.join(", ") : form.city || null;
 
-    if (geoOverrides.length > 0) {
-      return {
-        cityValue,
-        areas: geoOverrides,
-        source: "manual",
-        unresolvedPlaces: [],
-      };
-    }
-
     const resolution = resolveCompanyGeoAreas({
       city: cityValue,
       address: form.address,
@@ -398,17 +383,6 @@ const Companies = () => {
       source: resolution.source,
       unresolvedPlaces: resolution.unresolvedPlaces,
     };
-  };
-
-  const createGeoPreview = getCreateCompanyGeoResolution();
-  const hasGeoOverride = geoOverrides.length > 0;
-  const createGeoIsUnknown = createGeoPreview.areas.includes("Ukjent sted");
-  const toggleGeoOverride = (option: ManualGeoArea) => {
-    setGeoOverrides((current) =>
-      current.includes(option)
-        ? current.filter((item) => item !== option)
-        : [...current, option],
-    );
   };
 
   const createMutation = useMutation({
@@ -450,7 +424,6 @@ const Companies = () => {
         owner_id: "",
       });
       setLocations([""]);
-      setGeoOverrides([]);
       if (prefillCompanyName) {
         const nextParams = new URLSearchParams(searchParams);
         nextParams.delete("ny");
@@ -612,7 +585,7 @@ const Companies = () => {
     }
     const geoResolution = getCreateCompanyGeoResolution();
     if (geoResolution.areas.includes("Ukjent sted")) {
-      toast.warning("Legg til et sted som fanges av GEO, eller velg riktig GEO-filter.");
+      toast.warning("Legg til et mer kjent/større geografisk sted som CRM kan plassere automatisk.");
       return;
     }
     const cleanedOrgNumber = form.org_number.replace(/\D/g, "");
@@ -670,7 +643,6 @@ const Companies = () => {
               value={form.name}
               onChange={(name) => setForm((f) => ({ ...f, name }))}
               onSelect={(r) => {
-                setGeoOverrides([]);
                 setForm((f) => ({
                   ...f,
                   name: r.name,
@@ -701,7 +673,6 @@ const Companies = () => {
               value={form.org_number}
               onChange={(org_number) => setForm((f) => ({ ...f, org_number }))}
               onLookup={(result) => {
-                setGeoOverrides([]);
                 setForm((f) => ({
                   ...f,
                   name: result.name || f.name,
@@ -746,57 +717,6 @@ const Companies = () => {
                 <Plus className="h-3.5 w-3.5" />
                 Legg til sted
               </DesignLabModalInlineAction>
-            </div>
-          </DesignLabModalField>
-          <DesignLabModalField>
-            <DesignLabModalLabel>GEO-plassering</DesignLabModalLabel>
-            <div
-              className={cn(
-                "space-y-2 rounded-lg border p-3",
-                createGeoIsUnknown ? "border-amber-300 bg-amber-50/70" : "border-border bg-muted/20",
-              )}
-            >
-              <p className="text-[0.8125rem] font-medium text-foreground">
-                {hasGeoOverride
-                  ? `Manuell GEO: ${createGeoPreview.areas.join(", ")}.`
-                  : createGeoIsUnknown
-                    ? "Fant ikke GEO automatisk."
-                    : `Automatisk GEO: ${createGeoPreview.areas.join(", ")}.`}
-              </p>
-              {createGeoPreview.unresolvedPlaces.length > 0 && !hasGeoOverride && (
-                <p className="text-[0.75rem] text-muted-foreground">
-                  Ikke plassert: {createGeoPreview.unresolvedPlaces.join(", ")}.
-                </p>
-              )}
-              <DesignLabModalChipGroup>
-                {GEO_MANUAL_OPTIONS.map((option) => (
-                  <DesignLabFilterButton
-                    key={option}
-                    type="button"
-                    onClick={() => toggleGeoOverride(option)}
-                    active={geoOverrides.includes(option)}
-                    activeColors={DESIGN_LAB_NEUTRAL_TAG_ACTIVE_COLORS}
-                    inactiveColors={DESIGN_LAB_NEUTRAL_TAG_INACTIVE_COLORS}
-                    inactiveHoverColors={DESIGN_LAB_NEUTRAL_TAG_INACTIVE_HOVER_COLORS}
-                  >
-                    {option}
-                  </DesignLabFilterButton>
-                ))}
-              </DesignLabModalChipGroup>
-              {hasGeoOverride && (
-                <button
-                  type="button"
-                  onClick={() => setGeoOverrides([])}
-                  className="text-[0.75rem] font-medium text-muted-foreground hover:text-foreground"
-                >
-                  Bruk automatikk
-                </button>
-              )}
-              {createGeoIsUnknown && !hasGeoOverride && (
-                <p className="text-[0.75rem] text-amber-700">
-                  Legg til et mer presist sted, eller velg ett eller flere GEO-filter.
-                </p>
-              )}
             </div>
           </DesignLabModalField>
           <DesignLabModalField>

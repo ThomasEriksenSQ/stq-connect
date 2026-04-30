@@ -9,7 +9,8 @@ type GeoArea =
   | "Stavanger+"
   | "Bergen+"
   | "Kristiansand+"
-  | "Østlandet"
+  | "Vestfold"
+  | "Østfold"
   | "Vestlandet"
   | "Midt-Norge"
   | "Nord-Norge"
@@ -113,6 +114,19 @@ const AREA_PLACE_KEYS: Array<{ area: GeoArea; places: string[] }> = [
       "nittedal",
       "romerike",
       "akershus",
+      "eidsvoll",
+      "hamar",
+      "lillehammer",
+      "gjovik",
+      "raufoss",
+      "brumunddal",
+      "moelv",
+      "otta",
+      "ringebu",
+      "elverum",
+      "trysil",
+      "kongsvinger",
+      "innlandet",
     ],
   },
   {
@@ -121,7 +135,31 @@ const AREA_PLACE_KEYS: Array<{ area: GeoArea; places: string[] }> = [
   },
   {
     area: "Kongsberg+",
-    places: ["kongsberg", "notodden", "hokksund", "drammen", "lier", "lierstranda", "mjondalen", "honefoss", "buskerud", "ringerike"],
+    places: [
+      "kongsberg",
+      "notodden",
+      "hokksund",
+      "drammen",
+      "lier",
+      "lierstranda",
+      "mjondalen",
+      "sande",
+      "svelvik",
+      "holmestrand",
+      "horten",
+      "tonsberg",
+      "honefoss",
+      "nesbyen",
+      "al",
+      "geilo",
+      "fla",
+      "gol",
+      "hemsedal",
+      "lampeland",
+      "buskerud",
+      "ringerike",
+      "viken",
+    ],
   },
   {
     area: "Stavanger+",
@@ -136,9 +174,38 @@ const AREA_PLACE_KEYS: Array<{ area: GeoArea; places: string[] }> = [
     places: ["kristiansand", "flekkeroy", "kongshavn", "grimstad", "arendal", "lillesand", "vennesla", "mandal", "lindesnes", "agder"],
   },
   {
-    area: "Østlandet",
+    area: "Vestfold",
     places: [
-      "ostlandet",
+      "vestfold",
+      "tonsberg",
+      "sandefjord",
+      "larvik",
+      "horten",
+      "holmestrand",
+      "revetal",
+      "stokke",
+      "notteroy",
+      "faerder",
+      "tjome",
+      "barkaker",
+      "sem",
+      "vear",
+      "asgardstrand",
+      "borre",
+      "skoppum",
+      "torp",
+      "tjolling",
+      "sande",
+      "svelvik",
+      "drammen",
+      "lier",
+      "lierstranda",
+      "vestfold og telemark",
+    ],
+  },
+  {
+    area: "Østfold",
+    places: [
       "fredrikstad",
       "gamle fredrikstad",
       "krakeroy",
@@ -148,35 +215,77 @@ const AREA_PLACE_KEYS: Array<{ area: GeoArea; places: string[] }> = [
       "sarpsborg",
       "moss",
       "rygge",
+      "rade",
       "valer i ostfold",
       "halden",
-      "tonsberg",
-      "sandefjord",
-      "larvik",
-      "horten",
-      "holmestrand",
-      "revetal",
-      "stokke",
-      "notteroy",
-      "skien",
-      "porsgrunn",
-      "hamar",
-      "gjovik",
-      "lillehammer",
-      "nesbyen",
-      "geilo",
-      "gol",
-      "hemsedal",
-      "lampeland",
+      "mysen",
+      "askim",
+      "indre ostfold",
+      "eidsberg",
+      "rakkestad",
+      "spydeberg",
+      "tomter",
+      "skiptvet",
+      "viken",
+      "ostfold",
     ],
   },
   {
     area: "Vestlandet",
-    places: ["vestlandet", "haugesund", "kopervik", "akrehamn", "karmoy", "tysvaer", "nedre vats", "vats", "olen", "stord", "forde", "sogndal", "bremanger", "alesund", "molde", "kristiansund", "møre og romsdal", "more og romsdal"],
+    places: [
+      "vestlandet",
+      "bergen",
+      "fyllingsdalen",
+      "kokstad",
+      "sandsli",
+      "nesttun",
+      "asane",
+      "stavanger",
+      "sandnes",
+      "forus",
+      "sola",
+      "tananger",
+      "randaberg",
+      "bryne",
+      "tau",
+      "jorpeland",
+      "haugesund",
+      "kopervik",
+      "akrehamn",
+      "karmoy",
+      "tysvaer",
+      "nedre vats",
+      "vats",
+      "olen",
+      "stord",
+      "forde",
+      "sogndal",
+      "bremanger",
+      "alesund",
+      "molde",
+      "kristiansund",
+      "hordaland",
+      "rogaland",
+      "møre og romsdal",
+      "more og romsdal",
+    ],
   },
   {
     area: "Midt-Norge",
-    places: ["midt norge", "midtnorge", "steinkjer", "levanger", "verdal", "namsos", "rindal", "trondelag"],
+    places: [
+      "midt norge",
+      "midtnorge",
+      "trondheim",
+      "stjordal",
+      "orkanger",
+      "orkland",
+      "steinkjer",
+      "levanger",
+      "verdal",
+      "namsos",
+      "rindal",
+      "trondelag",
+    ],
   },
   {
     area: "Nord-Norge",
@@ -184,7 +293,38 @@ const AREA_PLACE_KEYS: Array<{ area: GeoArea; places: string[] }> = [
   },
   {
     area: "Sørlandet",
-    places: ["sorlandet", "telemark", "flekkefjord", "farsund", "lyngdal", "risor", "tvedestrand", "evje"],
+    places: [
+      "sorlandet",
+      "kristiansand",
+      "vennesla",
+      "sogne",
+      "songdalen",
+      "birkeland",
+      "lillesand",
+      "iveland",
+      "kjevik",
+      "hanes",
+      "flekkeroy",
+      "kongshavn",
+      "grimstad",
+      "arendal",
+      "mandal",
+      "lindesnes",
+      "flekkefjord",
+      "farsund",
+      "lyngdal",
+      "risor",
+      "tvedestrand",
+      "evje",
+      "porsgrunn",
+      "skien",
+      "bo",
+      "seljord",
+      "nome",
+      "telemark",
+      "vestfold og telemark",
+      "agder",
+    ],
   },
 ];
 
@@ -251,25 +391,27 @@ function findPostalCode(value: unknown) {
   return match?.[1] || null;
 }
 
-function geoAreaFromPostalCode(postalCode: string | null): GeoArea | null {
-  if (!postalCode) return null;
+function geoAreasFromPostalCode(postalCode: string | null): GeoArea[] {
+  if (!postalCode) return [];
   const value = Number(postalCode);
-  if (!Number.isFinite(value)) return null;
+  if (!Number.isFinite(value)) return [];
 
-  if (value < 1500 || (value >= 1900 && value < 2200)) return "Oslo+";
-  if (value >= 3000 && value < 3700) return "Kongsberg+";
-  if (value >= 4000 && value < 4400) return "Stavanger+";
-  if (value >= 4500 && value < 4800) return "Kristiansand+";
-  if (value >= 5000 && value < 5400) return "Bergen+";
-  if (value >= 7000 && value < 7600) return "Trondheim+";
-  if (value >= 1500 && value < 3000) return "Østlandet";
-  if (value >= 3700 && value < 4000) return "Østlandet";
-  if (value >= 4400 && value < 4500) return "Sørlandet";
-  if (value >= 4800 && value < 5000) return "Sørlandet";
-  if (value >= 5400 && value < 7000) return "Vestlandet";
-  if (value >= 7600 && value < 8000) return "Midt-Norge";
-  if (value >= 8000 && value < 10000) return "Nord-Norge";
-  return null;
+  if (value < 1500 || (value >= 1900 && value < 2200)) return ["Oslo+"];
+  if (value >= 1500 && value < 1900) return ["Østfold"];
+  if (value >= 3000 && value < 3100) return ["Kongsberg+", "Vestfold"];
+  if (value >= 3100 && value < 3300) return ["Kongsberg+", "Vestfold"];
+  if (value >= 3300 && value < 3700) return ["Kongsberg+"];
+  if (value >= 3700 && value < 4000) return ["Sørlandet"];
+  if (value >= 4000 && value < 4400) return ["Stavanger+", "Vestlandet"];
+  if (value >= 4400 && value < 4500) return ["Sørlandet"];
+  if (value >= 4500 && value < 4800) return ["Kristiansand+", "Sørlandet"];
+  if (value >= 4800 && value < 5000) return ["Sørlandet"];
+  if (value >= 5000 && value < 5400) return ["Bergen+", "Vestlandet"];
+  if (value >= 5400 && value < 7000) return ["Vestlandet"];
+  if (value >= 7000 && value < 7600) return ["Trondheim+", "Midt-Norge"];
+  if (value >= 7600 && value < 8000) return ["Midt-Norge"];
+  if (value >= 8000 && value < 10000) return ["Nord-Norge"];
+  return [];
 }
 
 function normalizeStoredGeoAreas(values: string[] | null | undefined): GeoArea[] {
@@ -301,9 +443,7 @@ function resolveGeo(input: {
   existingSource?: string | null;
 }) {
   const manualAreas = normalizeStoredGeoAreas(input.existingSource === "manual" ? input.existingAreas : null);
-  if (manualAreas.length > 0 && !manualAreas.includes("Ukjent sted")) {
-    return { areas: manualAreas, source: "manual", unresolvedPlaces: [] as string[] };
-  }
+  const manualKnownAreas = manualAreas.filter((area) => area !== "Ukjent sted");
 
   const parts = uniqueGeoParts([
     ...splitLocationText(input.city).map((value) => ({ value, source: "city" as const })),
@@ -315,10 +455,10 @@ function resolveGeo(input: {
   const unresolvedPlaces = new Map<string, string>();
 
   parts.forEach((part) => {
-    const postalArea = geoAreaFromPostalCode(findPostalCode(part.value));
+    const postalAreas = geoAreasFromPostalCode(findPostalCode(part.value));
     let matchedPart = false;
-    if (postalArea) {
-      matched.add(postalArea);
+    if (postalAreas.length > 0) {
+      postalAreas.forEach((area) => matched.add(area));
       sourceMatches.add("postal");
       matchedPart = true;
     }
@@ -344,9 +484,17 @@ function resolveGeo(input: {
   });
 
   if (matched.size > 0) {
-    const areas = GEO_AREA_ORDER.filter((area) => matched.has(area));
-    const source = sourceMatches.size > 1 ? "brreg_hybrid" : sourceMatches.has("postal") ? "brreg_postal" : "brreg_place";
+    const areas = GEO_AREA_ORDER.filter((area) => matched.has(area) || manualKnownAreas.includes(area));
+    const source = sourceMatches.size > 1 || manualKnownAreas.length > 0 ? "brreg_hybrid" : sourceMatches.has("postal") ? "brreg_postal" : "brreg_place";
     return { areas, source, unresolvedPlaces: [...unresolvedPlaces.values()] };
+  }
+
+  if (manualKnownAreas.length > 0) {
+    return { areas: manualKnownAreas, source: "manual", unresolvedPlaces: [] as string[] };
+  }
+
+  if (manualAreas.includes("Ukjent sted")) {
+    return { areas: ["Ukjent sted" as GeoArea], source: "manual", unresolvedPlaces: [...unresolvedPlaces.values()] };
   }
 
   return { areas: ["Ukjent sted" as GeoArea], source: "unknown", unresolvedPlaces: [...unresolvedPlaces.values()] };

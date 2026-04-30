@@ -21,7 +21,8 @@ describe("companyGeoAreas", () => {
       "Stavanger+",
       "Bergen+",
       "Kristiansand+",
-      "Østlandet",
+      "Vestfold",
+      "Østfold",
       "Vestlandet",
       "Midt-Norge",
       "Nord-Norge",
@@ -34,6 +35,7 @@ describe("companyGeoAreas", () => {
     expect(getCompanyGeoAreas({ city: "Bærum" })).toContain("Oslo+");
     expect(getCompanyGeoAreas({ city: "Sandnes" })).toContain("Stavanger+");
     expect(getCompanyGeoAreas({ city: "Hokksund" })).toContain("Kongsberg+");
+    expect(getCompanyGeoAreas({ city: "Geilo" })).toContain("Kongsberg+");
     expect(getCompanyGeoAreas({ city: "Askøy" })).toContain("Bergen+");
     expect(getCompanyGeoAreas({ city: "Vennesla" })).toContain("Kristiansand+");
   });
@@ -55,7 +57,7 @@ describe("companyGeoAreas", () => {
       locations: ["Oslo", "Bergen"],
     });
 
-    expect(resolution.areas).toEqual(["Oslo+", "Bergen+"]);
+    expect(resolution.areas).toEqual(["Oslo+", "Bergen+", "Vestlandet"]);
     expect(resolution.source).toBe("hybrid");
     expect(companyMatchesGeoFilter({ city: "Oslo, Bergen", zip_code: "0150" }, "Bergen+")).toBe(true);
   });
@@ -74,8 +76,9 @@ describe("companyGeoAreas", () => {
       company: { city: "Oslo" },
     };
 
-    expect(getContactGeoAreas(contact)).toEqual(["Bergen+"]);
+    expect(getContactGeoAreas(contact)).toEqual(["Bergen+", "Vestlandet"]);
     expect(contactMatchesGeoFilter(contact, "Bergen+")).toBe(true);
+    expect(contactMatchesGeoFilter(contact, "Vestlandet")).toBe(true);
     expect(contactMatchesGeoFilter(contact, "Oslo+")).toBe(false);
   });
 
@@ -102,19 +105,21 @@ describe("companyGeoAreas", () => {
   });
 
   it("maps broader region labels instead of leaving them unknown", () => {
-    expect(getCompanyGeoAreas({ city: "Viken" })).toContain("Østlandet");
-    expect(getCompanyGeoAreas({ city: "Telemark" })).toContain("Østlandet");
+    expect(getCompanyGeoAreas({ city: "Viken" })).toEqual(["Kongsberg+", "Østfold"]);
+    expect(getCompanyGeoAreas({ city: "Telemark" })).toContain("Sørlandet");
     expect(getCompanyGeoAreas({ city: "Rogaland" })).toContain("Stavanger+");
+    expect(getCompanyGeoAreas({ city: "Rogaland" })).toContain("Vestlandet");
     expect(getCompanyGeoAreas({ city: "Hordaland" })).toContain("Bergen+");
+    expect(getCompanyGeoAreas({ city: "Hordaland" })).toContain("Vestlandet");
     expect(getCompanyGeoAreas({ city: "Møre og Romsdal" })).toContain("Vestlandet");
     expect(getCompanyGeoAreas({ city: "Trøndelag" })).toContain("Midt-Norge");
     expect(getCompanyGeoAreas({ city: "Troms og Finnmark" })).toContain("Nord-Norge");
     expect(getCompanyGeoAreas({ city: "Agder" })).toContain("Sørlandet");
   });
 
-  it("maps Fredrikstad local places to Østlandet without a postal code", () => {
-    expect(getCompanyGeoAreas({ city: "KRÅKERØY" })).toEqual(["Østlandet"]);
-    expect(companyMatchesGeoFilter({ city: "KRÅKERØY" }, "Østlandet")).toBe(true);
+  it("maps Fredrikstad local places to Østfold without a postal code", () => {
+    expect(getCompanyGeoAreas({ city: "KRÅKERØY" })).toEqual(["Østfold"]);
+    expect(companyMatchesGeoFilter({ city: "KRÅKERØY" }, "Østfold")).toBe(true);
     expect(companyMatchesGeoFilter({ city: "KRÅKERØY" }, "Ukjent sted")).toBe(false);
   });
 
@@ -123,10 +128,19 @@ describe("companyGeoAreas", () => {
     expect(getCompanyGeoAreas({ city: "Andenes" })).toEqual(["Nord-Norge"]);
     expect(getCompanyGeoAreas({ city: "Andøya" })).toEqual(["Nord-Norge"]);
     expect(getCompanyGeoAreas({ city: "HELL" })).toEqual(["Trondheim+"]);
-    expect(getCompanyGeoAreas({ city: "TAU" })).toEqual(["Stavanger+"]);
-    expect(getCompanyGeoAreas({ city: "LIERSTRANDA" })).toEqual(["Kongsberg+"]);
+    expect(getCompanyGeoAreas({ city: "TAU" })).toEqual(["Stavanger+", "Vestlandet"]);
+    expect(getCompanyGeoAreas({ city: "LIERSTRANDA" })).toEqual(["Kongsberg+", "Vestfold"]);
     expect(getCompanyGeoAreas({ city: "Bremanger" })).toEqual(["Vestlandet"]);
-    expect(getCompanyGeoAreas({ city: "FLEKKERØY" })).toEqual(["Kristiansand+"]);
+    expect(getCompanyGeoAreas({ city: "FLEKKERØY" })).toEqual(["Kristiansand+", "Sørlandet"]);
+  });
+
+  it("lets neighboring GEO filters overlap where it is useful", () => {
+    expect(getCompanyGeoAreas({ city: "Horten" })).toEqual(["Kongsberg+", "Vestfold"]);
+    expect(getCompanyGeoAreas({ city: "Drammen" })).toEqual(["Kongsberg+", "Vestfold"]);
+    expect(companyMatchesGeoFilter({ city: "Drammen" }, "Kongsberg+")).toBe(true);
+    expect(companyMatchesGeoFilter({ city: "Drammen" }, "Vestfold")).toBe(true);
+    expect(getCompanyGeoAreas({ city: "Bergen" })).toEqual(["Bergen+", "Vestlandet"]);
+    expect(getCompanyGeoAreas({ zip_code: "3180" })).toEqual(["Kongsberg+", "Vestfold"]);
   });
 
   it("keeps unmapped or missing locations in unknown place", () => {
@@ -142,15 +156,15 @@ describe("companyGeoAreas", () => {
   it("normalizes old filter labels and uses postal fallback", () => {
     expect(normalizeGeoFilter("Oslo-området")).toBe("Oslo+");
     expect(normalizeGeoFilter("Kongsberg-området")).toBe("Kongsberg+");
-    expect(normalizeGeoFilter("Østlandet ellers")).toBe("Østlandet");
+    expect(normalizeGeoFilter("Østlandet ellers")).toBe("Alle");
     expect(normalizeGeoFilter("Stavanger/Sandnes")).toBe("Stavanger+");
     expect(normalizeGeoFilter("Bergen-området")).toBe("Bergen+");
     expect(normalizeGeoFilter("Kristiansand-området")).toBe("Kristiansand+");
     expect(normalizeGeoFilter("Vestlandet ellers")).toBe("Vestlandet");
     expect(normalizeGeoFilter("Midt-Norge ellers")).toBe("Midt-Norge");
     expect(normalizeGeoFilter("Sørlandet/Telemark ellers")).toBe("Sørlandet");
-    expect(getCompanyGeoAreas({ zip_code: "7010" })).toEqual(["Trondheim+"]);
-    expect(getCompanyGeoAreas({ zip_code: "3050" })).toEqual(["Kongsberg+"]);
+    expect(getCompanyGeoAreas({ zip_code: "7010" })).toEqual(["Trondheim+", "Midt-Norge"]);
+    expect(getCompanyGeoAreas({ zip_code: "3050" })).toEqual(["Kongsberg+", "Vestfold"]);
   });
 
   it("uses persisted geo areas before text fallback", () => {
@@ -159,6 +173,11 @@ describe("companyGeoAreas", () => {
       areas: ["Oslo+"],
       source: "manual",
     });
+  });
+
+  it("recomputes obsolete Østlandet values and augments persisted areas", () => {
+    expect(getCompanyGeoAreas({ city: "KRÅKERØY", geo_areas: ["Østlandet"] })).toEqual(["Østfold"]);
+    expect(getCompanyGeoAreas({ city: "Drammen", geo_areas: ["Kongsberg+"] })).toEqual(["Kongsberg+", "Vestfold"]);
   });
 
   it("reports unresolved place names when nothing maps", () => {
