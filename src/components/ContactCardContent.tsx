@@ -42,6 +42,7 @@ import {
   Phone,
   Mail,
   Linkedin,
+  Briefcase,
   FileText,
   Clock,
   ExternalLink,
@@ -104,6 +105,13 @@ import {
 import { DesignLabEntitySheet } from "@/components/designlab/DesignLabEntitySheet";
 import { ForespørselSheet } from "@/components/ForespørselSheet";
 import { NyForesporselModal, type NyForesporselInitialContext } from "@/pages/Foresporsler";
+import {
+  NewOpportunitySheet,
+  type OpportunityCompanyOption,
+  type OpportunityContactPreview,
+  type OpportunityEmployeeOption,
+  type OpportunityExternalConsultantOption,
+} from "@/components/pipeline/NewOpportunitySheet";
 import {
   DesignLabFieldGrid,
   DesignLabFieldLabel,
@@ -698,6 +706,7 @@ export function ContactCardContent({
   const [profileEditMode, setProfileEditMode] = useState(false);
   const [editSheetOpen, setEditSheetOpen] = useState(false);
   const [createRequestOpen, setCreateRequestOpen] = useState(false);
+  const [createOpportunityOpen, setCreateOpportunityOpen] = useState(false);
   const [selectedRequestId, setSelectedRequestId] = useState<number | null>(null);
   const [contactActionMenuOpen, setContactActionMenuOpen] = useState(false);
   const [textSize] = usePersistentState<TextSize>("dl-text-size", "M");
@@ -742,6 +751,100 @@ export function ContactCardContent({
     enabled: !!contactId,
   });
   const companyId = ((contact?.companies as any)?.id as string | null | undefined) ?? null;
+
+  const { data: opportunityEmployees = [] } = useQuery({
+    queryKey: ["pipeline-employees-v1"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("stacq_ansatte")
+        .select("id, navn, status, tilgjengelig_fra, slutt_dato, start_dato, bilde_url")
+        .order("navn", { ascending: true });
+      if (error) throw error;
+      return (data || []) as OpportunityEmployeeOption[];
+    },
+  });
+
+  const { data: opportunityExternalConsultants = [] } = useQuery({
+    queryKey: ["pipeline-external-consultants-v1"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("external_consultants")
+        .select("id, navn, status, type, company_id")
+        .order("navn", { ascending: true });
+      if (error) throw error;
+      return (data || []) as OpportunityExternalConsultantOption[];
+    },
+  });
+
+  const { data: opportunityCompanies = [] } = useQuery({
+    queryKey: ["pipeline-companies-v1"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("companies")
+        .select("id, name, status")
+        .neq("status", "deleted")
+        .order("name", { ascending: true });
+      if (error) throw error;
+      return (data || []) as OpportunityCompanyOption[];
+    },
+  });
+
+  const { data: opportunityContacts = [] } = useQuery({
+    queryKey: ["pipeline-contacts-v1"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("contacts")
+        .select("id, first_name, last_name, title, email, company_id, status")
+        .neq("status", "deleted")
+        .order("first_name", { ascending: true });
+      if (error) throw error;
+      return (data || []) as OpportunityContactPreview[];
+    },
+  });
+
+  const { data: opportunityCvPortraits = [] } = useQuery({
+    queryKey: ["pipeline-cv-portraits-v1"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("cv_documents")
+        .select("ansatt_id, portrait_url")
+        .not("portrait_url", "is", null);
+      if (error) throw error;
+      return (data || []) as Array<{ ansatt_id: number | null; portrait_url: string | null }>;
+    },
+  });
+
+  const opportunityCvPortraitMap = useMemo(() => {
+    const map = new Map<number, string>();
+    opportunityCvPortraits.forEach((row) => {
+      if (row.ansatt_id && row.portrait_url) map.set(row.ansatt_id, row.portrait_url);
+    });
+    return map;
+  }, [opportunityCvPortraits]);
+
+  const opportunityCompanyOptions = useMemo(() => {
+    const list = [...opportunityCompanies];
+    const currentCompany = contact?.companies as any;
+    if (companyId && currentCompany?.name && !list.some((company) => company.id === companyId)) {
+      list.unshift({ id: companyId, name: currentCompany.name, status: currentCompany.status || null });
+    }
+    return list;
+  }, [companyId, contact?.companies, opportunityCompanies]);
+
+  const opportunityContactOptions = useMemo(() => {
+    const list = [...opportunityContacts];
+    if (contact?.id && !list.some((entry) => entry.id === contact.id)) {
+      list.unshift({
+        id: contact.id,
+        first_name: contact.first_name || null,
+        last_name: contact.last_name || null,
+        title: contact.title || null,
+        email: contact.email || null,
+        company_id: companyId,
+      });
+    }
+    return list;
+  }, [companyId, contact, opportunityContacts]);
 
   const { data: companyTechProfile } = useQuery({
     queryKey: crmQueryKeys.companies.techProfile(companyId ?? "__none__"),
@@ -1421,6 +1524,12 @@ export function ContactCardContent({
     contactId: contact.id,
     contactName: `${contact.first_name || ""} ${contact.last_name || ""}`.trim(),
   };
+  const createOpportunityInitialContext = {
+    companyId,
+    companyName: companyName || null,
+    contactId: contact.id,
+    contactName: `${contact.first_name || ""} ${contact.last_name || ""}`.trim(),
+  };
   const consultantMatchVisible = !defaultHidden?.consultantMatch || showConsultantMatch;
   const showConsultantMatchPane = consultantMatchVisible && (matchingConsultants || consultantResults !== null);
   const isPreparingConsultantMatch = pendingConsultantMatch && !consultantCacheReady;
@@ -1762,6 +1871,7 @@ export function ContactCardContent({
                         toast.error("Kontakten må være koblet til et selskap for å opprette forespørsel");
                         return;
                       }
+                      setContactActionMenuOpen(false);
                       setCreateRequestOpen(true);
                     }}
                   >
@@ -1795,6 +1905,60 @@ export function ContactCardContent({
                       >
                         {companyId
                           ? "Start en ny forespørsel med kontakt og selskap fylt inn."
+                          : "Krever at kontakten er koblet til et selskap."}
+                      </span>
+                    </span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    className="rounded-[10px] px-2.5"
+                    disabled={!companyId}
+                    style={{
+                      height: "auto",
+                      minHeight: contactActionMenuMetrics.itemMinHeight,
+                      borderRadius: contactActionMenuMetrics.itemRadius,
+                      alignItems: "flex-start",
+                      paddingTop: contactActionMenuMetrics.itemPaddingY,
+                      paddingBottom: contactActionMenuMetrics.itemPaddingY,
+                    }}
+                    onClick={() => {
+                      if (!companyId) {
+                        toast.error("Kontakten må være koblet til et selskap for å opprette mulighet");
+                        return;
+                      }
+                      setContactActionMenuOpen(false);
+                      setCreateOpportunityOpen(true);
+                    }}
+                  >
+                    <span
+                      className="mt-0.5 flex shrink-0 items-center justify-center rounded-[8px] border border-[color:var(--dl-border-light)] bg-[color:var(--dl-surface-alt)] text-[color:var(--dl-text-muted)]"
+                      style={{
+                        width: contactActionMenuMetrics.itemIconBoxSize,
+                        height: contactActionMenuMetrics.itemIconBoxSize,
+                      }}
+                    >
+                      <Briefcase
+                        style={{
+                          width: contactActionMenuMetrics.itemIconSize,
+                          height: contactActionMenuMetrics.itemIconSize,
+                        }}
+                      />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span
+                        className="block truncate font-semibold text-[color:var(--dl-text)]"
+                        style={{ fontSize: contactActionMenuMetrics.itemTitleFontSize }}
+                      >
+                        Opprett mulighet
+                      </span>
+                      <span
+                        className="mt-0.5 block text-[color:var(--dl-text-muted)]"
+                        style={{
+                          fontSize: contactActionMenuMetrics.itemDescriptionFontSize,
+                          lineHeight: 1.35,
+                        }}
+                      >
+                        {companyId
+                          ? "Start en ny mulighet med kontakt og selskap fylt inn."
                           : "Krever at kontakten er koblet til et selskap."}
                       </span>
                     </span>
@@ -2852,6 +3016,22 @@ export function ContactCardContent({
         open={createRequestOpen}
         onClose={() => setCreateRequestOpen(false)}
         initialContext={createRequestInitialContext}
+      />
+
+      <NewOpportunitySheet
+        open={createOpportunityOpen}
+        onOpenChange={setCreateOpportunityOpen}
+        employees={opportunityEmployees}
+        externalConsultants={opportunityExternalConsultants}
+        companies={opportunityCompanyOptions}
+        contacts={opportunityContactOptions}
+        cvPortraitMap={opportunityCvPortraitMap}
+        userId={user?.id ?? null}
+        initialContext={createOpportunityInitialContext}
+        onCreated={async () => {
+          await queryClient.invalidateQueries({ queryKey: crmQueryKeys.pipeline.opportunities() });
+          notifyDataChanged();
+        }}
       />
 
       <DesignLabEntitySheet
