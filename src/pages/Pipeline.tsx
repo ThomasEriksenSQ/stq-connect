@@ -42,7 +42,7 @@ import { toast } from "@/components/ui/sonner";
 
 type ConsultantType = "intern" | "ekstern";
 type SourceType = "foresporsel" | "mulighet";
-type FilterStatus = "aktive" | "alle" | PipelineStatus;
+type FilterStatus = "tilgjengelige" | "alle" | PipelineStatus;
 type TypeFilter = "alle" | ConsultantType;
 type SourceFilter = "alle" | SourceType;
 
@@ -55,6 +55,7 @@ type PipelineItem = {
   consultantId: string;
   consultantName: string;
   consultantStatus: string | null;
+  consultantAvailableFrom: string | null;
   title: string;
   companyId: string | null;
   companyName: string;
@@ -123,8 +124,8 @@ type RequestLinkRow = {
   created_at: string | null;
   status: string;
   status_updated_at: string;
-  stacq_ansatte: { id: number; navn: string; status: string | null } | null;
-  external_consultants: { id: string; navn: string | null; status: string | null; type: string | null } | null;
+  stacq_ansatte: { id: number; navn: string; status: string | null; tilgjengelig_fra: string | null } | null;
+  external_consultants: { id: string; navn: string | null; status: string | null; type: string | null; tilgjengelig_fra: string | null } | null;
   foresporsler: {
     id: number;
     selskap_navn: string;
@@ -153,17 +154,17 @@ type OpportunityRow = {
   status_updated_at: string;
   created_at: string;
   updated_at: string;
-  stacq_ansatte: { id: number; navn: string; status: string | null } | null;
-  external_consultants: { id: string; navn: string | null; status: string | null; type: string | null } | null;
+  stacq_ansatte: { id: number; navn: string; status: string | null; tilgjengelig_fra: string | null } | null;
+  external_consultants: { id: string; navn: string | null; status: string | null; type: string | null; tilgjengelig_fra: string | null } | null;
   companies: { id: string; name: string } | null;
   contacts: ContactPreview | null;
 };
 
-const STATUS_FILTER_OPTIONS = ["Aktive", "Alle", ...PIPELINE_STATUS_VALUES.map((value) => PIPELINE_STATUS_META[value].label)] as const;
+const STATUS_FILTER_OPTIONS = ["Tilgjengelige", "Alle", ...PIPELINE_STATUS_VALUES.map((value) => PIPELINE_STATUS_META[value].label)] as const;
 const TYPE_FILTER_OPTIONS = ["Alle", "Ansatte", "Eksterne"] as const;
 const SOURCE_FILTER_OPTIONS = ["Alle", "Forespørsler", "Muligheter"] as const;
 
-const PIPELINE_TABLE_COLUMNS = "minmax(170px,1.35fr) 86px 112px 116px 76px";
+const PIPELINE_TABLE_COLUMNS = "minmax(210px,1.45fr) minmax(72px,0.45fr) minmax(150px,0.9fr) minmax(136px,0.85fr) minmax(88px,0.55fr)";
 
 const SELECT_CLASS =
   "h-[var(--dl-modal-control-height,32px)] w-full min-w-0 rounded-md border border-[#D7DCE3] bg-white px-2.5 text-[var(--dl-modal-font-size,13px)] text-[#1F2328] outline-none focus:border-[#5E6AD2] focus:shadow-[0_0_0_2px_rgba(94,106,210,0.15)]";
@@ -172,15 +173,15 @@ const TEXTAREA_CLASS =
   "min-h-[112px] w-full min-w-0 resize-none rounded-md border border-[#D7DCE3] bg-white px-2.5 py-2 text-[var(--dl-modal-font-size,13px)] text-[#1F2328] outline-none focus:border-[#5E6AD2] focus:shadow-[0_0_0_2px_rgba(94,106,210,0.15)]";
 
 function statusFilterLabel(value: FilterStatus) {
-  if (value === "aktive") return "Aktive";
+  if (value === "tilgjengelige") return "Tilgjengelige";
   if (value === "alle") return "Alle";
   return PIPELINE_STATUS_META[value].label;
 }
 
 function statusFilterValue(label: string): FilterStatus {
-  if (label === "Aktive") return "aktive";
+  if (label === "Tilgjengelige") return "tilgjengelige";
   if (label === "Alle") return "alle";
-  return PIPELINE_STATUS_VALUES.find((value) => PIPELINE_STATUS_META[value].label === label) ?? "aktive";
+  return PIPELINE_STATUS_VALUES.find((value) => PIPELINE_STATUS_META[value].label === label) ?? "tilgjengelige";
 }
 
 function typeFilterLabel(value: TypeFilter) {
@@ -240,10 +241,10 @@ function getLatestAt(items: PipelineItem[]) {
     .sort((left, right) => new Date(right).getTime() - new Date(left).getTime())[0] ?? "";
 }
 
-function statusMatchesFilter(status: PipelineStatus, filter: FilterStatus) {
+function statusMatchesFilter(item: PipelineItem, filter: FilterStatus) {
   if (filter === "alle") return true;
-  if (filter === "aktive") return isOpenPipelineStatus(status);
-  return status === filter;
+  if (filter === "tilgjengelige") return Boolean(item.consultantAvailableFrom);
+  return item.status === filter;
 }
 
 function consultantTypeLabel(type: ConsultantType) {
@@ -292,7 +293,7 @@ export default function Pipeline() {
   const queryClient = useQueryClient();
   const [textSize] = usePersistentState<TextSize>("dl-text-size", "M");
   const [cmdOpen, setCmdOpen] = useState(false);
-  const [statusFilter, setStatusFilter] = useState<FilterStatus>("aktive");
+  const [statusFilter, setStatusFilter] = useState<FilterStatus>("tilgjengelige");
   const [typeFilter, setTypeFilter] = useState<TypeFilter>("alle");
   const [sourceFilter, setSourceFilter] = useState<SourceFilter>("alle");
   const [selectedGroupKey, setSelectedGroupKey] = useState<string | null>(null);
@@ -305,7 +306,7 @@ export default function Pipeline() {
       const { data, error } = await supabase
         .from("foresporsler_konsulenter")
         .select(
-          "id, ansatt_id, ekstern_id, konsulent_type, created_at, status, status_updated_at, stacq_ansatte(id, navn, status), external_consultants(id, navn, status, type), foresporsler(id, selskap_navn, selskap_id, kontakt_id, mottatt_dato, frist_dato, status, type, referanse, companies!foresporsler_selskap_id_fkey(id, name), contacts!foresporsler_kontakt_id_fkey(id, first_name, last_name, title, email))",
+          "id, ansatt_id, ekstern_id, konsulent_type, created_at, status, status_updated_at, stacq_ansatte(id, navn, status, tilgjengelig_fra), external_consultants(id, navn, status, type, tilgjengelig_fra), foresporsler(id, selskap_navn, selskap_id, kontakt_id, mottatt_dato, frist_dato, status, type, referanse, companies!foresporsler_selskap_id_fkey(id, name), contacts!foresporsler_kontakt_id_fkey(id, first_name, last_name, title, email))",
         )
         .order("status_updated_at", { ascending: false });
       if (error) throw error;
@@ -319,7 +320,7 @@ export default function Pipeline() {
       const { data, error } = await supabase
         .from("pipeline_muligheter")
         .select(
-          "id, ansatt_id, ekstern_id, konsulent_type, company_id, contact_id, tittel, notat, status, status_updated_at, created_at, updated_at, stacq_ansatte(id, navn, status), external_consultants(id, navn, status, type), companies!pipeline_muligheter_company_id_fkey(id, name), contacts!pipeline_muligheter_contact_id_fkey(id, first_name, last_name, title, email)",
+          "id, ansatt_id, ekstern_id, konsulent_type, company_id, contact_id, tittel, notat, status, status_updated_at, created_at, updated_at, stacq_ansatte(id, navn, status, tilgjengelig_fra), external_consultants(id, navn, status, type, tilgjengelig_fra), companies!pipeline_muligheter_company_id_fkey(id, name), contacts!pipeline_muligheter_contact_id_fkey(id, first_name, last_name, title, email)",
         )
         .order("status_updated_at", { ascending: false });
       if (error) throw error;
@@ -408,6 +409,7 @@ export default function Pipeline() {
         consultantId: String(consultantId || ""),
         consultantName,
         consultantStatus: consultant?.status || null,
+        consultantAvailableFrom: consultant?.tilgjengelig_fra || null,
         title: request.referanse || request.type ? `${request.referanse || "Forespørsel"} ${request.type ? `(${request.type})` : ""}` : "Forespørsel",
         companyId: request.selskap_id || null,
         companyName: request.companies?.name || request.selskap_navn || "Ukjent selskap",
@@ -438,6 +440,7 @@ export default function Pipeline() {
         consultantId: String(consultantId || ""),
         consultantName: consultant?.navn || "Ukjent konsulent",
         consultantStatus: consultant?.status || null,
+        consultantAvailableFrom: consultant?.tilgjengelig_fra || null,
         title: opportunity.tittel || "Direkte mulighet",
         companyId: opportunity.company_id || null,
         companyName: opportunity.companies?.name || "Ukjent selskap",
@@ -458,13 +461,13 @@ export default function Pipeline() {
     return pipelineItems.filter((item) => {
       if (typeFilter !== "alle" && item.consultantType !== typeFilter) return false;
       if (sourceFilter !== "alle" && item.source !== sourceFilter) return false;
-      return statusMatchesFilter(item.status, statusFilter);
+      return statusMatchesFilter(item, statusFilter);
     });
   }, [pipelineItems, sourceFilter, statusFilter, typeFilter]);
 
   const groups = useMemo(() => buildPipelineGroups(filteredItems), [filteredItems]);
   const selectedGroup = useMemo(
-    () => groups.find((group) => group.consultantKey === selectedGroupKey) || groups[0] || null,
+    () => (selectedGroupKey ? groups.find((group) => group.consultantKey === selectedGroupKey) || null : null),
     [groups, selectedGroupKey],
   );
 
@@ -475,7 +478,13 @@ export default function Pipeline() {
         id: group.consultantKey,
         firstName: group.consultantName,
         lastName: "",
-        company: Array.from(new Set(group.items.map((item) => item.companyName).filter(Boolean))).slice(0, 3).join(", "),
+        company: "",
+        meta: `${group.items.length} løp`,
+        searchText: [
+          group.consultantName,
+          consultantTypeLabel(group.consultantType),
+          ...group.items.flatMap((item) => [item.companyName, item.contactName, item.title]),
+        ].filter(Boolean).join(" "),
         companyId: null,
         email: "",
         phone: "",
@@ -502,9 +511,13 @@ export default function Pipeline() {
 
   const stats = useMemo(() => {
     const openItems = pipelineItems.filter((item) => isOpenPipelineStatus(item.status));
+    const availableConsultants = new Set(
+      pipelineItems.filter((item) => item.consultantAvailableFrom).map((item) => item.consultantKey),
+    );
     return {
       consultants: new Set(pipelineItems.map((item) => item.consultantKey)).size,
       open: openItems.length,
+      available: availableConsultants.size,
       sentCv: pipelineItems.filter((item) => item.status === "sendt_cv").length,
       interviews: pipelineItems.filter((item) => item.status === "intervju").length,
       won: pipelineItems.filter((item) => item.status === "vunnet").length,
@@ -515,7 +528,7 @@ export default function Pipeline() {
   const isLoading = isLoadingRequestLinks || isLoadingOpportunities;
 
   const resetFilters = () => {
-    setStatusFilter("aktive");
+    setStatusFilter("tilgjengelige");
     setTypeFilter("alle");
     setSourceFilter("alle");
   };
@@ -594,7 +607,7 @@ export default function Pipeline() {
               value={typeFilterLabel(typeFilter)}
               onChange={(value) => setTypeFilter(typeFilterValue(value))}
             />
-            {(statusFilter !== "aktive" || typeFilter !== "alle" || sourceFilter !== "alle") && (
+            {(statusFilter !== "tilgjengelige" || typeFilter !== "alle" || sourceFilter !== "alle") && (
               <DesignLabGhostAction onClick={resetFilters}>
                 <X style={{ width: 12, height: 12 }} /> Nullstill
               </DesignLabGhostAction>
@@ -609,7 +622,7 @@ export default function Pipeline() {
 
           <div className="grid gap-2 pt-3 sm:grid-cols-2 lg:grid-cols-6">
             <PipelineStat label="Konsulenter" value={stats.consultants} />
-            <PipelineStat label="Aktive løp" value={stats.open} />
+            <PipelineStat label="Tilgjengelige" value={stats.available} />
             <PipelineStat label="Sendt CV" value={stats.sentCv} />
             <PipelineStat label="Intervju" value={stats.interviews} />
             <PipelineStat label="Vunnet" value={stats.won} />
@@ -662,7 +675,7 @@ export default function Pipeline() {
                       onDeleteOpportunity={deleteOpportunity}
                     />
                   ) : (
-                    <EmptyState text="Velg en konsulent for detaljer." />
+                    <EmptyState text="Trykk ⌘K for å søke." />
                   )}
                 </aside>
               </ResizablePanel>
@@ -784,10 +797,15 @@ function PipelineStat({ label, value }: { label: string; value: number }) {
 }
 
 function PipelineTableHeader() {
+  const labels = ["Konsulent", "Type", "Pipeline", "Høyeste status", "Sist"];
   return (
-    <div className="sticky top-0 z-10 grid items-center border-b" style={{ gridTemplateColumns: PIPELINE_TABLE_COLUMNS, height: 32, paddingInline: 16, borderColor: C.borderLight, background: C.surfaceAlt }}>
-      {["Konsulent", "Type", "Pipeline", "Høyeste status", "Sist"].map((label) => (
-        <span key={label} style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: C.textMuted }}>
+    <div className="sticky top-0 z-10 grid items-center gap-3 border-b" style={{ gridTemplateColumns: PIPELINE_TABLE_COLUMNS, height: 32, paddingInline: 16, borderColor: C.borderLight, background: C.surfaceAlt }}>
+      {labels.map((label) => (
+        <span
+          key={label}
+          className={`truncate ${label === "Sist" ? "text-right" : ""}`}
+          style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: C.textMuted }}
+        >
           {label}
         </span>
       ))}
@@ -801,7 +819,7 @@ function PipelineGroupRow({ group, active, onClick }: { group: PipelineGroup; ac
     <button
       type="button"
       onClick={onClick}
-      className="grid w-full cursor-pointer items-center border-b text-left transition-colors"
+      className="grid w-full cursor-pointer items-center gap-3 border-b text-left transition-colors"
       style={{
         gridTemplateColumns: PIPELINE_TABLE_COLUMNS,
         minHeight: 46,
@@ -817,7 +835,7 @@ function PipelineGroupRow({ group, active, onClick }: { group: PipelineGroup; ac
         event.currentTarget.style.background = active ? C.activeBg : "transparent";
       }}
     >
-      <div className="flex min-w-0 items-center gap-2">
+      <div className="flex min-w-0 items-center gap-2 overflow-hidden">
         <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full" style={{ background: C.filterActiveBg, color: C.textPrimary, fontSize: 11, fontWeight: 650 }}>
           {getInitials(group.consultantName)}
         </div>
@@ -826,17 +844,17 @@ function PipelineGroupRow({ group, active, onClick }: { group: PipelineGroup; ac
           {group.consultantStatus && <p className="truncate" style={{ fontSize: 11, color: C.textFaint }}>{group.consultantStatus}</p>}
         </div>
       </div>
-      <div>
+      <div className="min-w-0 overflow-hidden">
         <ConsultantTypeTag type={group.consultantType} />
       </div>
-      <div className="flex items-center gap-1.5">
+      <div className="flex min-w-0 flex-wrap items-center gap-1.5 overflow-hidden">
         <DesignLabReadonlyChip active={false}>{group.requestCount} foresp.</DesignLabReadonlyChip>
-        <DesignLabReadonlyChip active={false}>{group.opportunityCount} mul.</DesignLabReadonlyChip>
+        {group.opportunityCount > 0 ? <DesignLabReadonlyChip active={false}>{group.opportunityCount} mul.</DesignLabReadonlyChip> : null}
       </div>
-      <div>
+      <div className="min-w-0 overflow-hidden">
         <DesignLabStaticTag colors={statusMeta.colors}>{statusMeta.label}</DesignLabStaticTag>
       </div>
-      <span style={{ fontSize: 12, color: C.textMuted }}>{timeAgo(group.latestAt)}</span>
+      <span className="truncate text-right" style={{ fontSize: 12, color: C.textMuted }}>{timeAgo(group.latestAt)}</span>
     </button>
   );
 }

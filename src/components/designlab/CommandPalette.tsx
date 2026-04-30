@@ -14,6 +14,8 @@ interface ContactItem {
   firstName: string;
   lastName: string;
   company: string;
+  meta?: string;
+  searchText?: string;
   companyId: string | null;
   email: string;
   phone: string;
@@ -135,6 +137,7 @@ export function CommandPalette({
         ? contacts.filter((c) =>
             `${c.firstName} ${c.lastName}`.toLowerCase().includes(q) ||
             c.company.toLowerCase().includes(q) ||
+            (c.searchText || "").toLowerCase().includes(q) ||
             c.email.toLowerCase().includes(q)
           ).slice(0, 5)
         : contacts.slice(0, 5);
@@ -143,7 +146,7 @@ export function CommandPalette({
         result.push({
           id: `contact-${c.id}`,
           label: `${c.firstName} ${c.lastName}`,
-          meta: c.company || undefined,
+          meta: c.meta ?? (c.company || undefined),
           icon: Users,
           section: contactSectionLabel,
           action: () => { onSelectContact(c.id); onClose(); },
@@ -338,7 +341,19 @@ export function CommandPalette({
                       <Icon style={{ width: 14, height: 14, color: isActive ? C.textFaint : C.textGhost, flexShrink: 0 }} />
                       <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.label}</span>
                       {item.meta && (
-                        <span style={{ fontSize: 11, color: isActive ? C.textMuted : C.textFaint, marginLeft: "auto", flexShrink: 0 }}>
+                        <span
+                          style={{
+                            fontSize: 11,
+                            color: isActive ? C.textMuted : C.textFaint,
+                            marginLeft: "auto",
+                            flexShrink: 1,
+                            maxWidth: "42%",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
+                            textAlign: "right",
+                          }}
+                        >
                           {item.meta}
                         </span>
                       )}
