@@ -787,7 +787,8 @@ export function resolveCompanyGeoAreas(input: CompanyGeoAreaInput): CompanyGeoRe
   if (storedKnownAreas.length > 0) {
     const combined = GEO_FILTERS.filter(
       (filter): filter is Exclude<GeoFilter, "Alle"> =>
-        filter !== "Alle" && (storedKnownAreas.includes(filter) || inferredAreas.includes(filter)),
+        filter !== "Alle" &&
+        ((storedKnownAreas as GeoFilter[]).includes(filter) || (inferredAreas as GeoFilter[]).includes(filter)),
     );
 
     return {
