@@ -45,7 +45,8 @@ import { toast } from "@/components/ui/sonner";
 
 type ConsultantType = "intern" | "ekstern";
 type SourceType = "foresporsel" | "mulighet";
-type FilterStatus = "tilgjengelige" | "alle" | PipelineStatus;
+type SelectionFilter = "alle" | "tilgjengelige";
+type StatusFilter = "alle" | PipelineStatus;
 type TypeFilter = "alle" | ConsultantType;
 type SourceFilter = "alle" | SourceType;
 
@@ -187,16 +188,9 @@ const SELECT_CLASS =
 const TEXTAREA_CLASS =
   "min-h-[112px] w-full min-w-0 resize-none rounded-md border border-[#D7DCE3] bg-white px-2.5 py-2 text-[var(--dl-modal-font-size,13px)] text-[#1F2328] outline-none focus:border-[#5E6AD2] focus:shadow-[0_0_0_2px_rgba(94,106,210,0.15)]";
 
-function statusFilterLabel(value: FilterStatus) {
-  if (value === "tilgjengelige") return "Tilgjengelige";
-  if (value === "alle") return "Alle";
-  return PIPELINE_STATUS_META[value].label;
-}
-
-function statusFilterValue(label: string): FilterStatus {
-  if (label === "Tilgjengelige") return "tilgjengelige";
+function statusFilterValue(label: string): StatusFilter {
   if (label === "Alle") return "alle";
-  return PIPELINE_STATUS_VALUES.find((value) => PIPELINE_STATUS_META[value].label === label) ?? "tilgjengelige";
+  return PIPELINE_STATUS_VALUES.find((value) => PIPELINE_STATUS_META[value].label === label) ?? "alle";
 }
 
 function typeFilterLabel(value: TypeFilter) {
@@ -288,9 +282,8 @@ function isAvailablePipelineItem(item: PipelineItem) {
   return true;
 }
 
-function statusMatchesFilter(item: PipelineItem, filter: FilterStatus) {
+function statusMatches(item: PipelineItem, filter: StatusFilter) {
   if (filter === "alle") return true;
-  if (filter === "tilgjengelige") return isAvailablePipelineItem(item);
   return item.status === filter;
 }
 
