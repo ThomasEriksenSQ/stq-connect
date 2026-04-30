@@ -454,13 +454,6 @@ export default function DesignLabForesporsler() {
               }}
             />
           </div>
-          {(statusFilter !== "aktive" || typeFilter !== "Alle") && (
-            <div className="flex justify-end">
-              <DesignLabGhostAction onClick={() => { setStatusFilter("aktive"); setTypeFilter("Alle"); }}>
-                <X style={{ width: 12, height: 12 }} /> Nullstill
-              </DesignLabGhostAction>
-            </div>
-          )}
         </div>
 
         {/* Content: list + detail */}

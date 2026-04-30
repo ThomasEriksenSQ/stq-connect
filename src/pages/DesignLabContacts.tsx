@@ -2463,27 +2463,12 @@ export default function DesignLabContacts() {
             <>
               <DesignLabFilterRow label="EIER" options={ownerOptions} value={ownerFilter} onChange={setOwnerFilter} />
               <DesignLabFilterRow label="SIGNAL" options={["Alle", ...SIGNALS]} value={signalFilter} onChange={setSignalFilter} />
-              <div className="flex items-center justify-between">
-                <DesignLabFilterRow
-                  label="TYPE"
-                  options={[...TYPES]}
-                  value={typeFilter}
-                  onChange={(v) => setTypeFilter(v as TypeFilter)}
-                />
-                {(ownerFilter !== "Alle" || signalFilter !== "Alle" || typeFilter !== "Alle" || effectiveGeoFilter !== "Alle") && (
-                  <DesignLabActionButton
-                    variant="ghost"
-                    onClick={() => {
-                      setOwnerFilter("Alle");
-                      setSignalFilter("Alle");
-                      setTypeFilter("Alle");
-                      setGeoFilter("Alle");
-                    }}
-                  >
-                    <X style={{ width: 12, height: 12 }} /> Nullstill
-                  </DesignLabActionButton>
-                )}
-              </div>
+              <DesignLabFilterRow
+                label="TYPE"
+                options={[...TYPES]}
+                value={typeFilter}
+                onChange={(v) => setTypeFilter(v as TypeFilter)}
+              />
               <DesignLabFilterRow
                 label="GEO"
                 options={GEO_FILTERS}
