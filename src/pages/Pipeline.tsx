@@ -344,7 +344,8 @@ export default function Pipeline() {
   const queryClient = useQueryClient();
   const [textSize] = usePersistentState<TextSize>("dl-text-size", "M");
   const [cmdOpen, setCmdOpen] = useState(false);
-  const [statusFilter, setStatusFilter] = useState<FilterStatus>("tilgjengelige");
+  const [selectionFilter, setSelectionFilter] = useState<SelectionFilter>("tilgjengelige");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("alle");
   const [typeFilter, setTypeFilter] = useState<TypeFilter>("alle");
   const [sourceFilter, setSourceFilter] = useState<SourceFilter>("alle");
   const [selectedGroupKey, setSelectedGroupKey] = useState<string | null>(null);
@@ -549,13 +550,14 @@ export default function Pipeline() {
     return pipelineItems.filter((item) => {
       if (typeFilter !== "alle" && item.consultantType !== typeFilter) return false;
       if (sourceFilter !== "alle" && item.source !== sourceFilter) return false;
-      return statusMatchesFilter(item, statusFilter);
+      if (selectionFilter === "tilgjengelige" && !isAvailablePipelineItem(item)) return false;
+      return statusMatches(item, statusFilter);
     });
-  }, [pipelineItems, sourceFilter, statusFilter, typeFilter]);
+  }, [pipelineItems, selectionFilter, sourceFilter, statusFilter, typeFilter]);
 
   const groups = useMemo(() => {
     const pipelineGroups = buildPipelineGroups(filteredItems);
-    if (statusFilter !== "tilgjengelige" || sourceFilter !== "alle" || typeFilter === "ekstern") {
+    if (selectionFilter !== "tilgjengelige" || statusFilter !== "alle" || sourceFilter !== "alle" || typeFilter === "ekstern") {
       return pipelineGroups;
     }
 
@@ -579,7 +581,7 @@ export default function Pipeline() {
       }));
 
     return [...pipelineGroups, ...benchGroups].sort(compareAvailableGroups);
-  }, [availableEmployees, cvPortraitMap, filteredItems, sourceFilter, statusFilter, typeFilter]);
+  }, [availableEmployees, cvPortraitMap, filteredItems, selectionFilter, sourceFilter, statusFilter, typeFilter]);
   const selectedGroup = useMemo(
     () => (selectedGroupKey ? groups.find((group) => group.consultantKey === selectedGroupKey) || null : null),
     [groups, selectedGroupKey],
@@ -643,7 +645,8 @@ export default function Pipeline() {
   const isLoading = isLoadingRequestLinks || isLoadingOpportunities;
 
   const resetFilters = () => {
-    setStatusFilter("tilgjengelige");
+    setSelectionFilter("tilgjengelige");
+    setStatusFilter("alle");
     setTypeFilter("alle");
     setSourceFilter("alle");
   };
@@ -712,18 +715,14 @@ export default function Pipeline() {
           <DesignLabFilterRow
             label="UTVALG"
             options={SELECTION_FILTER_OPTIONS}
-            value={statusFilter === "tilgjengelige" ? "Tilgjengelige" : "Alle"}
-            onChange={(value) => setStatusFilter(value === "Tilgjengelige" ? "tilgjengelige" : "alle")}
+            value={selectionFilter === "tilgjengelige" ? "Tilgjengelige" : "Alle"}
+            onChange={(value) => setSelectionFilter(value === "Tilgjengelige" ? "tilgjengelige" : "alle")}
           />
           <DesignLabFilterRow
             label="STATUS"
             options={STATUS_FILTER_OPTIONS}
-            value={
-              statusFilter !== "alle" && statusFilter !== "tilgjengelige"
-                ? PIPELINE_STATUS_META[statusFilter].label
-                : "Alle"
-            }
-            onChange={(value) => setStatusFilter(value === "Alle" ? "alle" : statusFilterValue(value))}
+            value={statusFilter === "alle" ? "Alle" : PIPELINE_STATUS_META[statusFilter].label}
+            onChange={(value) => setStatusFilter(statusFilterValue(value))}
           />
           <div className="flex items-center justify-between">
             <DesignLabFilterRow
@@ -732,7 +731,7 @@ export default function Pipeline() {
               value={typeFilterLabel(typeFilter)}
               onChange={(value) => setTypeFilter(typeFilterValue(value))}
             />
-            {(statusFilter !== "tilgjengelige" || typeFilter !== "alle" || sourceFilter !== "alle") && (
+            {(selectionFilter !== "tilgjengelige" || statusFilter !== "alle" || typeFilter !== "alle" || sourceFilter !== "alle") && (
               <DesignLabGhostAction onClick={resetFilters}>
                 <X style={{ width: 12, height: 12 }} /> Nullstill
               </DesignLabGhostAction>
