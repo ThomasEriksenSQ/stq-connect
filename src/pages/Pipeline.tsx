@@ -656,12 +656,7 @@ export default function Pipeline() {
 
   const isLoading = isLoadingRequestLinks || isLoadingOpportunities;
 
-  const resetFilters = () => {
-    setSelectionFilter("tilgjengelige");
-    setStatusFilter("alle");
-    setTypeFilter("alle");
-    setSourceFilter("alle");
-  };
+
 
   const invalidatePipelineQueries = async () => {
     await Promise.all([
