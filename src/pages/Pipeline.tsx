@@ -1,19 +1,27 @@
-import { Fragment, useMemo, useState, type ReactNode } from "react";
+import { Fragment, useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { Plus, Trash2, X } from "lucide-react";
 import { formatDistanceToNowStrict } from "date-fns";
 import { nb } from "date-fns/locale";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 
 import { DesignLabMobileNavButton, DesignLabSidebar } from "@/components/designlab/DesignLabSidebar";
-import { DesignLabFilterButton, DesignLabSearchInput, DesignLabStaticTag } from "@/components/designlab/controls";
+import { CommandPalette } from "@/components/designlab/CommandPalette";
+import { DesignLabStaticTag } from "@/components/designlab/controls";
 import {
   DesignLabGhostAction,
+  DesignLabFilterRow,
   DesignLabPrimaryAction,
   DesignLabReadonlyChip,
   DesignLabSecondaryAction,
 } from "@/components/designlab/system";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  DesignLabFormSheet,
+  DesignLabFormSheetBody,
+  DesignLabFormSheetFooter,
+  DesignLabFormSheetHeader,
+} from "@/components/designlab/DesignLabEntitySheet";
 import { usePersistentState } from "@/hooks/usePersistentState";
 import { useAuth } from "@/hooks/useAuth";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -151,26 +159,53 @@ type OpportunityRow = {
   contacts: ContactPreview | null;
 };
 
-const STATUS_FILTERS: Array<{ value: FilterStatus; label: string }> = [
-  { value: "aktive", label: "Aktive" },
-  { value: "alle", label: "Alle" },
-  ...PIPELINE_STATUS_VALUES.map((value) => ({ value, label: PIPELINE_STATUS_META[value].label })),
-];
+const STATUS_FILTER_OPTIONS = ["Aktive", "Alle", ...PIPELINE_STATUS_VALUES.map((value) => PIPELINE_STATUS_META[value].label)] as const;
+const TYPE_FILTER_OPTIONS = ["Alle", "Ansatte", "Eksterne"] as const;
+const SOURCE_FILTER_OPTIONS = ["Alle", "Forespørsler", "Muligheter"] as const;
 
-const TYPE_FILTERS: Array<{ value: TypeFilter; label: string }> = [
-  { value: "alle", label: "Alle" },
-  { value: "intern", label: "Ansatte" },
-  { value: "ekstern", label: "Eksterne" },
-];
-
-const SOURCE_FILTERS: Array<{ value: SourceFilter; label: string }> = [
-  { value: "alle", label: "Alle" },
-  { value: "foresporsel", label: "Forespørsler" },
-  { value: "mulighet", label: "Muligheter" },
-];
+const PIPELINE_TABLE_COLUMNS = "minmax(170px,1.35fr) 86px 112px 116px 76px";
 
 const SELECT_CLASS =
-  "h-9 rounded-md border border-[#D7DCE3] bg-white px-2.5 text-[13px] text-[#1F2328] outline-none focus:border-[#5E6AD2]";
+  "h-[var(--dl-modal-control-height,32px)] w-full min-w-0 rounded-md border border-[#D7DCE3] bg-white px-2.5 text-[var(--dl-modal-font-size,13px)] text-[#1F2328] outline-none focus:border-[#5E6AD2] focus:shadow-[0_0_0_2px_rgba(94,106,210,0.15)]";
+
+const TEXTAREA_CLASS =
+  "min-h-[112px] w-full min-w-0 resize-none rounded-md border border-[#D7DCE3] bg-white px-2.5 py-2 text-[var(--dl-modal-font-size,13px)] text-[#1F2328] outline-none focus:border-[#5E6AD2] focus:shadow-[0_0_0_2px_rgba(94,106,210,0.15)]";
+
+function statusFilterLabel(value: FilterStatus) {
+  if (value === "aktive") return "Aktive";
+  if (value === "alle") return "Alle";
+  return PIPELINE_STATUS_META[value].label;
+}
+
+function statusFilterValue(label: string): FilterStatus {
+  if (label === "Aktive") return "aktive";
+  if (label === "Alle") return "alle";
+  return PIPELINE_STATUS_VALUES.find((value) => PIPELINE_STATUS_META[value].label === label) ?? "aktive";
+}
+
+function typeFilterLabel(value: TypeFilter) {
+  if (value === "intern") return "Ansatte";
+  if (value === "ekstern") return "Eksterne";
+  return "Alle";
+}
+
+function typeFilterValue(label: string): TypeFilter {
+  if (label === "Ansatte") return "intern";
+  if (label === "Eksterne") return "ekstern";
+  return "alle";
+}
+
+function sourceFilterLabel(value: SourceFilter) {
+  if (value === "foresporsel") return "Forespørsler";
+  if (value === "mulighet") return "Muligheter";
+  return "Alle";
+}
+
+function sourceFilterValue(label: string): SourceFilter {
+  if (label === "Forespørsler") return "foresporsel";
+  if (label === "Muligheter") return "mulighet";
+  return "alle";
+}
 
 function safeDate(value: string | null | undefined) {
   if (!value) return null;
@@ -256,7 +291,7 @@ export default function Pipeline() {
   const isMobile = useIsMobile();
   const queryClient = useQueryClient();
   const [textSize] = usePersistentState<TextSize>("dl-text-size", "M");
-  const [search, setSearch] = useState("");
+  const [cmdOpen, setCmdOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState<FilterStatus>("aktive");
   const [typeFilter, setTypeFilter] = useState<TypeFilter>("alle");
   const [sourceFilter, setSourceFilter] = useState<SourceFilter>("alle");
@@ -342,6 +377,17 @@ export default function Pipeline() {
     },
   });
 
+  useEffect(() => {
+    const handler = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        setCmdOpen(true);
+      }
+    };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, []);
+
   const pipelineItems = useMemo<PipelineItem[]>(() => {
     const requestItems = requestLinks.map((link): PipelineItem | null => {
       const request = link.foresporsler;
@@ -409,33 +455,50 @@ export default function Pipeline() {
   }, [opportunities, requestLinks]);
 
   const filteredItems = useMemo(() => {
-    const query = search.trim().toLowerCase();
     return pipelineItems.filter((item) => {
       if (typeFilter !== "alle" && item.consultantType !== typeFilter) return false;
       if (sourceFilter !== "alle" && item.source !== sourceFilter) return false;
-      if (!statusMatchesFilter(item.status, statusFilter)) return false;
-      if (!query) return true;
-
-      return [
-        item.consultantName,
-        item.companyName,
-        item.contactName,
-        item.contactTitle,
-        item.title,
-        item.note,
-        sourceLabel(item.source),
-        getPipelineStatusMeta(item.status).label,
-      ]
-        .filter(Boolean)
-        .some((value) => String(value).toLowerCase().includes(query));
+      return statusMatchesFilter(item.status, statusFilter);
     });
-  }, [pipelineItems, search, sourceFilter, statusFilter, typeFilter]);
+  }, [pipelineItems, sourceFilter, statusFilter, typeFilter]);
 
   const groups = useMemo(() => buildPipelineGroups(filteredItems), [filteredItems]);
   const selectedGroup = useMemo(
     () => groups.find((group) => group.consultantKey === selectedGroupKey) || groups[0] || null,
     [groups, selectedGroupKey],
   );
+
+  const commandGroups = useMemo(() => buildPipelineGroups(pipelineItems), [pipelineItems]);
+  const commandConsultants = useMemo(
+    () =>
+      commandGroups.map((group) => ({
+        id: group.consultantKey,
+        firstName: group.consultantName,
+        lastName: "",
+        company: Array.from(new Set(group.items.map((item) => item.companyName).filter(Boolean))).slice(0, 3).join(", "),
+        companyId: null,
+        email: "",
+        phone: "",
+        signal: consultantTypeLabel(group.consultantType),
+        daysSince: 0,
+      })),
+    [commandGroups],
+  );
+
+  const commandCompanies = useMemo(() => {
+    const map = new Map<string, { id: string; name: string; count: number }>();
+    pipelineItems.forEach((item) => {
+      const id = item.companyId || item.companyName;
+      const existing = map.get(id);
+      if (existing) existing.count += 1;
+      else map.set(id, { id, name: item.companyName, count: 1 });
+    });
+    return Array.from(map.values()).map((company) => ({
+      id: company.id,
+      name: company.name,
+      contactCount: company.count,
+    }));
+  }, [pipelineItems]);
 
   const stats = useMemo(() => {
     const openItems = pipelineItems.filter((item) => isOpenPipelineStatus(item.status));
@@ -452,7 +515,6 @@ export default function Pipeline() {
   const isLoading = isLoadingRequestLinks || isLoadingOpportunities;
 
   const resetFilters = () => {
-    setSearch("");
     setStatusFilter("aktive");
     setTypeFilter("alle");
     setSourceFilter("alle");
@@ -518,41 +580,34 @@ export default function Pipeline() {
           </DesignLabPrimaryAction>
         </header>
 
-        <div className="dl-filter-bar shrink-0 space-y-3" style={{ borderBottom: `1px solid ${C.border}` }}>
-          <div className="grid gap-2 md:grid-cols-[minmax(220px,1fr)_auto] md:items-center">
-            <DesignLabSearchInput
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="Søk konsulent, selskap, kontakt eller mulighet..."
+        <div className="dl-filter-bar shrink-0 space-y-0" style={{ borderBottom: `1px solid ${C.border}` }}>
+          <DesignLabFilterRow
+            label="STATUS"
+            options={STATUS_FILTER_OPTIONS}
+            value={statusFilterLabel(statusFilter)}
+            onChange={(value) => setStatusFilter(statusFilterValue(value))}
+          />
+          <div className="flex items-center justify-between">
+            <DesignLabFilterRow
+              label="TYPE"
+              options={TYPE_FILTER_OPTIONS}
+              value={typeFilterLabel(typeFilter)}
+              onChange={(value) => setTypeFilter(typeFilterValue(value))}
             />
-            <div className="flex flex-wrap items-center gap-2 md:justify-end">
-              <FilterGroup
-                label="STATUS"
-                options={STATUS_FILTERS}
-                value={statusFilter}
-                onChange={(value) => setStatusFilter(value as FilterStatus)}
-              />
-              <FilterGroup
-                label="TYPE"
-                options={TYPE_FILTERS}
-                value={typeFilter}
-                onChange={(value) => setTypeFilter(value as TypeFilter)}
-              />
-              <FilterGroup
-                label="KILDE"
-                options={SOURCE_FILTERS}
-                value={sourceFilter}
-                onChange={(value) => setSourceFilter(value as SourceFilter)}
-              />
-              {(search || statusFilter !== "aktive" || typeFilter !== "alle" || sourceFilter !== "alle") && (
-                <DesignLabGhostAction onClick={resetFilters}>
-                  <X style={{ width: 12, height: 12 }} /> Nullstill
-                </DesignLabGhostAction>
-              )}
-            </div>
+            {(statusFilter !== "aktive" || typeFilter !== "alle" || sourceFilter !== "alle") && (
+              <DesignLabGhostAction onClick={resetFilters}>
+                <X style={{ width: 12, height: 12 }} /> Nullstill
+              </DesignLabGhostAction>
+            )}
           </div>
+          <DesignLabFilterRow
+            label="KILDE"
+            options={SOURCE_FILTER_OPTIONS}
+            value={sourceFilterLabel(sourceFilter)}
+            onChange={(value) => setSourceFilter(sourceFilterValue(value))}
+          />
 
-          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-6">
+          <div className="grid gap-2 pt-3 sm:grid-cols-2 lg:grid-cols-6">
             <PipelineStat label="Konsulenter" value={stats.consultants} />
             <PipelineStat label="Aktive løp" value={stats.open} />
             <PipelineStat label="Sendt CV" value={stats.sentCv} />
@@ -562,61 +617,61 @@ export default function Pipeline() {
           </div>
         </div>
 
-        <div className="flex min-h-0 flex-1 overflow-hidden">
-          <section className="min-w-0 flex-1 overflow-y-auto" style={{ background: C.panel }}>
-            <PipelineTableHeader />
-            {isLoading ? (
-              <EmptyState text="Laster pipeline..." />
-            ) : groups.length === 0 ? (
-              <EmptyState text="Ingen pipeline-løp matcher filtrene." />
-            ) : (
-              groups.map((group) => (
-                <Fragment key={group.consultantKey}>
-                  <PipelineGroupRow
-                    group={group}
-                    active={
-                      selectedGroupKey
-                        ? selectedGroupKey === group.consultantKey
-                        : !isMobile && selectedGroup?.consultantKey === group.consultantKey
-                    }
-                    onClick={() => setSelectedGroupKey(group.consultantKey)}
-                  />
-                  {isMobile && selectedGroupKey === group.consultantKey && (
+        <div className="min-h-0 flex-1 overflow-hidden">
+          {isMobile ? (
+            <PipelineList
+              groups={groups}
+              isLoading={isLoading}
+              isMobile
+              selectedGroupKey={selectedGroupKey}
+              selectedGroup={selectedGroup}
+              savingStatusId={savingStatusId}
+              onSelectGroup={setSelectedGroupKey}
+              onStatusChange={updateStatus}
+              onOpenRequest={(id) => navigate(`/foresporsler?id=${id}`)}
+              onDeleteOpportunity={deleteOpportunity}
+            />
+          ) : (
+            <ResizablePanelGroup direction="horizontal" className="min-h-0 flex-1">
+              <ResizablePanel defaultSize={38} minSize={28}>
+                <PipelineList
+                  groups={groups}
+                  isLoading={isLoading}
+                  isMobile={false}
+                  selectedGroupKey={selectedGroupKey}
+                  selectedGroup={selectedGroup}
+                  savingStatusId={savingStatusId}
+                  onSelectGroup={setSelectedGroupKey}
+                  onStatusChange={updateStatus}
+                  onOpenRequest={(id) => navigate(`/foresporsler?id=${id}`)}
+                  onDeleteOpportunity={deleteOpportunity}
+                />
+              </ResizablePanel>
+              <ResizableHandle
+                withHandle
+                className="bg-transparent transition-colors hover:bg-[rgba(0,0,0,0.04)] data-[resize-handle-active]:bg-[rgba(94,106,210,0.12)]"
+              />
+              <ResizablePanel defaultSize={62} minSize={34}>
+                <aside className="h-full overflow-y-auto" style={{ background: C.surface, borderLeft: `1px solid ${C.borderLight}` }}>
+                  {selectedGroup ? (
                     <PipelineDetail
-                      group={group}
+                      group={selectedGroup}
                       savingStatusId={savingStatusId}
                       onStatusChange={updateStatus}
                       onOpenRequest={(id) => navigate(`/foresporsler?id=${id}`)}
                       onDeleteOpportunity={deleteOpportunity}
                     />
+                  ) : (
+                    <EmptyState text="Velg en konsulent for detaljer." />
                   )}
-                </Fragment>
-              ))
-            )}
-          </section>
-
-          {!isMobile && (
-            <aside
-              className="hidden w-[42%] min-w-[420px] max-w-[680px] shrink-0 overflow-y-auto border-l lg:block"
-              style={{ borderColor: C.borderLight, background: C.surface }}
-            >
-              {selectedGroup ? (
-                <PipelineDetail
-                  group={selectedGroup}
-                  savingStatusId={savingStatusId}
-                  onStatusChange={updateStatus}
-                  onOpenRequest={(id) => navigate(`/foresporsler?id=${id}`)}
-                  onDeleteOpportunity={deleteOpportunity}
-                />
-              ) : (
-                <EmptyState text="Velg en konsulent for detaljer." />
-              )}
-            </aside>
+                </aside>
+              </ResizablePanel>
+            </ResizablePanelGroup>
           )}
         </div>
       </main>
 
-      <NewOpportunityDialog
+      <NewOpportunitySheet
         open={createOpen}
         onOpenChange={setCreateOpen}
         employees={employees}
@@ -626,36 +681,96 @@ export default function Pipeline() {
         userId={user?.id || null}
         onCreated={invalidatePipelineQueries}
       />
+
+      <CommandPalette
+        open={cmdOpen}
+        onClose={() => setCmdOpen(false)}
+        textSize={textSize}
+        searchPlaceholder="Søk konsulent eller selskap..."
+        contactSectionLabel="Konsulenter"
+        companySectionLabel="Selskaper"
+        companyMetaSuffix="løp"
+        contacts={commandConsultants}
+        companies={commandCompanies}
+        selectedContact={
+          selectedGroup
+            ? {
+                id: selectedGroup.consultantKey,
+                firstName: selectedGroup.consultantName,
+                lastName: "",
+                email: "",
+                signal: consultantTypeLabel(selectedGroup.consultantType),
+              }
+            : null
+        }
+        onSelectContact={(id) => setSelectedGroupKey(id)}
+        onSelectCompany={(id) => {
+          const matchingGroup = commandGroups.find((group) =>
+            group.items.some((item) => (item.companyId || item.companyName) === id),
+          );
+          if (matchingGroup) setSelectedGroupKey(matchingGroup.consultantKey);
+        }}
+        onFilterByCompany={() => undefined}
+      />
     </div>
   );
 }
 
-function FilterGroup({
-  label,
-  options,
-  value,
-  onChange,
+function PipelineList({
+  groups,
+  isLoading,
+  isMobile,
+  selectedGroupKey,
+  selectedGroup,
+  savingStatusId,
+  onSelectGroup,
+  onStatusChange,
+  onOpenRequest,
+  onDeleteOpportunity,
 }: {
-  label: string;
-  options: Array<{ value: string; label: string }>;
-  value: string;
-  onChange: (value: string) => void;
+  groups: PipelineGroup[];
+  isLoading: boolean;
+  isMobile: boolean;
+  selectedGroupKey: string | null;
+  selectedGroup: PipelineGroup | null;
+  savingStatusId: string | null;
+  onSelectGroup: (key: string) => void;
+  onStatusChange: (item: PipelineItem, status: PipelineStatus) => void;
+  onOpenRequest: (id: string | number) => void;
+  onDeleteOpportunity: (item: PipelineItem) => void;
 }) {
   return (
-    <div className="flex items-center gap-1.5">
-      <span style={{ fontSize: 10, fontWeight: 600, color: C.textFaint, letterSpacing: "0.08em" }}>{label}</span>
-      <div className="flex items-center gap-1">
-        {options.map((option) => (
-          <DesignLabFilterButton
-            key={option.value}
-            active={value === option.value}
-            onClick={() => onChange(option.value)}
-          >
-            {option.label}
-          </DesignLabFilterButton>
-        ))}
-      </div>
-    </div>
+    <section className="h-full min-w-0 overflow-y-auto" style={{ background: C.panel }}>
+      <PipelineTableHeader />
+      {isLoading ? (
+        <EmptyState text="Laster pipeline..." />
+      ) : groups.length === 0 ? (
+        <EmptyState text="Ingen pipeline-løp matcher filtrene." />
+      ) : (
+        groups.map((group) => (
+          <Fragment key={group.consultantKey}>
+            <PipelineGroupRow
+              group={group}
+              active={
+                selectedGroupKey
+                  ? selectedGroupKey === group.consultantKey
+                  : !isMobile && selectedGroup?.consultantKey === group.consultantKey
+              }
+              onClick={() => onSelectGroup(group.consultantKey)}
+            />
+            {isMobile && selectedGroupKey === group.consultantKey && (
+              <PipelineDetail
+                group={group}
+                savingStatusId={savingStatusId}
+                onStatusChange={onStatusChange}
+                onOpenRequest={onOpenRequest}
+                onDeleteOpportunity={onDeleteOpportunity}
+              />
+            )}
+          </Fragment>
+        ))
+      )}
+    </section>
   );
 }
 
@@ -670,7 +785,7 @@ function PipelineStat({ label, value }: { label: string; value: number }) {
 
 function PipelineTableHeader() {
   return (
-    <div className="sticky top-0 z-10 grid items-center border-b" style={{ gridTemplateColumns: "minmax(220px,1.4fr) 120px 150px 140px 110px", height: 32, paddingInline: 16, borderColor: C.borderLight, background: C.surfaceAlt }}>
+    <div className="sticky top-0 z-10 grid items-center border-b" style={{ gridTemplateColumns: PIPELINE_TABLE_COLUMNS, height: 32, paddingInline: 16, borderColor: C.borderLight, background: C.surfaceAlt }}>
       {["Konsulent", "Type", "Pipeline", "Høyeste status", "Sist"].map((label) => (
         <span key={label} style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: C.textMuted }}>
           {label}
@@ -688,7 +803,7 @@ function PipelineGroupRow({ group, active, onClick }: { group: PipelineGroup; ac
       onClick={onClick}
       className="grid w-full cursor-pointer items-center border-b text-left transition-colors"
       style={{
-        gridTemplateColumns: "minmax(220px,1.4fr) 120px 150px 140px 110px",
+        gridTemplateColumns: PIPELINE_TABLE_COLUMNS,
         minHeight: 46,
         paddingInline: 16,
         borderColor: C.borderLight,
@@ -844,7 +959,7 @@ function EmptyState({ text }: { text: string }) {
   );
 }
 
-function NewOpportunityDialog({
+function NewOpportunitySheet({
   open,
   onOpenChange,
   employees,
@@ -865,30 +980,78 @@ function NewOpportunityDialog({
 }) {
   const [consultantType, setConsultantType] = useState<ConsultantType>("intern");
   const [consultantId, setConsultantId] = useState("");
+  const [consultantSearch, setConsultantSearch] = useState("");
+  const [consultantPickerOpen, setConsultantPickerOpen] = useState(false);
   const [companyId, setCompanyId] = useState("");
+  const [companySearch, setCompanySearch] = useState("");
+  const [companyPickerOpen, setCompanyPickerOpen] = useState(false);
   const [contactId, setContactId] = useState("");
+  const [contactSearch, setContactSearch] = useState("");
+  const [contactPickerOpen, setContactPickerOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [note, setNote] = useState("");
   const [saving, setSaving] = useState(false);
 
   const consultantOptions = consultantType === "intern" ? employees : externalConsultants;
+  const filteredConsultants = useMemo(() => {
+    const query = consultantSearch.trim().toLowerCase();
+    return consultantOptions
+      .filter((consultant) => {
+        if (!query) return true;
+        return [consultant.navn, consultant.status].filter(Boolean).some((value) => String(value).toLowerCase().includes(query));
+      })
+      .slice(0, 30);
+  }, [consultantOptions, consultantSearch]);
+
+  const filteredCompanies = useMemo(() => {
+    const query = companySearch.trim().toLowerCase();
+    return companies
+      .filter((company) => !query || [company.name, company.status].filter(Boolean).some((value) => String(value).toLowerCase().includes(query)))
+      .slice(0, 30);
+  }, [companies, companySearch]);
+
   const companyContacts = useMemo(
     () => contacts.filter((contact) => !companyId || contact.company_id === companyId),
     [companyId, contacts],
   );
+  const filteredContacts = useMemo(() => {
+    const query = contactSearch.trim().toLowerCase();
+    return companyContacts
+      .filter((contact) => {
+        if (!query) return true;
+        return [getContactName(contact), contact.title, contact.email]
+          .filter(Boolean)
+          .some((value) => String(value).toLowerCase().includes(query));
+      })
+      .slice(0, 30);
+  }, [companyContacts, contactSearch]);
 
   const reset = () => {
     setConsultantType("intern");
     setConsultantId("");
+    setConsultantSearch("");
+    setConsultantPickerOpen(false);
     setCompanyId("");
+    setCompanySearch("");
+    setCompanyPickerOpen(false);
     setContactId("");
+    setContactSearch("");
+    setContactPickerOpen(false);
     setTitle("");
     setNote("");
   };
 
-  const createOpportunity = async () => {
-    if (!consultantId || !companyId || !contactId) {
-      toast.error("Velg konsulent, selskap og kontaktperson");
+  const handleOpenChange = (nextOpen: boolean) => {
+    if (!nextOpen) reset();
+    onOpenChange(nextOpen);
+  };
+
+  const createOpportunity = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    const trimmedTitle = title.trim();
+    if (!consultantId || !companyId || !contactId || !trimmedTitle) {
+      toast.error("Fyll ut alle obligatoriske felt");
       return;
     }
 
@@ -900,7 +1063,7 @@ function NewOpportunityDialog({
         ekstern_id: consultantType === "ekstern" ? consultantId : null,
         company_id: companyId,
         contact_id: contactId,
-        tittel: title.trim() || "Direkte mulighet",
+        tittel: trimmedTitle,
         notat: note.trim() || null,
         status: "sendt_cv",
         created_by: userId,
@@ -920,95 +1083,259 @@ function NewOpportunityDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
-        <DialogHeader>
-          <DialogTitle>Ny mulighet</DialogTitle>
-        </DialogHeader>
-
-        <div className="grid gap-4">
-          <div className="grid gap-3 sm:grid-cols-[140px_1fr]">
-            <FieldLabel>Konsulenttype</FieldLabel>
+    <DesignLabFormSheet open={open} onOpenChange={handleOpenChange} maxWidth={560}>
+      <DesignLabFormSheetHeader title="Ny mulighet" />
+      <form onSubmit={createOpportunity} className="flex min-h-0 flex-1 flex-col">
+        <DesignLabFormSheetBody>
+          <SheetField>
+            <FieldLabel required>Konsulenttype</FieldLabel>
             <select
               className={SELECT_CLASS}
               value={consultantType}
+              required
+              aria-required="true"
               onChange={(event) => {
                 setConsultantType(event.target.value as ConsultantType);
                 setConsultantId("");
+                setConsultantSearch("");
+                setConsultantPickerOpen(false);
               }}
             >
               <option value="intern">Ansatt</option>
               <option value="ekstern">Ekstern</option>
             </select>
+          </SheetField>
 
-            <FieldLabel>Konsulent</FieldLabel>
-            <select className={SELECT_CLASS} value={consultantId} onChange={(event) => setConsultantId(event.target.value)}>
-              <option value="">Velg konsulent</option>
-              {consultantOptions.map((consultant) => (
-                <option key={String(consultant.id)} value={String(consultant.id)}>
-                  {consultant.navn || "Uten navn"}{consultant.status ? ` · ${consultant.status}` : ""}
-                </option>
-              ))}
-            </select>
+          <SheetField>
+            <FieldLabel required>Konsulent</FieldLabel>
+            <SearchSelect
+              value={consultantId}
+              search={consultantSearch}
+              onSearchChange={(value) => {
+                setConsultantSearch(value);
+                setConsultantId("");
+              }}
+              open={consultantPickerOpen}
+              onOpenChange={setConsultantPickerOpen}
+              placeholder="Søk etter konsulent..."
+              emptyText="Ingen konsulenter funnet"
+              required
+              options={filteredConsultants.map((consultant) => ({
+                id: String(consultant.id),
+                label: consultant.navn || "Uten navn",
+                meta: consultant.status,
+              }))}
+              onSelect={(option) => {
+                setConsultantId(option.id);
+                setConsultantSearch(option.label);
+                setConsultantPickerOpen(false);
+              }}
+              onClear={() => {
+                setConsultantId("");
+                setConsultantSearch("");
+              }}
+            />
+          </SheetField>
 
-            <FieldLabel>Selskap</FieldLabel>
-            <select
-              className={SELECT_CLASS}
+          <SheetField>
+            <FieldLabel required>Selskap</FieldLabel>
+            <SearchSelect
               value={companyId}
-              onChange={(event) => {
-                setCompanyId(event.target.value);
+              search={companySearch}
+              onSearchChange={(value) => {
+                setCompanySearch(value);
+                setCompanyId("");
+                setContactId("");
+                setContactSearch("");
+              }}
+              open={companyPickerOpen}
+              onOpenChange={setCompanyPickerOpen}
+              placeholder="Søk etter selskap..."
+              emptyText="Ingen selskaper funnet"
+              required
+              options={filteredCompanies.map((company) => ({
+                id: company.id,
+                label: company.name,
+                meta: company.status,
+              }))}
+              onSelect={(option) => {
+                setCompanyId(option.id);
+                setCompanySearch(option.label);
+                setContactId("");
+                setContactSearch("");
+                setCompanyPickerOpen(false);
+              }}
+              onClear={() => {
+                setCompanyId("");
+                setCompanySearch("");
+                setContactId("");
+                setContactSearch("");
+              }}
+            />
+          </SheetField>
+
+          <SheetField>
+            <FieldLabel required>Kontaktperson</FieldLabel>
+            <SearchSelect
+              value={contactId}
+              search={contactSearch}
+              onSearchChange={(value) => {
+                setContactSearch(value);
                 setContactId("");
               }}
-            >
-              <option value="">Velg selskap</option>
-              {companies.map((company) => (
-                <option key={company.id} value={company.id}>{company.name}</option>
-              ))}
-            </select>
+              open={contactPickerOpen}
+              onOpenChange={setContactPickerOpen}
+              placeholder={companyId ? "Søk etter kontaktperson..." : "Velg selskap først..."}
+              emptyText={companyId ? "Ingen kontakter på dette selskapet" : "Velg selskap først"}
+              disabled={!companyId}
+              required
+              options={filteredContacts.map((contact) => ({
+                id: contact.id,
+                label: getContactName(contact) || "Uten navn",
+                meta: contact.title || contact.email || null,
+              }))}
+              onSelect={(option) => {
+                setContactId(option.id);
+                setContactSearch(option.label);
+                setContactPickerOpen(false);
+              }}
+              onClear={() => {
+                setContactId("");
+                setContactSearch("");
+              }}
+            />
+          </SheetField>
 
-            <FieldLabel>Kontaktperson</FieldLabel>
-            <select className={SELECT_CLASS} value={contactId} onChange={(event) => setContactId(event.target.value)}>
-              <option value="">Velg kontakt</option>
-              {companyContacts.map((contact) => (
-                <option key={contact.id} value={contact.id}>
-                  {getContactName(contact) || "Uten navn"}{contact.title ? ` · ${contact.title}` : ""}
-                </option>
-              ))}
-            </select>
-
-            <FieldLabel>Tittel</FieldLabel>
+          <SheetField>
+            <FieldLabel required>Tittel</FieldLabel>
             <input
               className={SELECT_CLASS}
               value={title}
+              required
+              aria-required="true"
               onChange={(event) => setTitle(event.target.value)}
               placeholder="F.eks. Embedded vurdering hos kunde"
             />
+          </SheetField>
 
+          <SheetField>
             <FieldLabel>Notat</FieldLabel>
             <textarea
               value={note}
               onChange={(event) => setNote(event.target.value)}
-              className="min-h-[88px] rounded-md border border-[#D7DCE3] bg-white px-2.5 py-2 text-[13px] text-[#1F2328] outline-none focus:border-[#5E6AD2]"
+              className={TEXTAREA_CLASS}
               placeholder="Kort kontekst, hva kunden vurderer, neste steg..."
             />
-          </div>
-        </div>
+          </SheetField>
+        </DesignLabFormSheetBody>
 
-        <DialogFooter>
-          <DesignLabSecondaryAction onClick={() => onOpenChange(false)} disabled={saving}>Avbryt</DesignLabSecondaryAction>
-          <DesignLabPrimaryAction onClick={createOpportunity} disabled={saving}>
+        <DesignLabFormSheetFooter>
+          <DesignLabSecondaryAction type="button" onClick={() => handleOpenChange(false)} disabled={saving}>Avbryt</DesignLabSecondaryAction>
+          <DesignLabPrimaryAction type="submit" disabled={saving}>
             {saving ? "Oppretter..." : "Opprett mulighet"}
           </DesignLabPrimaryAction>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </DesignLabFormSheetFooter>
+      </form>
+    </DesignLabFormSheet>
   );
 }
 
-function FieldLabel({ children }: { children: ReactNode }) {
+function SheetField({ children }: { children: ReactNode }) {
+  return <div className="grid min-w-0 gap-1.5">{children}</div>;
+}
+
+type SearchSelectOption = {
+  id: string;
+  label: string;
+  meta?: string | null;
+};
+
+function SearchSelect({
+  value,
+  search,
+  onSearchChange,
+  open,
+  onOpenChange,
+  placeholder,
+  emptyText,
+  disabled = false,
+  required = false,
+  options,
+  onSelect,
+  onClear,
+}: {
+  value: string;
+  search: string;
+  onSearchChange: (value: string) => void;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  placeholder: string;
+  emptyText: string;
+  disabled?: boolean;
+  required?: boolean;
+  options: SearchSelectOption[];
+  onSelect: (option: SearchSelectOption) => void;
+  onClear: () => void;
+}) {
   return (
-    <label className="pt-2" style={{ fontSize: 11, color: C.textFaint, fontWeight: 650, letterSpacing: "0.08em", textTransform: "uppercase" }}>
+    <div className="relative min-w-0">
+      <input
+        className={`${SELECT_CLASS} ${disabled ? "cursor-not-allowed opacity-60" : ""}`}
+        value={search}
+        required={required}
+        aria-required={required}
+        disabled={disabled}
+        onChange={(event) => {
+          onSearchChange(event.target.value);
+          onOpenChange(true);
+        }}
+        onFocus={() => onOpenChange(true)}
+        onBlur={() => window.setTimeout(() => onOpenChange(false), 160)}
+        placeholder={placeholder}
+      />
+      {value && !disabled ? (
+        <button
+          type="button"
+          onMouseDown={(event) => event.preventDefault()}
+          onClick={onClear}
+          className="absolute right-2 top-1/2 inline-flex -translate-y-1/2 items-center justify-center rounded-sm text-[#8C929C] hover:text-[#1F2328]"
+          style={{ width: 22, height: 22 }}
+          aria-label="Nullstill valg"
+        >
+          <X style={{ width: 13, height: 13 }} />
+        </button>
+      ) : null}
+      {open && !disabled ? (
+        <div className="absolute left-0 right-0 top-full z-50 mt-1 max-h-56 overflow-y-auto rounded-md border bg-white shadow-lg" style={{ borderColor: C.borderDefault }}>
+          {options.length === 0 ? (
+            <p className="px-3 py-2.5" style={{ fontSize: 12, color: C.textFaint }}>{emptyText}</p>
+          ) : (
+            options.map((option) => (
+              <button
+                key={option.id}
+                type="button"
+                onMouseDown={(event) => event.preventDefault()}
+                onClick={() => onSelect(option)}
+                className="w-full px-3 py-2 text-left transition-colors hover:bg-[#F6F7F9]"
+              >
+                <p className="truncate" style={{ fontSize: 13, color: C.text, fontWeight: 500 }}>{option.label}</p>
+                {option.meta ? (
+                  <p className="truncate" style={{ fontSize: 11, color: C.textFaint }}>{option.meta}</p>
+                ) : null}
+              </button>
+            ))
+          )}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function FieldLabel({ children, required = false }: { children: ReactNode; required?: boolean }) {
+  return (
+    <label style={{ fontSize: 11, color: C.textFaint, fontWeight: 650, letterSpacing: "0.08em", textTransform: "uppercase" }}>
       {children}
+      {required ? <span style={{ color: C.danger, marginLeft: 3 }}>*</span> : null}
     </label>
   );
 }

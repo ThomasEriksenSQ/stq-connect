@@ -44,6 +44,10 @@ interface CommandPaletteProps {
   open: boolean;
   onClose: () => void;
   textSize: TextSize;
+  searchPlaceholder?: string;
+  contactSectionLabel?: string;
+  companySectionLabel?: string;
+  companyMetaSuffix?: string;
   contacts: ContactItem[];
   companies: CompanyItem[];
   selectedContact: SelectedContact | null;
@@ -76,6 +80,10 @@ export function CommandPalette({
   open,
   onClose,
   textSize,
+  searchPlaceholder = "Søk kontakt eller selskap...",
+  contactSectionLabel = "Kontakter",
+  companySectionLabel = "Selskaper",
+  companyMetaSuffix = "kontakter",
   contacts,
   companies,
   selectedContact,
@@ -137,7 +145,7 @@ export function CommandPalette({
           label: `${c.firstName} ${c.lastName}`,
           meta: c.company || undefined,
           icon: Users,
-          section: "Kontakter",
+          section: contactSectionLabel,
           action: () => { onSelectContact(c.id); onClose(); },
         });
       });
@@ -153,9 +161,9 @@ export function CommandPalette({
         result.push({
           id: `company-${c.id}`,
           label: c.name,
-          meta: `${c.contactCount} kontakter`,
+          meta: `${c.contactCount} ${companyMetaSuffix}`,
           icon: Building2,
-          section: "Selskaper",
+          section: companySectionLabel,
           action: () => {
             if (onSelectCompany) onSelectCompany(c.id, c.name);
             else onFilterByCompany(c.name);
@@ -166,7 +174,7 @@ export function CommandPalette({
     }
 
     return result;
-  }, [query, contacts, companies, onSelectContact, onSelectCompany, onFilterByCompany, onResetSearch, resetSearchLabel, onClose]);
+  }, [query, contacts, companies, onSelectContact, onSelectCompany, onFilterByCompany, onResetSearch, resetSearchLabel, onClose, contactSectionLabel, companySectionLabel, companyMetaSuffix]);
 
   // Clamp activeIdx
   useEffect(() => {
@@ -258,7 +266,7 @@ export function CommandPalette({
             ref={inputRef}
             value={query}
             onChange={(e) => { setQuery(e.target.value); setActiveIdx(0); }}
-            placeholder="Søk kontakt eller selskap..."
+            placeholder={searchPlaceholder}
             style={{
               width: "100%",
               height: "100%",
