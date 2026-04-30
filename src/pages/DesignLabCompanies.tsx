@@ -560,7 +560,7 @@ export default function DesignLabCompanies() {
     if (ownerFilter === "Uten eier") list = list.filter((c: any) => !c.ownerId);
     else if (ownerFilter !== "Alle") list = list.filter((c: any) => c.ownerName === ownerFilter);
     if (typeFilter === "Aldri kontaktet") {
-      list = list.filter((c: any) => (c.contactCount || 0) === 0 || (c.activityCount || 0) === 0);
+      list = list.filter((c: any) => (c.contactCount || 0) === 0 || ((c.activityCount || 0) === 0 && (c.taskCount || 0) === 0));
     } else if (typeFilter !== "Alle") {
       const dbValue = TYPE_LABEL_TO_VALUE[typeFilter];
       if (dbValue) list = list.filter((c: any) => c.status === dbValue || (dbValue === "customer" && c.status === "kunde"));

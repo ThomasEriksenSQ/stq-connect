@@ -404,7 +404,7 @@ const Companies = () => {
     const matchStatus =
       statusFilter === "all" ||
       (statusFilter === "__never_contacted__"
-        ? ((c.contacts || []).length === 0 || (c.activityCount || 0) === 0)
+        ? ((c.contacts || []).length === 0 || ((c.activityCount || 0) === 0 && (c.taskCount || 0) === 0))
         : c.status === statusFilter);
     const matchGeo = companyMatchesGeoFilter(c, effectiveGeoFilter);
     return matchSearch && matchOwner && matchStatus && matchGeo;
