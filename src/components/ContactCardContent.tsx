@@ -171,6 +171,7 @@ interface ContactCardContentProps {
   defaultHidden?: DefaultHiddenConfig;
   onDataChanged?: () => void;
   additionalSentCvInvalidateKeys?: readonly QueryKey[];
+  onLatestExternalActivity?: (contactId: string, activityAt: string) => void;
   onDeleted?: (contactId: string) => void;
   headerPaddingTop?: number;
 }
@@ -657,6 +658,7 @@ export function ContactCardContent({
   defaultHidden,
   onDataChanged,
   additionalSentCvInvalidateKeys = EMPTY_QUERY_KEYS,
+  onLatestExternalActivity,
   onDeleted,
   headerPaddingTop = 0,
 }: ContactCardContentProps) {
@@ -2706,6 +2708,8 @@ export function ContactCardContent({
             onDelete={(id) => deleteActivityMutation.mutate(id)}
             onUpdateActivity={(id, updates) => updateActivityMutation.mutate({ id, updates })}
             contactEmail={contact.email || undefined}
+            contactId={contactId}
+            onLatestExternalActivity={onLatestExternalActivity}
           />
         </div>
         </div>
@@ -3865,6 +3869,8 @@ function ActivityTimeline({
   onDelete,
   onUpdateActivity,
   contactEmail,
+  contactId,
+  onLatestExternalActivity,
 }: {
   activities: any[];
   profileMap: Record<string, string>;
@@ -3872,6 +3878,8 @@ function ActivityTimeline({
   onDelete: (id: string) => void;
   onUpdateActivity: (id: string, updates: Record<string, any>) => void;
   contactEmail?: string;
+  contactId: string;
+  onLatestExternalActivity?: (contactId: string, activityAt: string) => void;
 }) {
   const currentYear = getYear(new Date());
   const parseSafeDate = (value?: string | null) => {
@@ -3910,6 +3918,22 @@ function ActivityTimeline({
     enabled: !!contactEmail,
     staleTime: 5 * 60 * 1000,
   });
+
+  useEffect(() => {
+    if (!onLatestExternalActivity || outlookEmails.length === 0) return;
+
+    const latestEmail = outlookEmails
+      .map((email: any) => ({
+        createdAt: email.created_at,
+        time: parseSafeDate(email.created_at)?.getTime() ?? 0,
+      }))
+      .filter((email) => email.createdAt && email.time > 0)
+      .sort((left, right) => right.time - left.time)[0];
+
+    if (latestEmail?.createdAt) {
+      onLatestExternalActivity(contactId, latestEmail.createdAt);
+    }
+  }, [contactId, onLatestExternalActivity, outlookEmails]);
 
   // Merge activities and emails, sorted by date descending
   const mergedItems = useMemo(() => {

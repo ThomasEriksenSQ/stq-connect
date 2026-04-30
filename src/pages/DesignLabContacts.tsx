@@ -480,6 +480,15 @@ export default function DesignLabContacts() {
     () => [DL_QUERY_KEYS.sentCvLogs, DL_QUERY_KEYS.contactsParity],
     [],
   );
+  const [externalActivityMap, setExternalActivityMap] = useState<Record<string, string>>({});
+
+  const handleLatestExternalActivity = useCallback((contactId: string, activityAt: string) => {
+    setExternalActivityMap((previous) => {
+      const next = { ...previous };
+      updateLatestContactActivityDate(next, contactId, activityAt, new Date());
+      return next[contactId] === previous[contactId] ? previous : next;
+    });
+  }, []);
 
   const updateCachedContactFields = useCallback(
     (contactId: string, updates: Record<string, any>) => {
@@ -1163,10 +1172,30 @@ export default function DesignLabContacts() {
     });
   }, [rawContacts, activitiesMap, sentCvLastActivityMap, tasksMap, foresporslerMap, techProfileMap]);
 
-  const contacts = useMemo(
-    () => (parityContacts.length > 0 || (rawContacts.length === 0 && !isLoadingParity) ? parityContacts : fallbackContacts),
-    [fallbackContacts, isLoadingParity, parityContacts, rawContacts.length],
-  );
+  const contacts = useMemo(() => {
+    const sourceContacts =
+      parityContacts.length > 0 || (rawContacts.length === 0 && !isLoadingParity) ? parityContacts : fallbackContacts;
+    if (Object.keys(externalActivityMap).length === 0) return sourceContacts;
+
+    const now = new Date();
+    return sourceContacts.map((contact) => {
+      const externalActivityAt = externalActivityMap[contact.id];
+      if (!externalActivityAt) return contact;
+
+      const latestActivityMap: Record<string, string> = {};
+      updateLatestContactActivityDate(latestActivityMap, contact.id, contact.lastActivityAt, now);
+      updateLatestContactActivityDate(latestActivityMap, contact.id, externalActivityAt, now);
+
+      const lastActivityAt = latestActivityMap[contact.id] || null;
+      if (!lastActivityAt || lastActivityAt === contact.lastActivityAt) return contact;
+
+      return {
+        ...contact,
+        lastActivityAt,
+        daysSince: differenceInDays(now, new Date(lastActivityAt)),
+      };
+    });
+  }, [externalActivityMap, fallbackContacts, isLoadingParity, parityContacts, rawContacts.length]);
   const softDeletingUnknownContactsRef = useRef(false);
 
   useEffect(() => {
@@ -3118,6 +3147,7 @@ export default function DesignLabContacts() {
                         enableProfileEditMode
                         headerPaddingTop={12}
                         additionalSentCvInvalidateKeys={contactCardSentCvInvalidateKeys}
+                        onLatestExternalActivity={handleLatestExternalActivity}
                         onDeleted={() => setSelectedId(null)}
                         onDataChanged={() => {
                           void invalidateDesignLabQueries();
@@ -3174,6 +3204,7 @@ export default function DesignLabContacts() {
                 enableProfileEditMode
                 headerPaddingTop={12}
                 additionalSentCvInvalidateKeys={contactCardSentCvInvalidateKeys}
+                onLatestExternalActivity={handleLatestExternalActivity}
                 onDeleted={() => setSelectedId(null)}
                 onDataChanged={() => {
                   void invalidateDesignLabQueries();
