@@ -639,10 +639,10 @@ export default function Pipeline() {
       available: availableConsultants.size,
       sentCv: pipelineItems.filter((item) => item.status === "sendt_cv").length,
       interviews: pipelineItems.filter((item) => item.status === "intervju").length,
-      won: pipelineItems.filter((item) => item.status === "vunnet").length,
+      won: filteredItems.filter((item) => item.status === "vunnet").length,
       direct: pipelineItems.filter((item) => item.source === "mulighet").length,
     };
-  }, [availableEmployees, pipelineItems]);
+  }, [availableEmployees, filteredItems, pipelineItems]);
 
   const isLoading = isLoadingRequestLinks || isLoadingOpportunities;
 
