@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, Trash2, X } from "lucide-react";
+import { Pencil, Plus, Trash2, X } from "lucide-react";
 import { format, formatDistanceToNowStrict } from "date-fns";
 import { nb } from "date-fns/locale";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -363,6 +363,7 @@ export default function Pipeline() {
   const [createOpen, setCreateOpen] = useState(false);
   const [savingStatusId, setSavingStatusId] = useState<string | null>(null);
   const [pendingDelete, setPendingDelete] = useState<PipelineItem | null>(null);
+  const [editingOpportunity, setEditingOpportunity] = useState<PipelineItem | null>(null);
   const [deletingOpportunity, setDeletingOpportunity] = useState(false);
   const [oppdragModalOpen, setOppdragModalOpen] = useState(false);
   const [oppdragKonsulentNavn, setOppdragKonsulentNavn] = useState("");
@@ -772,6 +773,11 @@ export default function Pipeline() {
     setPendingDelete(item);
   };
 
+  const editOpportunity = (item: PipelineItem) => {
+    if (item.source !== "mulighet") return;
+    setEditingOpportunity(item);
+  };
+
   const confirmDeleteOpportunity = async () => {
     if (!pendingDelete) return;
     setDeletingOpportunity(true);
@@ -854,6 +860,7 @@ export default function Pipeline() {
               onSelectGroup={setSelectedGroupKey}
               onStatusChange={updateStatus}
               onOpenRequest={(id) => navigate(`/foresporsler?id=${id}`)}
+              onEditOpportunity={editOpportunity}
               onDeleteOpportunity={deleteOpportunity}
             />
           ) : (
@@ -869,6 +876,7 @@ export default function Pipeline() {
                   onSelectGroup={setSelectedGroupKey}
                   onStatusChange={updateStatus}
                   onOpenRequest={(id) => navigate(`/foresporsler?id=${id}`)}
+                  onEditOpportunity={editOpportunity}
                   onDeleteOpportunity={deleteOpportunity}
                 />
               </ResizablePanel>
@@ -884,6 +892,7 @@ export default function Pipeline() {
                       savingStatusId={savingStatusId}
                       onStatusChange={updateStatus}
                       onOpenRequest={(id) => navigate(`/foresporsler?id=${id}`)}
+                      onEditOpportunity={editOpportunity}
                       onDeleteOpportunity={deleteOpportunity}
                     />
                   ) : (
@@ -908,6 +917,36 @@ export default function Pipeline() {
         cvPortraitMap={cvPortraitMap}
         userId={user?.id || null}
         onCreated={invalidatePipelineQueries}
+      />
+
+      <NewOpportunitySheet
+        open={!!editingOpportunity}
+        onOpenChange={(open) => {
+          if (!open) setEditingOpportunity(null);
+        }}
+        employees={employees}
+        externalConsultants={externalConsultants}
+        companies={companies}
+        contacts={contacts}
+        cvPortraitMap={cvPortraitMap}
+        userId={user?.id || null}
+        onCreated={invalidatePipelineQueries}
+        editValue={
+          editingOpportunity
+            ? {
+                id: String(editingOpportunity.sourceId),
+                consultantType: editingOpportunity.consultantType,
+                consultantId: editingOpportunity.consultantId,
+                consultantName: editingOpportunity.consultantName,
+                companyId: editingOpportunity.companyId,
+                companyName: editingOpportunity.companyName,
+                contactId: editingOpportunity.contactId,
+                contactName: editingOpportunity.contactName,
+                title: editingOpportunity.title,
+                note: editingOpportunity.note,
+              }
+            : null
+        }
       />
 
       <CommandPalette
@@ -1092,6 +1131,7 @@ function PipelineList({
   onSelectGroup,
   onStatusChange,
   onOpenRequest,
+  onEditOpportunity,
   onDeleteOpportunity,
 }: {
   groups: PipelineGroup[];
@@ -1103,6 +1143,7 @@ function PipelineList({
   onSelectGroup: (key: string) => void;
   onStatusChange: (item: PipelineItem, status: PipelineStatus) => void;
   onOpenRequest: (id: string | number) => void;
+  onEditOpportunity: (item: PipelineItem) => void;
   onDeleteOpportunity: (item: PipelineItem) => void;
 }) {
   return (
@@ -1130,6 +1171,7 @@ function PipelineList({
                 savingStatusId={savingStatusId}
                 onStatusChange={onStatusChange}
                 onOpenRequest={onOpenRequest}
+                onEditOpportunity={onEditOpportunity}
                 onDeleteOpportunity={onDeleteOpportunity}
               />
             )}
@@ -1239,12 +1281,14 @@ function PipelineDetail({
   savingStatusId,
   onStatusChange,
   onOpenRequest,
+  onEditOpportunity,
   onDeleteOpportunity,
 }: {
   group: PipelineGroup;
   savingStatusId: string | null;
   onStatusChange: (item: PipelineItem, status: PipelineStatus) => void;
   onOpenRequest: (id: string | number) => void;
+  onEditOpportunity: (item: PipelineItem) => void;
   onDeleteOpportunity: (item: PipelineItem) => void;
 }) {
   return (
@@ -1323,9 +1367,14 @@ function PipelineDetail({
                 {item.source === "foresporsel" ? (
                   <DesignLabGhostAction onClick={() => onOpenRequest(item.sourceId)}>Åpne forespørsel</DesignLabGhostAction>
                 ) : (
-                  <DesignLabGhostAction onClick={() => onDeleteOpportunity(item)}>
-                    <Trash2 style={{ width: 12, height: 12 }} /> Slett
-                  </DesignLabGhostAction>
+                  <>
+                    <DesignLabGhostAction onClick={() => onEditOpportunity(item)}>
+                      <Pencil style={{ width: 12, height: 12 }} /> Rediger
+                    </DesignLabGhostAction>
+                    <DesignLabGhostAction onClick={() => onDeleteOpportunity(item)}>
+                      <Trash2 style={{ width: 12, height: 12 }} /> Slett
+                    </DesignLabGhostAction>
+                  </>
                 )}
               </div>
             </div>
@@ -1358,6 +1407,19 @@ function EmptyState({ text }: { text: string }) {
   );
 }
 
+type OpportunityEditValue = {
+  id: string;
+  consultantType: ConsultantType;
+  consultantId: string;
+  consultantName?: string | null;
+  companyId: string | null;
+  companyName?: string | null;
+  contactId: string | null;
+  contactName?: string | null;
+  title: string;
+  note: string | null;
+};
+
 function NewOpportunitySheet({
   open,
   onOpenChange,
@@ -1368,6 +1430,7 @@ function NewOpportunitySheet({
   cvPortraitMap,
   userId,
   onCreated,
+  editValue,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -1378,6 +1441,7 @@ function NewOpportunitySheet({
   cvPortraitMap: Map<number, string>;
   userId: string | null;
   onCreated: () => Promise<void>;
+  editValue?: OpportunityEditValue | null;
 }) {
   const [consultantType, setConsultantType] = useState<ConsultantType>("intern");
   const [consultantId, setConsultantId] = useState("");
@@ -1392,6 +1456,23 @@ function NewOpportunitySheet({
   const [title, setTitle] = useState("");
   const [note, setNote] = useState("");
   const [saving, setSaving] = useState(false);
+  const isEditing = Boolean(editValue);
+
+  useEffect(() => {
+    if (!open || !editValue) return;
+    setConsultantType(editValue.consultantType);
+    setConsultantId(editValue.consultantId);
+    setConsultantSearch(editValue.consultantName || "");
+    setConsultantPickerOpen(false);
+    setCompanyId(editValue.companyId || "");
+    setCompanySearch(editValue.companyName || "");
+    setCompanyPickerOpen(false);
+    setContactId(editValue.contactId || "");
+    setContactSearch(editValue.contactName || "");
+    setContactPickerOpen(false);
+    setTitle(editValue.title || "");
+    setNote(editValue.note || "");
+  }, [editValue, open]);
 
   const consultantOptions = useMemo(
     () =>
@@ -1453,7 +1534,7 @@ function NewOpportunitySheet({
     onOpenChange(nextOpen);
   };
 
-  const createOpportunity = async (event: FormEvent<HTMLFormElement>) => {
+  const saveOpportunity = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     const trimmedTitle = title.trim();
@@ -1464,12 +1545,12 @@ function NewOpportunitySheet({
 
     setSaving(true);
     try {
-      if (!userId) {
+      if (!isEditing && !userId) {
         toast.error("Du må være innlogget for å opprette mulighet");
         return;
       }
 
-      const { error } = await supabase.from("pipeline_muligheter").insert({
+      const payload = {
         konsulent_type: consultantType,
         ansatt_id: consultantType === "intern" ? Number(consultantId) : null,
         ekstern_id: consultantType === "ekstern" ? consultantId : null,
@@ -1477,19 +1558,29 @@ function NewOpportunitySheet({
         contact_id: contactId,
         tittel: trimmedTitle,
         notat: note.trim() || null,
-        status: "sendt_cv",
-        created_by: userId,
-      });
+      };
+
+      const { error } = isEditing && editValue
+        ? await supabase
+            .from("pipeline_muligheter")
+            .update({ ...payload, updated_at: new Date().toISOString() })
+            .eq("id", editValue.id)
+        : await supabase.from("pipeline_muligheter").insert({
+            ...payload,
+            status: "sendt_cv",
+            created_by: userId,
+          });
       if (error) throw error;
 
       await onCreated();
-      toast.success("Mulighet opprettet");
+      toast.success(isEditing ? "Mulighet oppdatert" : "Mulighet opprettet");
       reset();
       onOpenChange(false);
     } catch (error) {
       console.error(error);
       const message = getErrorMessage(error);
-      toast.error(message ? `Kunne ikke opprette mulighet: ${message}` : "Kunne ikke opprette mulighet");
+      const action = isEditing ? "oppdatere" : "opprette";
+      toast.error(message ? `Kunne ikke ${action} mulighet: ${message}` : `Kunne ikke ${action} mulighet`);
     } finally {
       setSaving(false);
     }
@@ -1501,10 +1592,12 @@ function NewOpportunitySheet({
       onOpenChange={handleOpenChange}
       contentClassName="px-6 py-6"
     >
-      <form onSubmit={createOpportunity} className="flex min-h-full flex-col">
+      <form onSubmit={saveOpportunity} className="flex min-h-full flex-col">
         <div className="-mx-6 -mt-6 mb-5 border-b border-border px-6 pb-4 pt-5">
-          <h2 className="text-[1.125rem] font-bold text-foreground">Ny mulighet</h2>
-          <p className="mt-1 text-[0.875rem] text-muted-foreground">Når det er en mulighet uten direkte forespørsel</p>
+          <h2 className="text-[1.125rem] font-bold text-foreground">{isEditing ? "Rediger mulighet" : "Ny mulighet"}</h2>
+          <p className="mt-1 text-[0.875rem] text-muted-foreground">
+            {isEditing ? "Oppdater konsulent, selskap, kontakt og notat." : "Når det er en mulighet uten direkte forespørsel"}
+          </p>
         </div>
 
         <div className="flex-1 space-y-4">
@@ -1667,7 +1760,7 @@ function NewOpportunitySheet({
             disabled={saving}
             className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-primary px-4 text-[0.8125rem] font-medium text-primary-foreground transition-colors hover:opacity-90 disabled:opacity-50"
           >
-            {saving ? "Oppretter..." : "Opprett mulighet"}
+            {saving ? (isEditing ? "Lagrer..." : "Oppretter...") : (isEditing ? "Lagre endringer" : "Opprett mulighet")}
           </button>
         </div>
       </form>

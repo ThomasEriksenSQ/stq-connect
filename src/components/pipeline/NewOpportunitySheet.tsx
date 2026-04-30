@@ -53,6 +53,19 @@ export type OpportunityInitialContext = {
   title?: string | null;
 };
 
+export type OpportunityEditValue = {
+  id: string;
+  consultantType: OpportunityConsultantType;
+  consultantId: string;
+  consultantName?: string | null;
+  companyId: string | null;
+  companyName?: string | null;
+  contactId: string | null;
+  contactName?: string | null;
+  title: string;
+  note: string | null;
+};
+
 const SELECT_CLASS =
   "h-10 w-full min-w-0 rounded-lg border border-border bg-background px-3 text-[0.875rem] text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50";
 
@@ -89,6 +102,7 @@ export function NewOpportunitySheet({
   userId,
   onCreated,
   initialContext,
+  editValue,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -100,6 +114,7 @@ export function NewOpportunitySheet({
   userId: string | null;
   onCreated: () => Promise<void>;
   initialContext?: OpportunityInitialContext;
+  editValue?: OpportunityEditValue | null;
 }) {
   const [consultantType, setConsultantType] = useState<OpportunityConsultantType>("intern");
   const [consultantId, setConsultantId] = useState("");
@@ -114,9 +129,25 @@ export function NewOpportunitySheet({
   const [title, setTitle] = useState("");
   const [note, setNote] = useState("");
   const [saving, setSaving] = useState(false);
+  const isEditing = Boolean(editValue);
 
   useEffect(() => {
     if (!open) return;
+    if (editValue) {
+      setConsultantType(editValue.consultantType);
+      setConsultantId(editValue.consultantId);
+      setConsultantSearch(editValue.consultantName || "");
+      setCompanyId(editValue.companyId || "");
+      setCompanySearch(editValue.companyName || "");
+      setContactId(editValue.contactId || "");
+      setContactSearch(editValue.contactName || "");
+      setTitle(editValue.title || "");
+      setNote(editValue.note || "");
+      setConsultantPickerOpen(false);
+      setCompanyPickerOpen(false);
+      setContactPickerOpen(false);
+      return;
+    }
     if (initialContext?.companyId) {
       setCompanyId(initialContext.companyId);
       setCompanySearch(initialContext.companyName || "");
@@ -127,6 +158,7 @@ export function NewOpportunitySheet({
     }
     if (initialContext?.title) setTitle(initialContext.title);
   }, [
+    editValue,
     initialContext?.companyId,
     initialContext?.companyName,
     initialContext?.contactId,
@@ -197,7 +229,7 @@ export function NewOpportunitySheet({
     onOpenChange(nextOpen);
   };
 
-  const createOpportunity = async (event: FormEvent<HTMLFormElement>) => {
+  const saveOpportunity = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     const trimmedTitle = title.trim();
@@ -208,12 +240,12 @@ export function NewOpportunitySheet({
 
     setSaving(true);
     try {
-      if (!userId) {
+      if (!isEditing && !userId) {
         toast.error("Du må være innlogget for å opprette mulighet");
         return;
       }
 
-      const { error } = await supabase.from("pipeline_muligheter").insert({
+      const payload = {
         konsulent_type: consultantType,
         ansatt_id: consultantType === "intern" ? Number(consultantId) : null,
         ekstern_id: consultantType === "ekstern" ? consultantId : null,
@@ -221,19 +253,32 @@ export function NewOpportunitySheet({
         contact_id: contactId,
         tittel: trimmedTitle,
         notat: note.trim() || null,
-        status: "sendt_cv",
-        created_by: userId,
-      });
+      };
+
+      const { error } = isEditing && editValue
+        ? await supabase
+            .from("pipeline_muligheter")
+            .update({
+              ...payload,
+              updated_at: new Date().toISOString(),
+            })
+            .eq("id", editValue.id)
+        : await supabase.from("pipeline_muligheter").insert({
+            ...payload,
+            status: "sendt_cv",
+            created_by: userId,
+          });
       if (error) throw error;
 
       await onCreated();
-      toast.success("Mulighet opprettet");
+      toast.success(isEditing ? "Mulighet oppdatert" : "Mulighet opprettet");
       reset();
       onOpenChange(false);
     } catch (error) {
       console.error(error);
       const message = getErrorMessage(error);
-      toast.error(message ? `Kunne ikke opprette mulighet: ${message}` : "Kunne ikke opprette mulighet");
+      const action = isEditing ? "oppdatere" : "opprette";
+      toast.error(message ? `Kunne ikke ${action} mulighet: ${message}` : `Kunne ikke ${action} mulighet`);
     } finally {
       setSaving(false);
     }
@@ -245,10 +290,12 @@ export function NewOpportunitySheet({
       onOpenChange={handleOpenChange}
       contentClassName="px-6 py-6"
     >
-      <form onSubmit={createOpportunity} className="flex min-h-full flex-col">
+      <form onSubmit={saveOpportunity} className="flex min-h-full flex-col">
         <div className="-mx-6 -mt-6 mb-5 border-b border-border px-6 pb-4 pt-5">
-          <h2 className="text-[1.125rem] font-bold text-foreground">Ny mulighet</h2>
-          <p className="mt-1 text-[0.875rem] text-muted-foreground">Når det er en mulighet uten direkte forespørsel</p>
+          <h2 className="text-[1.125rem] font-bold text-foreground">{isEditing ? "Rediger mulighet" : "Ny mulighet"}</h2>
+          <p className="mt-1 text-[0.875rem] text-muted-foreground">
+            {isEditing ? "Oppdater konsulent, selskap, kontakt og notat." : "Når det er en mulighet uten direkte forespørsel"}
+          </p>
         </div>
 
         <div className="flex-1 space-y-4">
@@ -411,7 +458,7 @@ export function NewOpportunitySheet({
             disabled={saving}
             className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-primary px-4 text-[0.8125rem] font-medium text-primary-foreground transition-colors hover:opacity-90 disabled:opacity-50"
           >
-            {saving ? "Oppretter..." : "Opprett mulighet"}
+            {saving ? (isEditing ? "Lagrer..." : "Oppretter...") : (isEditing ? "Lagre endringer" : "Opprett mulighet")}
           </button>
         </div>
       </form>
