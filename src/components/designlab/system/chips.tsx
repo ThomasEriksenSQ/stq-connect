@@ -153,10 +153,10 @@ export function DesignLabFilterRow<TOption extends string>({
   description?: ReactNode;
 }) {
   return (
-    <div className="flex flex-wrap items-start gap-x-2 gap-y-1.5 py-[3px]">
+    <div className="flex w-full min-w-0 items-start gap-x-2 gap-y-1.5 py-[3px]">
       <DesignLabControlLabel>{label}</DesignLabControlLabel>
       <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-1.5 flex-wrap">
+        <div className="dl-horizontal-scroll -mb-1 flex items-center gap-1.5 overflow-x-auto overscroll-x-contain pb-1 md:mb-0 md:flex-wrap md:overflow-visible md:pb-0">
           {options.map((option) => {
             const active = value === option;
 

@@ -144,7 +144,7 @@ export const DesignLabFilterButton = forwardRef<HTMLButtonElement, ButtonHTMLAtt
       ref={ref}
       disabled={disabled}
       className={cn(
-        "inline-flex items-center justify-center gap-1.5 whitespace-nowrap transition-colors",
+        "inline-flex shrink-0 items-center justify-center gap-1.5 whitespace-nowrap transition-colors",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--dl-focus-ring)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--dl-focus-offset)]",
         disabled ? "cursor-not-allowed" : "cursor-pointer",
         className,

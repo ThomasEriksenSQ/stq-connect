@@ -25,7 +25,7 @@ import { Textarea } from "@/components/ui/textarea";
 
 import { DesignLabMobileNavButton, DesignLabSidebar } from "@/components/designlab/DesignLabSidebar";
 import { CommandPalette } from "@/components/designlab/CommandPalette";
-import { DesignLabStaticTag } from "@/components/designlab/controls";
+import { DesignLabSearchInput, DesignLabStaticTag } from "@/components/designlab/controls";
 import { DealTypeTag } from "@/components/designlab/DealTypeTag";
 import {
   DesignLabGhostAction,
@@ -359,6 +359,7 @@ export default function Pipeline() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("alle");
   const [typeFilter, setTypeFilter] = useState<TypeFilter>("alle");
   const [sourceFilter, setSourceFilter] = useState<SourceFilter>("alle");
+  const [search, setSearch] = useState("");
   const [selectedGroupKey, setSelectedGroupKey] = useState<string | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [savingStatusId, setSavingStatusId] = useState<string | null>(null);
@@ -575,14 +576,31 @@ export default function Pipeline() {
     return [...requestItems.filter(Boolean), ...opportunityItems] as PipelineItem[];
   }, [cvPortraitMap, opportunities, requestLinks]);
 
+  const normalizedSearch = search.trim().toLowerCase();
+
   const filteredItems = useMemo(() => {
     return pipelineItems.filter((item) => {
       if (typeFilter !== "alle" && item.consultantType !== typeFilter) return false;
       if (sourceFilter !== "alle" && item.source !== sourceFilter) return false;
       if (selectionFilter === "tilgjengelige" && !isAvailablePipelineItem(item)) return false;
+      if (normalizedSearch) {
+        const searchable = [
+          item.consultantName,
+          item.consultantStatus,
+          item.companyName,
+          item.contactName,
+          item.contactTitle,
+          item.title,
+          item.note,
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
+        if (!searchable.includes(normalizedSearch)) return false;
+      }
       return statusMatches(item, statusFilter);
     });
-  }, [pipelineItems, selectionFilter, sourceFilter, statusFilter, typeFilter]);
+  }, [normalizedSearch, pipelineItems, selectionFilter, sourceFilter, statusFilter, typeFilter]);
 
   const groups = useMemo(() => {
     const pipelineGroups = buildPipelineGroups(filteredItems);
@@ -593,6 +611,10 @@ export default function Pipeline() {
     const existingKeys = new Set(pipelineGroups.map((group) => group.consultantKey));
     const benchGroups = availableEmployees
       .filter((employee) => !existingKeys.has(`intern:${employee.id}`))
+      .filter((employee) => {
+        if (!normalizedSearch) return true;
+        return [employee.navn, employee.status].filter(Boolean).join(" ").toLowerCase().includes(normalizedSearch);
+      })
       .map((employee) => ({
         consultantKey: `intern:${employee.id}`,
         consultantType: "intern" as const,
@@ -610,7 +632,7 @@ export default function Pipeline() {
       }));
 
     return [...pipelineGroups, ...benchGroups].sort(compareAvailableGroups);
-  }, [availableEmployees, cvPortraitMap, filteredItems, selectionFilter, sourceFilter, statusFilter, typeFilter]);
+  }, [availableEmployees, cvPortraitMap, filteredItems, normalizedSearch, selectionFilter, sourceFilter, statusFilter, typeFilter]);
   const selectedGroup = useMemo(
     () => (selectedGroupKey ? groups.find((group) => group.consultantKey === selectedGroupKey) || null : null),
     [groups, selectedGroupKey],
@@ -814,6 +836,13 @@ export default function Pipeline() {
         </header>
 
         <div className="dl-filter-bar shrink-0 space-y-0" style={{ borderBottom: `1px solid ${C.border}` }}>
+          <div className="pb-3 md:hidden">
+            <DesignLabSearchInput
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Søk konsulent, selskap eller kontakt..."
+            />
+          </div>
           <DesignLabFilterRow
             label="UTVALG"
             options={SELECTION_FILTER_OPTIONS}
@@ -839,7 +868,7 @@ export default function Pipeline() {
             onChange={(value) => setSourceFilter(sourceFilterValue(value))}
           />
 
-          <div className="grid gap-2 pt-3 sm:grid-cols-5">
+          <div className="dl-horizontal-scroll flex gap-2 overflow-x-auto overscroll-x-contain pb-1 pt-3 sm:grid sm:grid-cols-5 sm:overflow-visible sm:pb-0">
             <PipelineStat label="Sendt CV" value={stats.sentCv} />
             <PipelineStat label="Intervju" value={stats.interviews} />
             <PipelineStat label="Vunnet" value={stats.won} />
@@ -1184,7 +1213,7 @@ function PipelineList({
 
 function PipelineStat({ label, value }: { label: string; value: number }) {
   return (
-    <div className="border px-3 py-2" style={{ borderColor: C.borderLight, background: C.surface, borderRadius: 6 }}>
+    <div className="min-w-[116px] flex-1 border px-3 py-2 sm:min-w-0" style={{ borderColor: C.borderLight, background: C.surface, borderRadius: 6 }}>
       <p style={{ fontSize: 11, color: C.textFaint, fontWeight: 500 }}>{label}</p>
       <p style={{ fontSize: 18, color: C.text, fontWeight: 650 }}>{value}</p>
     </div>

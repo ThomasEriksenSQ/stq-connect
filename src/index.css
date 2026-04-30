@@ -361,6 +361,15 @@ html {
   .dl-mobile-list {
     padding: 0 var(--dl-shell-pad-x) var(--dl-page-pad-bottom);
   }
+
+  .dl-horizontal-scroll {
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .dl-horizontal-scroll::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 @layer utilities {
