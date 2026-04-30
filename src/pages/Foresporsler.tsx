@@ -1130,12 +1130,11 @@ export default function Foresporsler() {
           </div>
 
           <div className="hidden md:block border border-border rounded-lg overflow-hidden bg-card shadow-[0_1px_3px_rgba(0,0,0,0.07)]">
-            <div className="grid grid-cols-[90px_minmax(0,1.35fr)_minmax(0,1fr)_120px_minmax(0,1.1fr)_minmax(180px,1fr)_120px] gap-3 px-4 py-2.5 border-b border-border bg-background">
+            <div className="grid grid-cols-[90px_minmax(0,1.35fr)_minmax(0,1fr)_120px_minmax(180px,1fr)_120px] gap-3 px-4 py-2.5 border-b border-border bg-background">
               <SortHeader field="mottatt_dato">Mottatt</SortHeader>
               <SortHeader field="selskap_navn">Selskap</SortHeader>
               <span className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground">Kontakt</span>
               <span className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground">Type</span>
-              <span className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground">Teknologier</span>
               <SortHeader field="sendt_count">Konsulent</SortHeader>
               <span className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground">Status</span>
             </div>
@@ -1148,7 +1147,7 @@ export default function Foresporsler() {
                 <div
                   key={row.id}
                   onClick={() => openSelectedRow(row.id)}
-                  className="grid grid-cols-[90px_minmax(0,1.35fr)_minmax(0,1fr)_120px_minmax(0,1.1fr)_minmax(180px,1fr)_120px] gap-3 items-center px-4 min-h-[48px] py-2.5 hover:bg-muted/40 transition-colors cursor-pointer"
+                  className="grid grid-cols-[90px_minmax(0,1.35fr)_minmax(0,1fr)_120px_minmax(180px,1fr)_120px] gap-3 items-center px-4 min-h-[48px] py-2.5 hover:bg-muted/40 transition-colors cursor-pointer"
                 >
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -1167,18 +1166,6 @@ export default function Foresporsler() {
                       : <span className="text-muted-foreground">—</span>}
                   </span>
                   <TypeBadge type={row.type} />
-                  <div className="flex items-center gap-1 flex-wrap">
-                    {(row.teknologier || []).slice(0, 3).map((t: string) => (
-                      <span key={t} className="inline-flex items-center rounded-full border border-border bg-muted px-2 py-0.5 text-[0.6875rem] font-medium text-foreground">
-                        {t}
-                      </span>
-                    ))}
-                    {(row.teknologier || []).length > 3 && (
-                      <span className="inline-flex items-center rounded-full bg-muted/60 px-2 py-0.5 text-[0.6875rem] text-muted-foreground">
-                        +{row.teknologier!.length - 3}
-                      </span>
-                    )}
-                  </div>
                   <div className="flex flex-col items-start gap-1 min-w-0">
                     {sendt.length === 0 ? (
                       <span className="text-[0.8125rem] text-muted-foreground">—</span>
