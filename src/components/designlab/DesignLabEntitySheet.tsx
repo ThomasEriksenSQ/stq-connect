@@ -124,7 +124,16 @@ export function DesignLabFormSheetHeader({ title, subtitle }: { title: string; s
           {title}
         </h2>
         {subtitle ? (
-          <p style={{ color: C.textMuted, fontSize: 12, lineHeight: 1.4 }}>{subtitle}</p>
+          <p
+            style={{
+              color: C.textMuted,
+              fontSize: `calc(var(--dl-modal-font-size, 13px) * 0.92)`,
+              lineHeight: 1.4,
+              fontWeight: 400,
+            }}
+          >
+            {subtitle}
+          </p>
         ) : null}
       </div>
       <SheetClose asChild>
