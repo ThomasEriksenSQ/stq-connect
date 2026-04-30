@@ -45,7 +45,8 @@ import { toast } from "@/components/ui/sonner";
 
 type ConsultantType = "intern" | "ekstern";
 type SourceType = "foresporsel" | "mulighet";
-type FilterStatus = "tilgjengelige" | "alle" | PipelineStatus;
+type SelectionFilter = "alle" | "tilgjengelige";
+type StatusFilter = "alle" | PipelineStatus;
 type TypeFilter = "alle" | ConsultantType;
 type SourceFilter = "alle" | SourceType;
 
@@ -187,16 +188,9 @@ const SELECT_CLASS =
 const TEXTAREA_CLASS =
   "min-h-[112px] w-full min-w-0 resize-none rounded-md border border-[#D7DCE3] bg-white px-2.5 py-2 text-[var(--dl-modal-font-size,13px)] text-[#1F2328] outline-none focus:border-[#5E6AD2] focus:shadow-[0_0_0_2px_rgba(94,106,210,0.15)]";
 
-function statusFilterLabel(value: FilterStatus) {
-  if (value === "tilgjengelige") return "Tilgjengelige";
-  if (value === "alle") return "Alle";
-  return PIPELINE_STATUS_META[value].label;
-}
-
-function statusFilterValue(label: string): FilterStatus {
-  if (label === "Tilgjengelige") return "tilgjengelige";
+function statusFilterValue(label: string): StatusFilter {
   if (label === "Alle") return "alle";
-  return PIPELINE_STATUS_VALUES.find((value) => PIPELINE_STATUS_META[value].label === label) ?? "tilgjengelige";
+  return PIPELINE_STATUS_VALUES.find((value) => PIPELINE_STATUS_META[value].label === label) ?? "alle";
 }
 
 function typeFilterLabel(value: TypeFilter) {
@@ -288,9 +282,8 @@ function isAvailablePipelineItem(item: PipelineItem) {
   return true;
 }
 
-function statusMatchesFilter(item: PipelineItem, filter: FilterStatus) {
+function statusMatches(item: PipelineItem, filter: StatusFilter) {
   if (filter === "alle") return true;
-  if (filter === "tilgjengelige") return isAvailablePipelineItem(item);
   return item.status === filter;
 }
 
@@ -351,7 +344,8 @@ export default function Pipeline() {
   const queryClient = useQueryClient();
   const [textSize] = usePersistentState<TextSize>("dl-text-size", "M");
   const [cmdOpen, setCmdOpen] = useState(false);
-  const [statusFilter, setStatusFilter] = useState<FilterStatus>("tilgjengelige");
+  const [selectionFilter, setSelectionFilter] = useState<SelectionFilter>("tilgjengelige");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("alle");
   const [typeFilter, setTypeFilter] = useState<TypeFilter>("alle");
   const [sourceFilter, setSourceFilter] = useState<SourceFilter>("alle");
   const [selectedGroupKey, setSelectedGroupKey] = useState<string | null>(null);
@@ -556,13 +550,14 @@ export default function Pipeline() {
     return pipelineItems.filter((item) => {
       if (typeFilter !== "alle" && item.consultantType !== typeFilter) return false;
       if (sourceFilter !== "alle" && item.source !== sourceFilter) return false;
-      return statusMatchesFilter(item, statusFilter);
+      if (selectionFilter === "tilgjengelige" && !isAvailablePipelineItem(item)) return false;
+      return statusMatches(item, statusFilter);
     });
-  }, [pipelineItems, sourceFilter, statusFilter, typeFilter]);
+  }, [pipelineItems, selectionFilter, sourceFilter, statusFilter, typeFilter]);
 
   const groups = useMemo(() => {
     const pipelineGroups = buildPipelineGroups(filteredItems);
-    if (statusFilter !== "tilgjengelige" || sourceFilter !== "alle" || typeFilter === "ekstern") {
+    if (selectionFilter !== "tilgjengelige" || statusFilter !== "alle" || sourceFilter !== "alle" || typeFilter === "ekstern") {
       return pipelineGroups;
     }
 
@@ -586,7 +581,7 @@ export default function Pipeline() {
       }));
 
     return [...pipelineGroups, ...benchGroups].sort(compareAvailableGroups);
-  }, [availableEmployees, cvPortraitMap, filteredItems, sourceFilter, statusFilter, typeFilter]);
+  }, [availableEmployees, cvPortraitMap, filteredItems, selectionFilter, sourceFilter, statusFilter, typeFilter]);
   const selectedGroup = useMemo(
     () => (selectedGroupKey ? groups.find((group) => group.consultantKey === selectedGroupKey) || null : null),
     [groups, selectedGroupKey],
@@ -650,7 +645,8 @@ export default function Pipeline() {
   const isLoading = isLoadingRequestLinks || isLoadingOpportunities;
 
   const resetFilters = () => {
-    setStatusFilter("tilgjengelige");
+    setSelectionFilter("tilgjengelige");
+    setStatusFilter("alle");
     setTypeFilter("alle");
     setSourceFilter("alle");
   };
@@ -719,18 +715,14 @@ export default function Pipeline() {
           <DesignLabFilterRow
             label="UTVALG"
             options={SELECTION_FILTER_OPTIONS}
-            value={statusFilter === "tilgjengelige" ? "Tilgjengelige" : "Alle"}
-            onChange={(value) => setStatusFilter(value === "Tilgjengelige" ? "tilgjengelige" : "alle")}
+            value={selectionFilter === "tilgjengelige" ? "Tilgjengelige" : "Alle"}
+            onChange={(value) => setSelectionFilter(value === "Tilgjengelige" ? "tilgjengelige" : "alle")}
           />
           <DesignLabFilterRow
             label="STATUS"
             options={STATUS_FILTER_OPTIONS}
-            value={
-              statusFilter !== "alle" && statusFilter !== "tilgjengelige"
-                ? PIPELINE_STATUS_META[statusFilter].label
-                : "Alle"
-            }
-            onChange={(value) => setStatusFilter(value === "Alle" ? "alle" : statusFilterValue(value))}
+            value={statusFilter === "alle" ? "Alle" : PIPELINE_STATUS_META[statusFilter].label}
+            onChange={(value) => setStatusFilter(statusFilterValue(value))}
           />
           <div className="flex items-center justify-between">
             <DesignLabFilterRow
@@ -739,7 +731,7 @@ export default function Pipeline() {
               value={typeFilterLabel(typeFilter)}
               onChange={(value) => setTypeFilter(typeFilterValue(value))}
             />
-            {(statusFilter !== "tilgjengelige" || typeFilter !== "alle" || sourceFilter !== "alle") && (
+            {(selectionFilter !== "tilgjengelige" || statusFilter !== "alle" || typeFilter !== "alle" || sourceFilter !== "alle") && (
               <DesignLabGhostAction onClick={resetFilters}>
                 <X style={{ width: 12, height: 12 }} /> Nullstill
               </DesignLabGhostAction>
