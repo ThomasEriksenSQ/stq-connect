@@ -9,6 +9,7 @@ import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/componen
 import { DesignLabMobileNavButton, DesignLabSidebar } from "@/components/designlab/DesignLabSidebar";
 import { CommandPalette } from "@/components/designlab/CommandPalette";
 import { DesignLabStaticTag } from "@/components/designlab/controls";
+import { DealTypeTag } from "@/components/designlab/DealTypeTag";
 import {
   DesignLabGhostAction,
   DesignLabFilterRow,
