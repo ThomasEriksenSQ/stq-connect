@@ -529,6 +529,7 @@ export function NyForesporselModal({
     <DesignLabEntitySheet open={open} onOpenChange={(nextOpen) => { if (!nextOpen) onClose(); }} contentClassName="px-6 py-6">
       <div className="mb-5">
         <h2 className="text-[1.125rem] font-bold text-foreground">Ny forespørsel</h2>
+        <p className="mt-1 text-[0.875rem] text-muted-foreground">Når mottatt forespørsel fra et selskap</p>
       </div>
 
       <div className="space-y-4">
