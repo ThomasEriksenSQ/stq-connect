@@ -174,7 +174,8 @@ type OpportunityRow = {
   contacts: ContactPreview | null;
 };
 
-const STATUS_FILTER_OPTIONS = ["Alle", "Tilgjengelige", ...PIPELINE_STATUS_VALUES.map((value) => PIPELINE_STATUS_META[value].label)] as const;
+const SELECTION_FILTER_OPTIONS = ["Alle", "Tilgjengelige"] as const;
+const STATUS_FILTER_OPTIONS = ["Alle", ...PIPELINE_STATUS_VALUES.map((value) => PIPELINE_STATUS_META[value].label)] as const;
 const TYPE_FILTER_OPTIONS = ["Alle", "Ansatte", "Eksterne"] as const;
 const SOURCE_FILTER_OPTIONS = ["Alle", "Forespørsler", "Muligheter"] as const;
 
@@ -716,10 +717,20 @@ export default function Pipeline() {
 
         <div className="dl-filter-bar shrink-0 space-y-0" style={{ borderBottom: `1px solid ${C.border}` }}>
           <DesignLabFilterRow
+            label="UTVALG"
+            options={SELECTION_FILTER_OPTIONS}
+            value={statusFilter === "tilgjengelige" ? "Tilgjengelige" : "Alle"}
+            onChange={(value) => setStatusFilter(value === "Tilgjengelige" ? "tilgjengelige" : "alle")}
+          />
+          <DesignLabFilterRow
             label="STATUS"
             options={STATUS_FILTER_OPTIONS}
-            value={statusFilterLabel(statusFilter)}
-            onChange={(value) => setStatusFilter(statusFilterValue(value))}
+            value={
+              statusFilter !== "alle" && statusFilter !== "tilgjengelige"
+                ? PIPELINE_STATUS_META[statusFilter].label
+                : "Alle"
+            }
+            onChange={(value) => setStatusFilter(value === "Alle" ? "alle" : statusFilterValue(value))}
           />
           <div className="flex items-center justify-between">
             <DesignLabFilterRow
