@@ -759,11 +759,20 @@ export function CompanyCardContent({
 
   const deleteCompanyMutation = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase.from("companies").delete().eq("id", companyId);
+      const { error } = await supabase
+        .from("companies")
+        .update({
+          status: "deleted",
+          ikke_relevant: true,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", companyId);
       if (error) throw error;
     },
     onSuccess: () => {
+      queryClient.removeQueries({ queryKey: crmQueryKeys.companies.detail(companyId), exact: true });
       queryClient.invalidateQueries({ queryKey: crmQueryKeys.companies.all() });
+      queryClient.invalidateQueries({ queryKey: crmQueryKeys.contacts.all() });
       toast.success("Selskap slettet");
       navigate("/selskaper");
     },

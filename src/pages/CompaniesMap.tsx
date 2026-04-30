@@ -60,6 +60,7 @@ export default function CompaniesMap() {
       const { data, error } = await supabase
         .from("companies")
         .select("id, name, address, city, zip_code, geo_areas, geo_source, geo_unresolved_places, status, profiles!companies_owner_id_fkey(id, full_name)")
+        .neq("status", "deleted")
         .order("name");
       if (error) throw error;
       return (data || []).map((company: any) => ({

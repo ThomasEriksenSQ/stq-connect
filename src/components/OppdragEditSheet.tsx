@@ -75,6 +75,7 @@ function CompanySearchField({
         .from("companies")
         .select("id, name, org_number")
         .ilike("name", `%${q.trim()}%`)
+        .neq("status", "deleted")
         .order("name")
         .limit(8);
       setResults(data || []);

@@ -671,7 +671,7 @@ export function ConsultantModal({ open, onClose, editRow, onSaved }: {
   const { data: companies = [] } = useQuery({
     queryKey: ["companies-for-ext"],
     queryFn: async () => {
-      const { data } = await supabase.from("companies").select("id, name").order("name");
+      const { data } = await supabase.from("companies").select("id, name").neq("status", "deleted").order("name");
       return data || [];
     },
   });

@@ -323,6 +323,7 @@ export default function DesignLabCompanies() {
       const { data, error } = await supabase
         .from("companies")
         .select("*, contacts(id), profiles!companies_owner_id_fkey(id, full_name)")
+        .neq("status", "deleted")
         .order("name");
       if (error) throw error;
 

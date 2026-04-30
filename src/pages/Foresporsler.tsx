@@ -356,6 +356,7 @@ export function NyForesporselModal({
         .from("companies")
         .select("id, name, city, status")
         .ilike("name", `%${query}%`)
+        .neq("status", "deleted")
         .limit(8);
       if (data) setCompanyResults(data);
     }, 300);

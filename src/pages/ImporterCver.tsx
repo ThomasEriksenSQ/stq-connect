@@ -454,6 +454,7 @@ function PartnerSearch({
         .from("companies")
         .select("id, name")
         .ilike("name", `%${q}%`)
+        .neq("status", "deleted")
         .limit(5);
       setResults(data || []);
     }, 250);

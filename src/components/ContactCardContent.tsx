@@ -2280,6 +2280,7 @@ export function ContactCardContent({
                   .from("companies")
                   .select("id, name")
                   .ilike("name", `%${q.trim()}%`)
+                  .neq("status", "deleted")
                   .limit(8);
                 setCompanyResults(data || []);
               }}

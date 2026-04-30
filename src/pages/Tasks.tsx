@@ -74,7 +74,7 @@ const Tasks = () => {
   const { data: companies = [] } = useQuery({
     queryKey: ["companies-simple"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("companies").select("id, name").order("name");
+      const { data, error } = await supabase.from("companies").select("id, name").neq("status", "deleted").order("name");
       if (error) throw error;
       return data;
     },

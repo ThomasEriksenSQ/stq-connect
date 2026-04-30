@@ -368,7 +368,12 @@ export function AIChatPanel() {
     if (searchTimer.current) clearTimeout(searchTimer.current);
     if (query.length < 1) { setFCompanyResults([]); return; }
     searchTimer.current = setTimeout(async () => {
-      const { data } = await supabase.from("companies").select("id, name, city").ilike("name", `%${query}%`).limit(8);
+      const { data } = await supabase
+        .from("companies")
+        .select("id, name, city")
+        .ilike("name", `%${query}%`)
+        .neq("status", "deleted")
+        .limit(8);
       if (data) setFCompanyResults(data);
     }, 300);
   };

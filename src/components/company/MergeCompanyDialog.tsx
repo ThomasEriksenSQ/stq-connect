@@ -78,6 +78,7 @@ export function MergeCompanyDialog({
         .from("companies")
         .select("id, name, org_number, status")
         .neq("id", sourceCompanyId)
+        .neq("status", "deleted")
         .order("name");
 
       if (error) throw error;

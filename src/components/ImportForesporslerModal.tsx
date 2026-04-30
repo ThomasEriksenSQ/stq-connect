@@ -86,7 +86,7 @@ export function ImportForesporslerModal({ open, onOpenChange }: { open: boolean;
     });
 
     // Fetch existing companies
-    const { data: companies } = await supabase.from("companies").select("id, name");
+    const { data: companies } = await supabase.from("companies").select("id, name").neq("status", "deleted");
     const companyList = companies || [];
     const companyMap = new Map<string, { id: string; name: string }>();
     companyList.forEach((c) => {
