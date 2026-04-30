@@ -1053,9 +1053,11 @@ function PipelineDetail({
             <DesignLabReadonlyChip active={false}>{group.openItems} aktive løp</DesignLabReadonlyChip>
           </div>
         </div>
-        <DesignLabStaticTag colors={getPipelineStatusMeta(group.highestStatus).colors}>
-          {getPipelineStatusMeta(group.highestStatus).label}
-        </DesignLabStaticTag>
+        {group.items.length > 0 ? (
+          <DesignLabStaticTag colors={getPipelineStatusMeta(group.highestStatus).colors}>
+            {getPipelineStatusMeta(group.highestStatus).label}
+          </DesignLabStaticTag>
+        ) : null}
       </div>
 
       <div className="space-y-2">
