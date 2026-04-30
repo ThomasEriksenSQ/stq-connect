@@ -1105,6 +1105,83 @@ export type Database = {
         }
         Relationships: []
       }
+      pipeline_muligheter: {
+        Row: {
+          ansatt_id: number | null
+          company_id: string | null
+          contact_id: string | null
+          created_at: string
+          created_by: string | null
+          ekstern_id: string | null
+          id: string
+          konsulent_type: string
+          notat: string | null
+          status: string
+          status_updated_at: string
+          tittel: string
+          updated_at: string
+        }
+        Insert: {
+          ansatt_id?: number | null
+          company_id?: string | null
+          contact_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          ekstern_id?: string | null
+          id?: string
+          konsulent_type?: string
+          notat?: string | null
+          status?: string
+          status_updated_at?: string
+          tittel?: string
+          updated_at?: string
+        }
+        Update: {
+          ansatt_id?: number | null
+          company_id?: string | null
+          contact_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          ekstern_id?: string | null
+          id?: string
+          konsulent_type?: string
+          notat?: string | null
+          status?: string
+          status_updated_at?: string
+          tittel?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pipeline_muligheter_ansatt_id_fkey"
+            columns: ["ansatt_id"]
+            isOneToOne: false
+            referencedRelation: "stacq_ansatte"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pipeline_muligheter_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pipeline_muligheter_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pipeline_muligheter_ekstern_id_fkey"
+            columns: ["ekstern_id"]
+            isOneToOne: false
+            referencedRelation: "external_consultants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string

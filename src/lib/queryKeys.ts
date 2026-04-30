@@ -39,6 +39,10 @@ export const crmQueryKeys = {
     senereKonsulenter: (foresporselId: number | string | null | undefined) =>
       ["foresporsler-senere-konsulenter", foresporselId] as const,
   },
+  pipeline: {
+    all: () => ["pipeline-overview-v1"] as const,
+    opportunities: () => ["pipeline-muligheter-v1"] as const,
+  },
   profiles: {
     all: () => ["profiles"] as const,
   },

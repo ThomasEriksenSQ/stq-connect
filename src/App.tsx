@@ -58,6 +58,7 @@ const DesignLabInnstillinger = lazy(() =>
 );
 const DesignLabHome = lazy(() => import("./pages/DesignLabHome"));
 const DesignLabNews = lazy(() => import("./pages/DesignLabNews"));
+const Pipeline = lazy(() => import("./pages/Pipeline"));
 
 const queryClient = new QueryClient();
 
@@ -282,6 +283,14 @@ function AppRouter() {
                   </Suspense>
                 }
               />
+            }
+          />
+          <Route
+            path="pipeline"
+            element={
+              <Suspense fallback={<LazyFallback />}>
+                <Pipeline />
+              </Suspense>
             }
           />
           <Route
