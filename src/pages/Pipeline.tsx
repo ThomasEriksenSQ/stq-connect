@@ -926,15 +926,19 @@ function PipelineTableHeader() {
   const labels = ["Konsulent", "Type", "Aktive forespørsler", "Aktive muligheter", "Høyeste status", "Sist"];
   return (
     <div className="sticky top-0 z-10 grid items-center gap-3 border-b" style={{ gridTemplateColumns: PIPELINE_TABLE_COLUMNS, height: 32, paddingInline: 16, borderColor: C.borderLight, background: C.surfaceAlt }}>
-      {labels.map((label) => (
-        <span
-          key={label}
-          className={`truncate ${label === "Sist" ? "text-right" : ""}`}
-          style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: C.textMuted }}
-        >
-          {label}
-        </span>
-      ))}
+      {labels.map((label) => {
+        const centered = label === "Aktive forespørsler" || label === "Aktive muligheter";
+        const align = label === "Sist" ? "text-right" : centered ? "text-center" : "";
+        return (
+          <span
+            key={label}
+            className={`truncate ${align}`}
+            style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: C.textMuted }}
+          >
+            {label}
+          </span>
+        );
+      })}
     </div>
   );
 }
@@ -983,10 +987,10 @@ function PipelineGroupRow({ group, active, onClick }: { group: PipelineGroup; ac
       <div className="min-w-0 overflow-hidden">
         <ConsultantTypeTag type={group.consultantType} />
       </div>
-      <div className="min-w-0 overflow-hidden">
+      <div className="min-w-0 overflow-hidden text-center">
         <span style={{ fontSize: 13, color: C.textMuted }}>{group.requestCount}</span>
       </div>
-      <div className="min-w-0 overflow-hidden">
+      <div className="min-w-0 overflow-hidden text-center">
         <span style={{ fontSize: 13, color: C.textMuted }}>{group.opportunityCount}</span>
       </div>
       <div className="min-w-0 overflow-hidden">
