@@ -831,16 +831,7 @@ export default function DesignLabCompanies() {
             />
           </div>
           <DesignLabFilterRow label="EIER" options={OWNERS} value={ownerFilter} onChange={setOwnerFilter} />
-          <div className="flex items-center justify-between">
-            <DesignLabFilterRow label="TYPE" options={[...TYPE_FILTERS]} value={typeFilter} onChange={(v) => setTypeFilter(v as TypeFilter)} />
-            <div className="flex items-center gap-3">
-              {(ownerFilter !== "Alle" || typeFilter !== "Alle" || effectiveGeoFilter !== "Alle") && (
-                <DesignLabGhostAction onClick={() => { setOwnerFilter("Alle"); setTypeFilter("Alle"); setGeoFilter("Alle"); }}>
-                  <X style={{ width: 12, height: 12 }} /> Nullstill
-                </DesignLabGhostAction>
-              )}
-            </div>
-          </div>
+          <DesignLabFilterRow label="TYPE" options={[...TYPE_FILTERS]} value={typeFilter} onChange={(v) => setTypeFilter(v as TypeFilter)} />
           <DesignLabFilterRow
             label="GEO"
             options={GEO_FILTERS}
