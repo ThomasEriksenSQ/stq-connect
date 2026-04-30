@@ -30,6 +30,8 @@ import { C } from "@/components/designlab/theme";
 import { getDesignLabTextSizeStyle, type TextSize } from "@/components/designlab/TextSizeControl";
 import { crmQueryKeys } from "@/lib/queryKeys";
 import { getInitials } from "@/lib/utils";
+import { hasConsultantAvailability, sortHuntConsultants, getConsultantAvailabilityMeta } from "@/lib/contactHunt";
+import { getEmployeeLifecycleStatus, isEmployeeEndDatePassed } from "@/lib/employeeStatus";
 import {
   getPipelineStatusMeta,
   isOpenPipelineStatus,
@@ -56,6 +58,7 @@ type PipelineItem = {
   consultantName: string;
   consultantStatus: string | null;
   consultantAvailableFrom: string | null;
+  consultantEndDate: string | null;
   title: string;
   companyId: string | null;
   companyName: string;
@@ -77,6 +80,7 @@ type PipelineGroup = {
   consultantId: string;
   consultantName: string;
   consultantStatus: string | null;
+  consultantAvailableFrom: string | null;
   items: PipelineItem[];
   openItems: number;
   requestCount: number;
@@ -106,6 +110,8 @@ type EmployeeOption = {
   status: string | null;
   tilgjengelig_fra?: string | null;
   slutt_dato?: string | null;
+  start_dato?: string | null;
+  bilde_url?: string | null;
 };
 
 type ExternalConsultantOption = {
@@ -116,6 +122,11 @@ type ExternalConsultantOption = {
   company_id?: string | null;
 };
 
+type CvPortraitRow = {
+  ansatt_id: number | null;
+  portrait_url: string | null;
+};
+
 type RequestLinkRow = {
   id: string;
   ansatt_id: number | null;
@@ -124,7 +135,7 @@ type RequestLinkRow = {
   created_at: string | null;
   status: string;
   status_updated_at: string;
-  stacq_ansatte: { id: number; navn: string; status: string | null; tilgjengelig_fra: string | null } | null;
+  stacq_ansatte: { id: number; navn: string; status: string | null; tilgjengelig_fra: string | null; slutt_dato: string | null } | null;
   external_consultants: { id: string; navn: string | null; status: string | null; type: string | null; tilgjengelig_fra: string | null } | null;
   foresporsler: {
     id: number;
@@ -154,7 +165,7 @@ type OpportunityRow = {
   status_updated_at: string;
   created_at: string;
   updated_at: string;
-  stacq_ansatte: { id: number; navn: string; status: string | null; tilgjengelig_fra: string | null } | null;
+  stacq_ansatte: { id: number; navn: string; status: string | null; tilgjengelig_fra: string | null; slutt_dato: string | null } | null;
   external_consultants: { id: string; navn: string | null; status: string | null; type: string | null; tilgjengelig_fra: string | null } | null;
   companies: { id: string; name: string } | null;
   contacts: ContactPreview | null;
@@ -241,9 +252,34 @@ function getLatestAt(items: PipelineItem[]) {
     .sort((left, right) => new Date(right).getTime() - new Date(left).getTime())[0] ?? "";
 }
 
+function isAvailableEmployee(employee: Pick<EmployeeOption, "status" | "tilgjengelig_fra" | "slutt_dato">) {
+  return (
+    ["AKTIV/SIGNERT", "Ledig"].includes(employee.status || "") &&
+    hasConsultantAvailability(employee.tilgjengelig_fra) &&
+    !isEmployeeEndDatePassed(employee.slutt_dato)
+  );
+}
+
+function isActiveOpportunityEmployee(employee: EmployeeOption) {
+  return getEmployeeLifecycleStatus(employee) === "Aktiv";
+}
+
+function isActiveExternalConsultant(consultant: ExternalConsultantOption) {
+  const normalized = String(consultant.status || "").trim().toLowerCase();
+  return !["sluttet", "deleted", "slettet", "inactive", "inaktiv"].includes(normalized);
+}
+
+function isAvailablePipelineItem(item: PipelineItem) {
+  if (!hasConsultantAvailability(item.consultantAvailableFrom)) return false;
+  if (item.consultantType === "intern") {
+    return ["AKTIV/SIGNERT", "Ledig"].includes(item.consultantStatus || "") && !isEmployeeEndDatePassed(item.consultantEndDate);
+  }
+  return true;
+}
+
 function statusMatchesFilter(item: PipelineItem, filter: FilterStatus) {
   if (filter === "alle") return true;
-  if (filter === "tilgjengelige") return Boolean(item.consultantAvailableFrom);
+  if (filter === "tilgjengelige") return isAvailablePipelineItem(item);
   return item.status === filter;
 }
 
@@ -273,6 +309,7 @@ function buildPipelineGroups(items: PipelineItem[]): PipelineGroup[] {
         consultantId: first.consultantId,
         consultantName: first.consultantName,
         consultantStatus: first.consultantStatus,
+        consultantAvailableFrom: first.consultantAvailableFrom,
         items: groupItems.sort(
           (left, right) => new Date(right.statusUpdatedAt).getTime() - new Date(left.statusUpdatedAt).getTime(),
         ),
@@ -284,6 +321,15 @@ function buildPipelineGroups(items: PipelineItem[]): PipelineGroup[] {
       } satisfies PipelineGroup;
     })
     .sort((left, right) => new Date(right.latestAt).getTime() - new Date(left.latestAt).getTime());
+}
+
+function compareAvailableGroups(left: PipelineGroup, right: PipelineGroup) {
+  const leftAvailability = getConsultantAvailabilityMeta(left.consultantAvailableFrom);
+  const rightAvailability = getConsultantAvailabilityMeta(right.consultantAvailableFrom);
+  if (leftAvailability.daysUntil !== rightAvailability.daysUntil) {
+    return leftAvailability.daysUntil - rightAvailability.daysUntil;
+  }
+  return left.consultantName.localeCompare(right.consultantName, "nb");
 }
 
 export default function Pipeline() {
@@ -306,7 +352,7 @@ export default function Pipeline() {
       const { data, error } = await supabase
         .from("foresporsler_konsulenter")
         .select(
-          "id, ansatt_id, ekstern_id, konsulent_type, created_at, status, status_updated_at, stacq_ansatte(id, navn, status, tilgjengelig_fra), external_consultants(id, navn, status, type, tilgjengelig_fra), foresporsler(id, selskap_navn, selskap_id, kontakt_id, mottatt_dato, frist_dato, status, type, referanse, companies!foresporsler_selskap_id_fkey(id, name), contacts!foresporsler_kontakt_id_fkey(id, first_name, last_name, title, email))",
+          "id, ansatt_id, ekstern_id, konsulent_type, created_at, status, status_updated_at, stacq_ansatte(id, navn, status, tilgjengelig_fra, slutt_dato), external_consultants(id, navn, status, type, tilgjengelig_fra), foresporsler(id, selskap_navn, selskap_id, kontakt_id, mottatt_dato, frist_dato, status, type, referanse, companies!foresporsler_selskap_id_fkey(id, name), contacts!foresporsler_kontakt_id_fkey(id, first_name, last_name, title, email))",
         )
         .order("status_updated_at", { ascending: false });
       if (error) throw error;
@@ -320,7 +366,7 @@ export default function Pipeline() {
       const { data, error } = await supabase
         .from("pipeline_muligheter")
         .select(
-          "id, ansatt_id, ekstern_id, konsulent_type, company_id, contact_id, tittel, notat, status, status_updated_at, created_at, updated_at, stacq_ansatte(id, navn, status, tilgjengelig_fra), external_consultants(id, navn, status, type, tilgjengelig_fra), companies!pipeline_muligheter_company_id_fkey(id, name), contacts!pipeline_muligheter_contact_id_fkey(id, first_name, last_name, title, email)",
+          "id, ansatt_id, ekstern_id, konsulent_type, company_id, contact_id, tittel, notat, status, status_updated_at, created_at, updated_at, stacq_ansatte(id, navn, status, tilgjengelig_fra, slutt_dato), external_consultants(id, navn, status, type, tilgjengelig_fra), companies!pipeline_muligheter_company_id_fkey(id, name), contacts!pipeline_muligheter_contact_id_fkey(id, first_name, last_name, title, email)",
         )
         .order("status_updated_at", { ascending: false });
       if (error) throw error;
@@ -333,7 +379,7 @@ export default function Pipeline() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("stacq_ansatte")
-        .select("id, navn, status, tilgjengelig_fra, slutt_dato")
+        .select("id, navn, status, tilgjengelig_fra, slutt_dato, start_dato, bilde_url")
         .order("navn", { ascending: true });
       if (error) throw error;
       return (data || []) as EmployeeOption[];
@@ -378,6 +424,31 @@ export default function Pipeline() {
     },
   });
 
+  const { data: cvPortraits = [] } = useQuery({
+    queryKey: ["pipeline-cv-portraits-v1"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("cv_documents")
+        .select("ansatt_id, portrait_url")
+        .not("portrait_url", "is", null);
+      if (error) throw error;
+      return (data || []) as CvPortraitRow[];
+    },
+  });
+
+  const cvPortraitMap = useMemo(() => {
+    const map = new Map<number, string>();
+    cvPortraits.forEach((row) => {
+      if (row.ansatt_id && row.portrait_url) map.set(row.ansatt_id, row.portrait_url);
+    });
+    return map;
+  }, [cvPortraits]);
+
+  const availableEmployees = useMemo(
+    () => sortHuntConsultants(employees.filter(isAvailableEmployee)),
+    [employees],
+  );
+
   useEffect(() => {
     const handler = (event: KeyboardEvent) => {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
@@ -410,6 +481,7 @@ export default function Pipeline() {
         consultantName,
         consultantStatus: consultant?.status || null,
         consultantAvailableFrom: consultant?.tilgjengelig_fra || null,
+        consultantEndDate: consultantType === "intern" ? link.stacq_ansatte?.slutt_dato || null : null,
         title: request.referanse || request.type ? `${request.referanse || "Forespørsel"} ${request.type ? `(${request.type})` : ""}` : "Forespørsel",
         companyId: request.selskap_id || null,
         companyName: request.companies?.name || request.selskap_navn || "Ukjent selskap",
@@ -441,6 +513,7 @@ export default function Pipeline() {
         consultantName: consultant?.navn || "Ukjent konsulent",
         consultantStatus: consultant?.status || null,
         consultantAvailableFrom: consultant?.tilgjengelig_fra || null,
+        consultantEndDate: consultantType === "intern" ? opportunity.stacq_ansatte?.slutt_dato || null : null,
         title: opportunity.tittel || "Direkte mulighet",
         companyId: opportunity.company_id || null,
         companyName: opportunity.companies?.name || "Ukjent selskap",
@@ -465,7 +538,32 @@ export default function Pipeline() {
     });
   }, [pipelineItems, sourceFilter, statusFilter, typeFilter]);
 
-  const groups = useMemo(() => buildPipelineGroups(filteredItems), [filteredItems]);
+  const groups = useMemo(() => {
+    const pipelineGroups = buildPipelineGroups(filteredItems);
+    if (statusFilter !== "tilgjengelige" || sourceFilter !== "alle" || typeFilter === "ekstern") {
+      return pipelineGroups;
+    }
+
+    const existingKeys = new Set(pipelineGroups.map((group) => group.consultantKey));
+    const benchGroups = availableEmployees
+      .filter((employee) => !existingKeys.has(`intern:${employee.id}`))
+      .map((employee) => ({
+        consultantKey: `intern:${employee.id}`,
+        consultantType: "intern" as const,
+        consultantId: String(employee.id),
+        consultantName: employee.navn,
+        consultantStatus: employee.status,
+        consultantAvailableFrom: employee.tilgjengelig_fra || null,
+        items: [],
+        openItems: 0,
+        requestCount: 0,
+        opportunityCount: 0,
+        highestStatus: "sendt_cv" as PipelineStatus,
+        latestAt: employee.tilgjengelig_fra || "",
+      }));
+
+    return [...pipelineGroups, ...benchGroups].sort(compareAvailableGroups);
+  }, [availableEmployees, filteredItems, sourceFilter, statusFilter, typeFilter]);
   const selectedGroup = useMemo(
     () => (selectedGroupKey ? groups.find((group) => group.consultantKey === selectedGroupKey) || null : null),
     [groups, selectedGroupKey],
@@ -511,11 +609,10 @@ export default function Pipeline() {
 
   const stats = useMemo(() => {
     const openItems = pipelineItems.filter((item) => isOpenPipelineStatus(item.status));
-    const availableConsultants = new Set(
-      pipelineItems.filter((item) => item.consultantAvailableFrom).map((item) => item.consultantKey),
-    );
+    const availableConsultants = new Set(pipelineItems.filter(isAvailablePipelineItem).map((item) => item.consultantKey));
+    availableEmployees.forEach((employee) => availableConsultants.add(`intern:${employee.id}`));
     return {
-      consultants: new Set(pipelineItems.map((item) => item.consultantKey)).size,
+      consultants: new Set([...pipelineItems.map((item) => item.consultantKey), ...availableEmployees.map((employee) => `intern:${employee.id}`)]).size,
       open: openItems.length,
       available: availableConsultants.size,
       sentCv: pipelineItems.filter((item) => item.status === "sendt_cv").length,
@@ -523,7 +620,7 @@ export default function Pipeline() {
       won: pipelineItems.filter((item) => item.status === "vunnet").length,
       direct: pipelineItems.filter((item) => item.source === "mulighet").length,
     };
-  }, [pipelineItems]);
+  }, [availableEmployees, pipelineItems]);
 
   const isLoading = isLoadingRequestLinks || isLoadingOpportunities;
 
@@ -691,6 +788,7 @@ export default function Pipeline() {
         externalConsultants={externalConsultants}
         companies={companies}
         contacts={contacts}
+        cvPortraitMap={cvPortraitMap}
         userId={user?.id || null}
         onCreated={invalidatePipelineQueries}
       />
@@ -815,6 +913,8 @@ function PipelineTableHeader() {
 
 function PipelineGroupRow({ group, active, onClick }: { group: PipelineGroup; active: boolean; onClick: () => void }) {
   const statusMeta = getPipelineStatusMeta(group.highestStatus);
+  const hasPipelineItems = group.items.length > 0;
+  const availability = getConsultantAvailabilityMeta(group.consultantAvailableFrom);
   return (
     <button
       type="button"
@@ -848,13 +948,25 @@ function PipelineGroupRow({ group, active, onClick }: { group: PipelineGroup; ac
         <ConsultantTypeTag type={group.consultantType} />
       </div>
       <div className="flex min-w-0 flex-wrap items-center gap-1.5 overflow-hidden">
-        <DesignLabReadonlyChip active={false}>{group.requestCount} foresp.</DesignLabReadonlyChip>
-        {group.opportunityCount > 0 ? <DesignLabReadonlyChip active={false}>{group.opportunityCount} mul.</DesignLabReadonlyChip> : null}
+        {hasPipelineItems ? (
+          <>
+            <DesignLabReadonlyChip active={false}>{group.requestCount} foresp.</DesignLabReadonlyChip>
+            {group.opportunityCount > 0 ? <DesignLabReadonlyChip active={false}>{group.opportunityCount} mul.</DesignLabReadonlyChip> : null}
+          </>
+        ) : (
+          <DesignLabReadonlyChip active={false}>0 løp</DesignLabReadonlyChip>
+        )}
       </div>
       <div className="min-w-0 overflow-hidden">
-        <DesignLabStaticTag colors={statusMeta.colors}>{statusMeta.label}</DesignLabStaticTag>
+        {hasPipelineItems ? (
+          <DesignLabStaticTag colors={statusMeta.colors}>{statusMeta.label}</DesignLabStaticTag>
+        ) : (
+          <DesignLabReadonlyChip active={false}>{availability.label}</DesignLabReadonlyChip>
+        )}
       </div>
-      <span className="truncate text-right" style={{ fontSize: 12, color: C.textMuted }}>{timeAgo(group.latestAt)}</span>
+      <span className="truncate text-right" style={{ fontSize: 12, color: C.textMuted }}>
+        {hasPipelineItems ? timeAgo(group.latestAt) : "—"}
+      </span>
     </button>
   );
 }
@@ -888,6 +1000,11 @@ function PipelineDetail({
       </div>
 
       <div className="space-y-2">
+        {group.items.length === 0 ? (
+          <div className="border p-3" style={{ borderColor: C.borderLight, background: C.panel, borderRadius: 6 }}>
+            <p style={{ fontSize: 13, color: C.textMuted }}>Ingen pipeline-løp ennå.</p>
+          </div>
+        ) : null}
         {group.items.map((item) => (
           <div key={item.id} className="border p-3" style={{ borderColor: C.borderLight, background: C.panel, borderRadius: 6 }}>
             <div className="flex items-start justify-between gap-3">
@@ -984,6 +1101,7 @@ function NewOpportunitySheet({
   externalConsultants,
   companies,
   contacts,
+  cvPortraitMap,
   userId,
   onCreated,
 }: {
@@ -993,6 +1111,7 @@ function NewOpportunitySheet({
   externalConsultants: ExternalConsultantOption[];
   companies: CompanyOption[];
   contacts: ContactPreview[];
+  cvPortraitMap: Map<number, string>;
   userId: string | null;
   onCreated: () => Promise<void>;
 }) {
@@ -1010,7 +1129,13 @@ function NewOpportunitySheet({
   const [note, setNote] = useState("");
   const [saving, setSaving] = useState(false);
 
-  const consultantOptions = consultantType === "intern" ? employees : externalConsultants;
+  const consultantOptions = useMemo(
+    () =>
+      consultantType === "intern"
+        ? employees.filter(isActiveOpportunityEmployee)
+        : externalConsultants.filter(isActiveExternalConsultant),
+    [consultantType, employees, externalConsultants],
+  );
   const filteredConsultants = useMemo(() => {
     const query = consultantSearch.trim().toLowerCase();
     return consultantOptions
@@ -1075,6 +1200,11 @@ function NewOpportunitySheet({
 
     setSaving(true);
     try {
+      if (!userId) {
+        toast.error("Du må være innlogget for å opprette mulighet");
+        return;
+      }
+
       const { error } = await supabase.from("pipeline_muligheter").insert({
         konsulent_type: consultantType,
         ansatt_id: consultantType === "intern" ? Number(consultantId) : null,
@@ -1141,8 +1271,12 @@ function NewOpportunitySheet({
               options={filteredConsultants.map((consultant) => ({
                 id: String(consultant.id),
                 label: consultant.navn || "Uten navn",
-                meta: consultant.status,
+                avatarUrl:
+                  consultantType === "intern"
+                    ? cvPortraitMap.get(Number(consultant.id)) || (consultant as EmployeeOption).bilde_url || null
+                    : null,
               }))}
+              showAvatar
               onSelect={(option) => {
                 setConsultantId(option.id);
                 setConsultantSearch(option.label);
@@ -1174,7 +1308,6 @@ function NewOpportunitySheet({
               options={filteredCompanies.map((company) => ({
                 id: company.id,
                 label: company.name,
-                meta: company.status,
               }))}
               onSelect={(option) => {
                 setCompanyId(option.id);
@@ -1266,6 +1399,7 @@ type SearchSelectOption = {
   id: string;
   label: string;
   meta?: string | null;
+  avatarUrl?: string | null;
 };
 
 function SearchSelect({
@@ -1278,6 +1412,7 @@ function SearchSelect({
   emptyText,
   disabled = false,
   required = false,
+  showAvatar = false,
   options,
   onSelect,
   onClear,
@@ -1291,6 +1426,7 @@ function SearchSelect({
   emptyText: string;
   disabled?: boolean;
   required?: boolean;
+  showAvatar?: boolean;
   options: SearchSelectOption[];
   onSelect: (option: SearchSelectOption) => void;
   onClear: () => void;
@@ -1334,12 +1470,31 @@ function SearchSelect({
                 type="button"
                 onMouseDown={(event) => event.preventDefault()}
                 onClick={() => onSelect(option)}
-                className="w-full px-3 py-2 text-left transition-colors hover:bg-[#F6F7F9]"
+                className="flex w-full items-center gap-2.5 px-3 py-2 text-left transition-colors hover:bg-[#F6F7F9]"
               >
-                <p className="truncate" style={{ fontSize: 13, color: C.text, fontWeight: 500 }}>{option.label}</p>
-                {option.meta ? (
-                  <p className="truncate" style={{ fontSize: 11, color: C.textFaint }}>{option.meta}</p>
+                {showAvatar ? (
+                  option.avatarUrl ? (
+                    <img
+                      src={option.avatarUrl}
+                      alt={option.label}
+                      className="h-7 w-7 shrink-0 rounded-full border object-cover"
+                      style={{ borderColor: C.borderLight }}
+                    />
+                  ) : (
+                    <span
+                      className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full"
+                      style={{ background: C.filterActiveBg, color: C.textPrimary, fontSize: 10, fontWeight: 650 }}
+                    >
+                      {getInitials(option.label)}
+                    </span>
+                  )
                 ) : null}
+                <span className="min-w-0">
+                  <p className="truncate" style={{ fontSize: 13, color: C.text, fontWeight: 500 }}>{option.label}</p>
+                  {option.meta ? (
+                    <p className="truncate" style={{ fontSize: 11, color: C.textFaint }}>{option.meta}</p>
+                  ) : null}
+                </span>
               </button>
             ))
           )}
