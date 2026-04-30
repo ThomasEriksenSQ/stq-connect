@@ -739,8 +739,7 @@ export default function Pipeline() {
             onChange={(value) => setSourceFilter(sourceFilterValue(value))}
           />
 
-          <div className="grid gap-2 pt-3 sm:grid-cols-2 lg:grid-cols-4">
-            <PipelineStat label="Tilgjengelige" value={stats.available} />
+          <div className="grid gap-2 pt-3 sm:grid-cols-3">
             <PipelineStat label="Sendt CV" value={stats.sentCv} />
             <PipelineStat label="Intervju" value={stats.interviews} />
             <PipelineStat label="Vunnet" value={stats.won} />
