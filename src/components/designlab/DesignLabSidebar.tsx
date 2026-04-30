@@ -3,7 +3,7 @@ import { useTheme } from "next-themes";
 import { User } from "@supabase/supabase-js";
 import {
   Users, Building2, LayoutDashboard, Briefcase, Settings, LogOut,
-  UserPlus, Radar, TrendingUp, Globe, Clock, Menu, PanelLeftClose, PanelLeftOpen, X,
+  UserPlus, Radar, TrendingUp, Globe, Clock, Menu, PanelLeftClose, PanelLeftOpen, X, GitBranch,
 } from "lucide-react";
 import { C } from "@/components/designlab/theme";
 import { ThemeModeButton, ThemeModeControl } from "@/components/ThemeModeControl";
@@ -25,6 +25,7 @@ const NAV_MAIN: { label: string; icon: typeof LayoutDashboard; key: CrmNavItem }
   { label: "Selskaper", icon: Building2, key: "companies" },
   { label: "Kontakter", icon: Users, key: "contacts" },
   { label: "Forespørsler", icon: Briefcase, key: "requests" },
+  { label: "Pipeline", icon: GitBranch, key: "pipeline" },
   { label: "Oppfølginger", icon: Clock, key: "followUps" },
 ];
 

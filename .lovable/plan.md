@@ -1,73 +1,34 @@
-## Problem
+## Mål
 
-Sletting av en pipeline-mulighet bruker `window.confirm`, som gir nettleserens stygge dialog ("På en innebygd side på ... står det"). Den globale regelen krever en pen bekreftelsesdialog med "Er du sikker?", "Ja, slett" og "Avbryt".
+Legg til "Pipeline" som menyvalg i venstre sidemeny, rett under "Forespørsler", med passende ikon. Klikk skal navigere til `/pipeline`.
 
-## Endring i `src/pages/Pipeline.tsx`
+## Endringer
 
-1. **Importer AlertDialog**:
-   ```ts
-   import {
-     AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
-     AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
-   } from "@/components/ui/alert-dialog";
-   ```
+### 1. `src/lib/crmNavigation.ts`
 
-2. **Ny state** ved siden av andre `useState`-kall:
-   ```ts
-   const [pendingDelete, setPendingDelete] = useState<PipelineItem | null>(null);
-   const [deletingOpportunity, setDeletingOpportunity] = useState(false);
-   ```
+Legg til `pipeline` som en `CrmNavItem` og map den til `/pipeline` (samme rute uavhengig av alias siden Pipeline ikke har egen design-lab-variant):
 
-3. **Erstatt `deleteOpportunity` (linje 683–694)** — fjern `window.confirm`, bare åpne dialogen:
-   ```ts
-   const deleteOpportunity = (item: PipelineItem) => {
-     if (item.source !== "mulighet") return;
-     setPendingDelete(item);
-   };
+```ts
+export type CrmNavItem =
+  | "dashboard" | "companies" | "contacts" | "requests"
+  | "pipeline"
+  | "followUps" | "stacqPrisen" | "markedsradar"
+  | "activeAssignments" | "employees" | "externalConsultants"
+  | "websiteAi" | "settings";
+```
 
-   const confirmDeleteOpportunity = async () => {
-     if (!pendingDelete) return;
-     setDeletingOpportunity(true);
-     const { error } = await supabase
-       .from("pipeline_muligheter")
-       .delete()
-       .eq("id", pendingDelete.sourceId as string);
-     setDeletingOpportunity(false);
-     if (error) {
-       toast.error("Kunne ikke slette mulighet");
-       return;
-     }
-     setPendingDelete(null);
-     await invalidatePipelineQueries();
-     toast.success("Mulighet slettet");
-   };
-   ```
+I `ROOT_NAV_PATHS` og `DESIGN_LAB_NAV_PATHS`, legg til:
+```ts
+pipeline: "/pipeline",
+```
+(samme verdi i begge — ruten finnes kun på `/pipeline` i `App.tsx`).
 
-4. **Render `<AlertDialog>` rett før det avsluttende `</div>`** i `Pipeline`-komponenten (rundt linje 853, etter `<CommandPalette … />`):
-   ```tsx
-   <AlertDialog open={!!pendingDelete} onOpenChange={(open) => !open && setPendingDelete(null)}>
-     <AlertDialogContent>
-       <AlertDialogHeader>
-         <AlertDialogTitle>Er du sikker?</AlertDialogTitle>
-         <AlertDialogDescription>
-           Slette muligheten "{pendingDelete?.title}"? Dette kan ikke angres.
-         </AlertDialogDescription>
-       </AlertDialogHeader>
-       <AlertDialogFooter>
-         <AlertDialogCancel disabled={deletingOpportunity}>Avbryt</AlertDialogCancel>
-         <AlertDialogAction
-           onClick={(e) => { e.preventDefault(); void confirmDeleteOpportunity(); }}
-           disabled={deletingOpportunity}
-           className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-         >
-           Ja, slett
-         </AlertDialogAction>
-       </AlertDialogFooter>
-     </AlertDialogContent>
-   </AlertDialog>
-   ```
+### 2. `src/components/designlab/DesignLabSidebar.tsx`
 
-### Effekt
-- Klikk på "Slett" på en mulighet åpner en pen modal i stedet for nettleserdialog.
-- "Avbryt" lukker uten endring; "Ja, slett" sletter og viser toast.
-- Følger global slette-regel ("Er du sikker?" / "Ja, slett" / "Avbryt").
+- Importer `GitBranch` fra `lucide-react` (passende ikon for "pipeline").
+- I `NAV_MAIN`, legg til en ny rad rett under Forespørsler:
+  ```ts
+  { label: "Pipeline", icon: GitBranch, key: "pipeline" },
+  ```
+
+Resultat: Pipeline vises i hovedmenyen mellom "Forespørsler" og "Oppfølginger", med GitBranch-ikon, og lenker til `/pipeline`. Active-state håndteres automatisk via eksisterende `getNavItemFromPath`.

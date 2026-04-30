@@ -9,6 +9,7 @@ export type CrmNavItem =
   | "companies"
   | "contacts"
   | "requests"
+  | "pipeline"
   | "followUps"
   | "stacqPrisen"
   | "markedsradar"
@@ -23,6 +24,7 @@ const ROOT_NAV_PATHS: Record<CrmNavItem, string> = {
   companies: "/selskaper",
   contacts: "/kontakter",
   requests: "/foresporsler",
+  pipeline: "/pipeline",
   followUps: "/oppfolginger",
   stacqPrisen: "/stacq/prisen",
   markedsradar: "/markedsradar",
@@ -38,6 +40,7 @@ const DESIGN_LAB_NAV_PATHS: Record<CrmNavItem, string> = {
   companies: "/design-lab/selskaper",
   contacts: "/design-lab/kontakter",
   requests: "/design-lab/foresporsler",
+  pipeline: "/pipeline",
   followUps: "/design-lab/oppfolginger",
   stacqPrisen: "/design-lab/stacq-prisen",
   markedsradar: "/design-lab/markedsradar",
