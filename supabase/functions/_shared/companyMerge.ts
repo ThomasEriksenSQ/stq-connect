@@ -63,14 +63,6 @@ export function getCompanyMergeBlockingConflicts(source: MergeableCompany, targe
     conflicts.push("Ulikt org.nr");
   }
 
-  if (
-    hasValue(source.sf_account_id) &&
-    hasValue(target.sf_account_id) &&
-    source.sf_account_id !== target.sf_account_id
-  ) {
-    conflicts.push("Ulik Salesforce-ID");
-  }
-
   return conflicts;
 }
 
