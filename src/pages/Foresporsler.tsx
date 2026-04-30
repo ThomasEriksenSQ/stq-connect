@@ -230,7 +230,7 @@ function AiTeknologiBox({
           className="flex items-center gap-1 text-[0.75rem] text-primary hover:underline"
         >
           <Sparkles className="h-3 w-3" />
-          Analyser tekst
+          Legg til teknologier fra tekst
         </button>
       </div>
       {show && (
