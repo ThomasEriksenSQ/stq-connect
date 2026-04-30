@@ -24,6 +24,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { BrregSearch, lookupByOrgNr } from "@/components/BrregSearch";
 import { toast } from "@/components/ui/sonner";
 import { useCrmNavigation } from "@/lib/crmNavigation";
+import { fetchCompanyListActivitySummary } from "@/lib/companyListActivity";
 import {
   GEO_FILTERS,
   companyMatchesGeoFilter,
@@ -327,75 +328,23 @@ export default function DesignLabCompanies() {
         .order("name");
       if (error) throw error;
 
-      const companyIds = data.map((c) => c.id);
-      const companyIdSet = new Set(companyIds);
-      const contactIds = data.flatMap((c) => (c.contacts || []).map((ct: any) => ct.id));
-
-      const [actRes, taskRes, contactActRes, contactTaskRes] = await Promise.all([
-        supabase.from("activities").select("company_id, created_at, subject, description")
-          .not("company_id", "is", null).order("created_at", { ascending: false }).limit(2000),
-        supabase.from("tasks").select("company_id, due_date, title, description, status, created_at")
-          .not("company_id", "is", null).neq("status", "done").limit(2000),
-        supabase.from("activities").select("contact_id, created_at, subject, description")
-          .not("contact_id", "is", null).order("created_at", { ascending: false }).limit(2000),
-        supabase.from("tasks").select("contact_id, due_date, title, description, status, created_at")
-          .not("contact_id", "is", null).neq("status", "done").limit(2000),
-      ]);
-
-      const contactToCompany: Record<string, string> = {};
-      data.forEach((c) => (c.contacts || []).forEach((ct: any) => { contactToCompany[ct.id] = c.id; }));
-
-      const now = new Date();
-      const isPast = (d: string) => new Date(d) <= now;
-      const lastActivityMap: Record<string, string> = {};
-      const taskCountMap: Record<string, number> = {};
-      const overdueTaskMap: Record<string, boolean> = {};
-      const companyActsMap: Record<string, any[]> = {};
-      const companyTasksMap: Record<string, any[]> = {};
-
-      (actRes.data || []).forEach((a) => {
-        if (!a.company_id || !companyIdSet.has(a.company_id)) return;
-        if (isPast(a.created_at) && !lastActivityMap[a.company_id]) lastActivityMap[a.company_id] = a.created_at;
-      });
-
-      ((contactActRes as any).data || []).forEach((a: any) => {
-        const cid = contactToCompany[a.contact_id];
-        if (!cid) return;
-        if (isPast(a.created_at) && (!lastActivityMap[cid] || a.created_at > lastActivityMap[cid]))
-          lastActivityMap[cid] = a.created_at;
-        if (!companyActsMap[cid]) companyActsMap[cid] = [];
-        companyActsMap[cid].push(a);
-      });
-
-      (taskRes.data || []).forEach((t) => {
-        if (!t.company_id || !companyIdSet.has(t.company_id)) return;
-        taskCountMap[t.company_id] = (taskCountMap[t.company_id] || 0) + 1;
-        if (t.due_date && new Date(t.due_date) < new Date()) overdueTaskMap[t.company_id] = true;
-      });
-
-      ((contactTaskRes as any).data || []).forEach((t: any) => {
-        const cid = contactToCompany[t.contact_id];
-        if (!cid) return;
-        taskCountMap[cid] = (taskCountMap[cid] || 0) + 1;
-        if (t.due_date && new Date(t.due_date) < new Date()) overdueTaskMap[cid] = true;
-        if (!companyTasksMap[cid]) companyTasksMap[cid] = [];
-        companyTasksMap[cid].push(t);
-      });
+      const activitySummary = await fetchCompanyListActivitySummary(supabase, data);
 
       const signalMap: Record<string, string> = {};
       for (const c of data) {
         const sig = getEffectiveSignal(
-          (companyActsMap[c.id] || []).map((a: any) => ({ created_at: a.created_at, subject: a.subject, description: a.description })),
-          (companyTasksMap[c.id] || []).map((t: any) => ({ created_at: t.created_at, title: t.title, description: t.description, due_date: t.due_date })),
+          (activitySummary.companyActsMap[c.id] || []).map((a: any) => ({ created_at: a.created_at, subject: a.subject, description: a.description })),
+          (activitySummary.companyTasksMap[c.id] || []).map((t: any) => ({ created_at: t.created_at, title: t.title, description: t.description, due_date: t.due_date })),
         );
         signalMap[c.id] = sig || "";
       }
 
       return data.map((c) => ({
         ...c,
-        lastActivity: lastActivityMap[c.id] || null,
-        taskCount: taskCountMap[c.id] || 0,
-        hasOverdue: overdueTaskMap[c.id] || false,
+        lastActivity: activitySummary.lastActivityMap[c.id] || null,
+        activityCount: activitySummary.activityCountMap[c.id] || 0,
+        taskCount: activitySummary.taskCountMap[c.id] || 0,
+        hasOverdue: activitySummary.overdueTaskMap[c.id] || false,
         signal: signalMap[c.id] || "",
         contactCount: (c.contacts || []).length,
         ownerName: (c.profiles as any)?.full_name || "",
@@ -611,7 +560,7 @@ export default function DesignLabCompanies() {
     if (ownerFilter === "Uten eier") list = list.filter((c: any) => !c.ownerId);
     else if (ownerFilter !== "Alle") list = list.filter((c: any) => c.ownerName === ownerFilter);
     if (typeFilter === "Aldri kontaktet") {
-      list = list.filter((c: any) => (c.contactCount || 0) === 0 || !c.lastActivity);
+      list = list.filter((c: any) => (c.contactCount || 0) === 0 || (c.activityCount || 0) === 0);
     } else if (typeFilter !== "Alle") {
       const dbValue = TYPE_LABEL_TO_VALUE[typeFilter];
       if (dbValue) list = list.filter((c: any) => c.status === dbValue || (dbValue === "customer" && c.status === "kunde"));
