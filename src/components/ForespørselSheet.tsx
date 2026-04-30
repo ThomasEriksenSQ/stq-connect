@@ -359,8 +359,8 @@ function MissingContactBanner({ row }: { row: any }) {
   };
 
   return (
-    <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 space-y-2">
-      <p className="text-[0.8125rem] text-amber-800">
+    <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 space-y-2 dark:border-amber-800/70 dark:bg-amber-950/20">
+      <p className="text-[0.8125rem] text-amber-800 dark:text-amber-200">
         ⚠️ Denne forespørselen mangler kontakt — legg til en kontakt for å holde CRM oppdatert
       </p>
       {row.selskap_id && (
@@ -371,7 +371,7 @@ function MissingContactBanner({ row }: { row: any }) {
             onFocus={() => { setShowDropdown(true); if (search) doSearch(search); }}
             onBlur={() => setTimeout(() => setShowDropdown(false), 200)}
             placeholder="Søk etter kontakt..."
-            className="text-[0.8125rem] h-8 bg-white"
+            className="text-[0.8125rem] h-8 bg-background"
           />
           {showDropdown && results.length > 0 && (
             <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-card border border-border rounded-lg shadow-md max-h-[160px] overflow-y-auto">
@@ -2125,15 +2125,15 @@ function EditMode(props: any) {
 
       {/* Partner banner */}
       {isPartner && (
-        <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 space-y-2">
-          <p className="text-[0.8125rem] text-amber-800">
+        <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 space-y-2 dark:border-amber-800/70 dark:bg-amber-950/20">
+          <p className="text-[0.8125rem] text-amber-800 dark:text-amber-200">
             Forespørselen kom via en partner — hvem er sluttkunden?
           </p>
           <Input
             value={sluttkunde}
             onChange={(e: any) => setSluttkunde(e.target.value)}
             placeholder="f.eks. Kongsberg Defence, Equinor..."
-            className="h-10 rounded-lg bg-white"
+            className="h-10 rounded-lg bg-background"
           />
         </div>
       )}

@@ -184,7 +184,7 @@ export function DesignLabSidebar({ navigate, signOut, user, activePath }: Design
               borderRadius: px(12),
               paddingTop: px(6),
               paddingBottom: px(6),
-              boxShadow: "0 1px 2px rgba(15,23,42,0.04), inset 0 1px 0 rgba(255,255,255,0.55)",
+              boxShadow: C.shadow,
             }}
           >
             <div
@@ -356,7 +356,7 @@ export function DesignLabMobileNavButton({ navigate, signOut, user, activePath }
                   borderRadius: px(12),
                   paddingTop: px(6),
                   paddingBottom: px(6),
-                  boxShadow: "0 1px 2px rgba(15,23,42,0.04), inset 0 1px 0 rgba(255,255,255,0.55)",
+                  boxShadow: C.shadow,
                 }}
               >
                 <div

@@ -164,6 +164,11 @@ html {
     --dl-signal-no-bg: #FAEBEC;
     --dl-signal-no-text: #8B1D20;
     --dl-signal-no-border: #E8B8BA;
+    --dl-map-bg: #EEF6FB;
+    --dl-map-grid: #D7E3EA;
+    --dl-map-land: #E8F0E4;
+    --dl-map-land-border: #9CB391;
+    --dl-map-label: #64748B;
     --dl-shadow: 0 1px 2px rgba(0,0,0,0.05);
     --dl-shadow-md: 0 4px 12px rgba(0,0,0,0.08);
     --dl-shadow-lg: 0 8px 32px rgba(0,0,0,0.11);
@@ -266,6 +271,11 @@ html {
     --dl-signal-no-bg: rgba(240,135,139,0.14);
     --dl-signal-no-text: #F4A2A5;
     --dl-signal-no-border: rgba(240,135,139,0.34);
+    --dl-map-bg: #101722;
+    --dl-map-grid: #263244;
+    --dl-map-land: #193223;
+    --dl-map-land-border: #3E6F50;
+    --dl-map-label: #8FA0B7;
     --dl-shadow: 0 1px 2px rgba(0,0,0,0.28);
     --dl-shadow-md: 0 12px 30px rgba(0,0,0,0.34);
     --dl-shadow-lg: 0 18px 48px rgba(0,0,0,0.42);
@@ -544,6 +554,49 @@ html {
 .dl-v8-theme .bg-card,
 .dl-v8-theme [class*="bg-card"] {
   background-color: var(--dl-surface);
+}
+
+.dark .dl-v8-theme .bg-white,
+.dark .dl-v8-theme [class*="bg-white"] {
+  background-color: var(--dl-surface);
+}
+
+.dark .dl-v8-theme .text-gray-500,
+.dark .dl-v8-theme .text-gray-600 {
+  color: var(--dl-text-muted);
+}
+
+.dark .dl-v8-theme .border-gray-200 {
+  border-color: var(--dl-border);
+}
+
+.dark .dl-v8-theme [class*="bg-[#E8ECF5]"],
+.dark .dl-v8-theme [class*="bg-[#F0F2F6]"],
+.dark .dl-v8-theme [class*="bg-[#F3F5F9]"] {
+  background-color: var(--dl-filter-active-bg);
+}
+
+.dark .dl-v8-theme [class*="text-[#1A1C1F]"],
+.dark .dl-v8-theme [class*="text-[#374151]"],
+.dark .dl-v8-theme [class*="text-[#3A3F4A]"],
+.dark .dl-v8-theme [class*="text-[#4B5563]"],
+.dark .dl-v8-theme [class*="text-[#5C636E]"],
+.dark .dl-v8-theme [class*="text-[#6B7280]"],
+.dark .dl-v8-theme [class*="text-[#8C929C]"] {
+  color: var(--dl-text-muted);
+}
+
+.dark .dl-v8-theme [class*="border-[#C5CBE8]"],
+.dark .dl-v8-theme [class*="border-[#DDE0E7]"],
+.dark .dl-v8-theme [class*="border-[#E8EAEE]"] {
+  border-color: var(--dl-border);
+}
+
+.dark .dl-v8-theme [class*="hover:bg-[#F8F9FB]"]:hover,
+.dark .dl-v8-theme [class*="hover:bg-[#F0F2F6]"]:hover,
+.dark .dl-v8-theme [class*="hover:bg-[#F6F7F9]"]:hover,
+.dark .dl-v8-theme [class*="hover:bg-[#F1F4F9]"]:hover {
+  background-color: var(--dl-hover-bg);
 }
 
 /* V8 scrollbar */

@@ -36,7 +36,7 @@ function formatCurrency(value: number) {
 
 function LoadingTable() {
   return (
-    <div className="overflow-hidden rounded-2xl border border-border bg-white shadow-sm">
+    <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
       <div className="border-b border-border px-6 py-5">
         <Skeleton className="h-5 w-44" />
         <Skeleton className="mt-3 h-4 w-72" />
@@ -137,7 +137,7 @@ export default function Okonomi() {
   }, [months]);
 
   return (
-    <div className="min-h-screen bg-white text-foreground">
+    <div className="min-h-screen bg-background text-foreground">
       <main className="mx-auto flex w-full max-w-7xl flex-col gap-8 px-6 py-10 lg:px-10">
         <header className="space-y-2">
           <p className="text-sm font-medium uppercase tracking-[0.18em] text-muted-foreground">Tripletex</p>
@@ -167,7 +167,7 @@ export default function Okonomi() {
         ) : null}
 
         {!loading && !error && months.length > 0 ? (
-          <section className="overflow-hidden rounded-2xl border border-border bg-white shadow-sm">
+          <section className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
             <div className="border-b border-border px-6 py-5">
               <h2 className="text-lg font-semibold text-foreground">Resultatregnskap per måned</h2>
               <p className="mt-1 text-sm text-muted-foreground">Jan til inneværende måned, med YTD-summer i siste kolonne.</p>
@@ -176,7 +176,7 @@ export default function Okonomi() {
             <Table>
               <TableHeader>
                 <TableRow className="hover:bg-transparent">
-                  <TableHead className="min-w-[220px] bg-white font-semibold text-foreground">Kategori</TableHead>
+                  <TableHead className="min-w-[220px] bg-card font-semibold text-foreground">Kategori</TableHead>
                   {monthLabels.map((month) => (
                     <TableHead key={month} className="min-w-[120px] text-right font-semibold text-foreground">
                       {month}

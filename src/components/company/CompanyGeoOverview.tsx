@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import { MapPin } from "lucide-react";
+import { C } from "@/components/designlab/theme";
 import { buildCompanyGeoSummary, type CompanyGeoCluster, type CompanyGeoInput } from "@/lib/companyGeo";
 
 type CompanyGeoOverviewProps = {
@@ -165,8 +166,8 @@ export function CompanyGeoOverview({
   const activePosition = activeCluster ? projectCoord(activeCluster.coord) : null;
   const panelHeight = mapHeight ?? (compact ? 220 : 270);
   const wrapperStyle: CSSProperties = {
-    borderColor: "#D9DDE7",
-    background: "#F8FAFC",
+    borderColor: C.border,
+    background: C.surfaceAlt,
   };
 
   return (
@@ -174,15 +175,15 @@ export function CompanyGeoOverview({
       className={`overflow-hidden rounded-[8px] border shadow-[0_1px_2px_rgba(15,23,42,0.06)] ${className}`}
       style={wrapperStyle}
     >
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#E3E7EF] bg-white px-3 py-2">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b px-3 py-2" style={{ borderColor: C.borderLight, background: C.surface }}>
         <div className="flex min-w-0 items-center gap-2">
-          <MapPin className="h-4 w-4 shrink-0 text-[#5E6AD2]" />
-          <span className="text-[0.8125rem] font-semibold text-[#1A1C1F]">Geografisk oversikt</span>
-          <span className="text-[0.75rem] text-[#6B7280]">
+          <MapPin className="h-4 w-4 shrink-0" style={{ color: C.accent }} />
+          <span className="text-[0.8125rem] font-semibold" style={{ color: C.text }}>Geografisk oversikt</span>
+          <span className="text-[0.75rem]" style={{ color: C.textMuted }}>
             {uniqueMappedCompanies}/{companies.length} selskaper
           </span>
         </div>
-        <div className="flex items-center gap-2 text-[0.75rem] text-[#6B7280]">
+        <div className="flex items-center gap-2 text-[0.75rem]" style={{ color: C.textMuted }}>
           <span>{summary.clusters.length} steder</span>
           {summary.missingCompanies.length > 0 && <span>{summary.missingCompanies.length} uten koordinat</span>}
         </div>
@@ -191,7 +192,7 @@ export function CompanyGeoOverview({
       <div className="grid min-h-0 md:grid-cols-[minmax(0,1fr)_220px]">
         <div className="relative min-h-0" style={{ height: panelHeight }}>
           {isLoading ? (
-            <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/70 text-[0.8125rem] text-[#6B7280]">
+            <div className="absolute inset-0 z-10 flex items-center justify-center text-[0.8125rem]" style={{ background: "color-mix(in srgb, var(--dl-surface) 78%, transparent)", color: C.textMuted }}>
               Laster selskaper...
             </div>
           ) : null}
@@ -203,22 +204,22 @@ export function CompanyGeoOverview({
             aria-label="Kart over selskaper"
             onClick={() => setActiveClusterKey(null)}
           >
-            <rect width={MAP_WIDTH} height={MAP_HEIGHT} fill="#EEF6FB" />
+            <rect width={MAP_WIDTH} height={MAP_HEIGHT} fill="var(--dl-map-bg)" />
             {[60, 64, 68].map((lat) => {
               const { y } = projectCoord([lat, MIN_LON]);
-              return <line key={`lat-${lat}`} x1={0} x2={MAP_WIDTH} y1={y} y2={y} stroke="#D7E3EA" strokeWidth={1} />;
+              return <line key={`lat-${lat}`} x1={0} x2={MAP_WIDTH} y1={y} y2={y} stroke="var(--dl-map-grid)" strokeWidth={1} />;
             })}
             {[8, 16, 24].map((lon) => {
               const { x } = projectCoord([MIN_LAT, lon]);
-              return <line key={`lon-${lon}`} x1={x} x2={x} y1={0} y2={MAP_HEIGHT} stroke="#D7E3EA" strokeWidth={1} />;
+              return <line key={`lon-${lon}`} x1={x} x2={x} y1={0} y2={MAP_HEIGHT} stroke="var(--dl-map-grid)" strokeWidth={1} />;
             })}
-            <path d={coordPath(OUTLINE_COORDS)} fill="#E8F0E4" stroke="#9CB391" strokeWidth={2.2} opacity={0.96} />
+            <path d={coordPath(OUTLINE_COORDS)} fill="var(--dl-map-land)" stroke="var(--dl-map-land-border)" strokeWidth={2.2} opacity={0.96} />
             {ISLAND_COORDS.map((coords, index) => (
               <path
                 key={`island-${index}`}
                 d={coordPath(coords)}
-                fill="#E8F0E4"
-                stroke="#9CB391"
+                fill="var(--dl-map-land)"
+                stroke="var(--dl-map-land-border)"
                 strokeWidth={1.6}
                 opacity={0.9}
               />
@@ -226,7 +227,7 @@ export function CompanyGeoOverview({
             {CITY_LABELS.map((city) => {
               const { x, y } = projectCoord(city.coord);
               return (
-                <text key={city.label} x={x + 8} y={y - 8} fill="#64748B" fontSize={18} fontWeight={600} opacity={0.72}>
+                <text key={city.label} x={x + 8} y={y - 8} fill="var(--dl-map-label)" fontSize={18} fontWeight={600} opacity={0.72}>
                   {city.label}
                 </text>
               );
@@ -275,17 +276,20 @@ export function CompanyGeoOverview({
 
           {activeCluster && activePosition ? (
             <div
-              className="absolute z-20 max-h-[180px] w-[240px] overflow-auto rounded-[8px] border border-[#D9DDE7] bg-white p-2 shadow-[0_16px_40px_rgba(15,23,42,0.18)]"
+              className="absolute z-20 max-h-[180px] w-[240px] overflow-auto rounded-[8px] border p-2"
               style={{
                 left: `${clamp((activePosition.x / MAP_WIDTH) * 100, 16, 84)}%`,
                 top: `${clamp((activePosition.y / MAP_HEIGHT) * 100, 18, 76)}%`,
                 transform: "translate(-50%, -12px)",
+                borderColor: C.border,
+                background: C.surface,
+                boxShadow: C.shadowLg,
               }}
               onMouseLeave={() => setActiveClusterKey(null)}
             >
               <div className="mb-1 flex items-center justify-between gap-2">
-                <span className="truncate text-[0.8125rem] font-semibold text-[#1A1C1F]">{activeCluster.locationLabel}</span>
-                <span className="shrink-0 text-[0.6875rem] font-medium text-[#6B7280]">
+                <span className="truncate text-[0.8125rem] font-semibold" style={{ color: C.text }}>{activeCluster.locationLabel}</span>
+                <span className="shrink-0 text-[0.6875rem] font-medium" style={{ color: C.textMuted }}>
                   {getClusterCompanyCount(activeCluster)}
                 </span>
               </div>
@@ -295,13 +299,16 @@ export function CompanyGeoOverview({
                     key={`${activeCluster.key}-${company.companyId}`}
                     type="button"
                     onClick={() => onCompanySelect?.(company.companyId)}
-                    className="block w-full truncate rounded-[6px] px-2 py-1 text-left text-[0.75rem] text-[#374151] hover:bg-[#F1F4F9]"
+                    className="block w-full truncate rounded-[6px] px-2 py-1 text-left text-[0.75rem] transition-colors"
+                    style={{ color: C.textMuted }}
+                    onMouseEnter={(event) => { event.currentTarget.style.background = C.hoverBg; event.currentTarget.style.color = C.text; }}
+                    onMouseLeave={(event) => { event.currentTarget.style.background = "transparent"; event.currentTarget.style.color = C.textMuted; }}
                   >
                     {company.companyName}
                   </button>
                 ))}
                 {activeCluster.companies.length > 12 ? (
-                  <div className="px-2 py-1 text-[0.6875rem] text-[#6B7280]">
+                  <div className="px-2 py-1 text-[0.6875rem]" style={{ color: C.textMuted }}>
                     +{activeCluster.companies.length - 12} flere
                   </div>
                 ) : null}
@@ -310,23 +317,25 @@ export function CompanyGeoOverview({
           ) : null}
         </div>
 
-        <div className="hidden border-l border-[#E3E7EF] bg-white md:block">
-          <div className="border-b border-[#E3E7EF] px-3 py-2 text-[0.6875rem] font-semibold uppercase text-[#6B7280]">
+        <div className="hidden border-l md:block" style={{ borderColor: C.borderLight, background: C.surface }}>
+          <div className="border-b px-3 py-2 text-[0.6875rem] font-semibold uppercase" style={{ borderColor: C.borderLight, color: C.textMuted }}>
             Flest selskaper
           </div>
-          <div className="divide-y divide-[#EEF1F5]">
+          <div className="divide-y" style={{ borderColor: C.borderLight }}>
             {topClusters.length === 0 ? (
-              <div className="px-3 py-4 text-[0.75rem] text-[#6B7280]">Ingen steder å vise</div>
+              <div className="px-3 py-4 text-[0.75rem]" style={{ color: C.textMuted }}>Ingen steder å vise</div>
             ) : (
               topClusters.map((cluster) => (
                 <button
                   key={cluster.key}
                   type="button"
                   onClick={() => setActiveClusterKey(cluster.key)}
-                  className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left hover:bg-[#F8FAFC]"
+                  className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left transition-colors"
+                  onMouseEnter={(event) => { event.currentTarget.style.background = C.hoverBg; }}
+                  onMouseLeave={(event) => { event.currentTarget.style.background = "transparent"; }}
                 >
-                  <span className="min-w-0 truncate text-[0.75rem] font-medium text-[#374151]">{cluster.locationLabel}</span>
-                  <span className="shrink-0 rounded-[6px] bg-[#EEF1F5] px-2 py-0.5 text-[0.6875rem] font-semibold text-[#4B5563]">
+                  <span className="min-w-0 truncate text-[0.75rem] font-medium" style={{ color: C.textMuted }}>{cluster.locationLabel}</span>
+                  <span className="shrink-0 rounded-[6px] px-2 py-0.5 text-[0.6875rem] font-semibold" style={{ background: C.surfaceAlt, color: C.textMuted }}>
                     {getClusterCompanyCount(cluster)}
                   </span>
                 </button>

@@ -1390,8 +1390,8 @@ function ConsultantTypeTag({ type }: { type: ConsultantType }) {
     <DesignLabStaticTag
       colors={
         type === "intern"
-          ? { background: "#111827", color: "#FFFFFF", border: "1px solid #111827", fontWeight: 650 }
-          : { background: "#EAF0F9", color: "#1A4FA0", border: "1px solid #B3C8E8", fontWeight: 600 }
+          ? { background: C.text, color: C.appBg, border: `1px solid ${C.text}`, fontWeight: 650 }
+          : { background: C.infoBg, color: C.info, border: `1px solid ${C.info}`, fontWeight: 600 }
       }
     >
       {consultantTypeLabel(type)}
@@ -1829,15 +1829,15 @@ function SearchSelect({
           type="button"
           onMouseDown={(event) => event.preventDefault()}
           onClick={onClear}
-          className="absolute right-2 top-1/2 inline-flex -translate-y-1/2 items-center justify-center rounded-sm text-[#8C929C] hover:text-[#1F2328]"
-          style={{ width: 22, height: 22 }}
+          className="absolute right-2 top-1/2 inline-flex -translate-y-1/2 items-center justify-center rounded-sm"
+          style={{ width: 22, height: 22, color: C.textFaint }}
           aria-label="Nullstill valg"
         >
           <X style={{ width: 13, height: 13 }} />
         </button>
       ) : null}
       {open && !disabled ? (
-        <div className="absolute left-0 right-0 top-full z-50 mt-1 max-h-56 overflow-y-auto rounded-md border bg-white shadow-lg" style={{ borderColor: C.borderDefault }}>
+        <div className="absolute left-0 right-0 top-full z-50 mt-1 max-h-56 overflow-y-auto rounded-md border shadow-lg" style={{ borderColor: C.borderDefault, background: C.surface }}>
           {options.length === 0 ? (
             <p className="px-3 py-2.5" style={{ fontSize: 12, color: C.textFaint }}>{emptyText}</p>
           ) : (
@@ -1847,7 +1847,9 @@ function SearchSelect({
                 type="button"
                 onMouseDown={(event) => event.preventDefault()}
                 onClick={() => onSelect(option)}
-                className="flex w-full items-center gap-2.5 px-3 py-2 text-left transition-colors hover:bg-[#F6F7F9]"
+                className="flex w-full items-center gap-2.5 px-3 py-2 text-left transition-colors"
+                onMouseEnter={(event) => { event.currentTarget.style.background = C.hoverBg; }}
+                onMouseLeave={(event) => { event.currentTarget.style.background = "transparent"; }}
               >
                 {showAvatar ? (
                   option.avatarUrl ? (
