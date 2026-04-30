@@ -609,7 +609,7 @@ export default function DesignLabForesporsler() {
    ═══════════════════════════════════════════════════════════ */
 
 function TableHeader({ sort, onSort }: { sort: { field: SortField; dir: SortDir }; onSort: (f: SortField) => void }) {
-  const cols = "minmax(160px,1.2fr) 120px minmax(160px,1.2fr) 80px minmax(160px,1.1fr) minmax(170px,1.2fr) minmax(110px,0.8fr) 88px";
+  const cols = "minmax(160px,1.2fr) 120px minmax(160px,1.2fr) 108px minmax(160px,1.1fr) minmax(170px,1.2fr) minmax(110px,0.8fr) 88px";
 
   return (
     <div
@@ -659,7 +659,7 @@ function ForespRow({
   const sendt = row.foresporsler_konsulenter || [];
   const technologies = getVisibleTechnologies(row.teknologier);
   const signal = row.contacts?.id ? signalByContactId.get(row.contacts.id) || null : null;
-  const cols = "minmax(160px,1.2fr) 120px minmax(160px,1.2fr) 80px minmax(160px,1.1fr) minmax(170px,1.2fr) minmax(110px,0.8fr) 88px";
+  const cols = "minmax(160px,1.2fr) 120px minmax(160px,1.2fr) 108px minmax(160px,1.1fr) minmax(170px,1.2fr) minmax(110px,0.8fr) 88px";
 
   return (
     <div
