@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  getConsultantAvailabilityBlockDates,
   getConsultantAvailabilityMeta,
   getConsultantMatchTags,
   getTechnologyMatchTags,
@@ -63,6 +64,43 @@ describe("contactHunt", () => {
       tone: "unknown",
       isVisible: true,
     });
+  });
+
+  it("uses future assignment end date as the effective availability date", () => {
+    const today = new Date("2026-05-01T12:00:00");
+
+    expect(getConsultantAvailabilityMeta("2026-04-01", "2026-05-08", today)).toMatchObject({
+      daysUntil: 7,
+      label: "Tilgjengelig 8. mai",
+      tone: "soon",
+      isVisible: true,
+    });
+
+    expect(hasConsultantAvailability("2026-04-01", "2026-05-08")).toBe(true);
+  });
+
+  it("sorts consultants by the effective availability date including assignment end date", () => {
+    const sorted = sortHuntConsultants([
+      { navn: "Tom Erik", tilgjengelig_fra: isoDate(-10), availability_blocked_until: isoDate(7) },
+      { navn: "Ledig Nå", tilgjengelig_fra: isoDate(0), availability_blocked_until: null },
+    ]);
+
+    expect(sorted.map((consultant) => consultant.navn)).toEqual(["Ledig Nå", "Tom Erik"]);
+  });
+
+  it("finds the latest active assignment date per consultant", () => {
+    expect(
+      getConsultantAvailabilityBlockDates([
+        { ansatt_id: 42, slutt_dato: "2026-05-08", forny_dato: "2026-05-01" },
+        { ansatt_id: 42, slutt_dato: "2026-05-15", forny_dato: null },
+        { ansatt_id: 51, slutt_dato: null, forny_dato: "2026-06-01" },
+      ]),
+    ).toEqual(
+      new Map([
+        [42, "2026-05-15"],
+        [51, "2026-06-01"],
+      ]),
+    );
   });
 
   it("derives consultant overlap tags across contact and company dna", () => {

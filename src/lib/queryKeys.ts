@@ -6,6 +6,8 @@ export const crmQueryKeys = {
     detail: (contactId: string) => ["contact", contactId] as const,
     activities: (contactId: string) => ["contact-activities", contactId] as const,
     tasks: (contactId: string) => ["contact-tasks", contactId] as const,
+    huntConsultants: () => ["contacts-hunt-consultants"] as const,
+    designLabHuntConsultants: () => ["dl-available-consultants-v9"] as const,
   },
   sentCv: {
     contact: (contactId: string) => ["contact-sent-cv", contactId] as const,
@@ -76,6 +78,8 @@ export const oppdragQueryKeys = [
   crmQueryKeys.oppdrag.prisen(),
   crmQueryKeys.oppdrag.activeNames(),
   crmQueryKeys.oppdrag.fornyelser(),
+  crmQueryKeys.contacts.huntConsultants(),
+  crmQueryKeys.contacts.designLabHuntConsultants(),
 ] as const satisfies readonly QueryKey[];
 
 export async function invalidateQueryGroup(queryClient: QueryClient, queryKeys: readonly QueryKey[]) {

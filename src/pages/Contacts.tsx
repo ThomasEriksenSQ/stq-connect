@@ -30,6 +30,7 @@ import {
 import { crmQueryKeys, crmSummaryQueryKeys, invalidateQueryGroup } from "@/lib/queryKeys";
 import { mergeTechnologyTags } from "@/lib/technologyTags";
 import {
+  getConsultantAvailabilityBlockDates,
   getConsultantAvailabilityMeta,
   hasConsultantAvailability,
   hasRecentActualActivity,
@@ -70,7 +71,7 @@ type SortDir = "asc" | "desc";
 type HuntConsultant = Pick<
   Database["public"]["Tables"]["stacq_ansatte"]["Row"],
   "id" | "navn" | "status" | "tilgjengelig_fra" | "kompetanse" | "slutt_dato"
->;
+> & { availability_blocked_until?: string | null };
 type OwnerPreview = { id: string; full_name: string } | null;
 type CompanyPreview = Pick<
   Database["public"]["Tables"]["companies"]["Row"],
@@ -550,7 +551,7 @@ const Contacts = () => {
   });
 
   const { data: huntConsultants = [], isLoading: huntConsultantsLoading } = useQuery({
-    queryKey: ["contacts-hunt-consultants"],
+    queryKey: crmQueryKeys.contacts.huntConsultants(),
     queryFn: async () => {
       const { data, error } = await supabase
         .from("stacq_ansatte")
@@ -558,8 +559,24 @@ const Contacts = () => {
         .in("status", ["AKTIV/SIGNERT", "Ledig"])
         .not("tilgjengelig_fra", "is", null);
       if (error) throw error;
-      return sortHuntConsultants(((data || []) as HuntConsultant[]).filter((consultant) =>
-        hasConsultantAvailability(consultant.tilgjengelig_fra) && !isEmployeeEndDatePassed(consultant.slutt_dato),
+
+      const consultants = (data || []) as HuntConsultant[];
+      const consultantIds = consultants.map((consultant) => consultant.id);
+      const { data: activeOppdrag, error: oppdragError } = consultantIds.length
+        ? await supabase
+            .from("stacq_oppdrag")
+            .select("ansatt_id, slutt_dato, forny_dato")
+            .in("ansatt_id", consultantIds)
+            .in("status", ["Aktiv", "Oppstart"])
+        : { data: [], error: null };
+      if (oppdragError) throw oppdragError;
+
+      const availabilityBlockedByAnsattId = getConsultantAvailabilityBlockDates(activeOppdrag || []);
+      return sortHuntConsultants(consultants.map((consultant) => ({
+        ...consultant,
+        availability_blocked_until: availabilityBlockedByAnsattId.get(consultant.id) || null,
+      })).filter((consultant) =>
+        hasConsultantAvailability(consultant.tilgjengelig_fra, consultant.availability_blocked_until) && !isEmployeeEndDatePassed(consultant.slutt_dato),
       ));
     },
   });
@@ -1550,7 +1567,7 @@ const Contacts = () => {
             ? [1, 2, 3].map((item) => <div key={item} className="h-12 w-44 rounded-xl bg-secondary/50 animate-pulse" />)
             : huntConsultants.map((consultant) => {
                 const isSelected = selectedConsultantId === consultant.id;
-                const availability = getConsultantAvailabilityMeta(consultant.tilgjengelig_fra);
+                const availability = getConsultantAvailabilityMeta(consultant.tilgjengelig_fra, consultant.availability_blocked_until);
 
                 return (
                   <button

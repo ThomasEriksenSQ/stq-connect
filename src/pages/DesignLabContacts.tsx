@@ -16,6 +16,7 @@ import { nb } from "date-fns/locale";
 import { getEffectiveSignal, normalizeCategoryLabel } from "@/lib/categoryUtils";
 import { toast } from "@/components/ui/sonner";
 import {
+  getConsultantAvailabilityBlockDates,
   getConsultantAvailabilityMeta,
   hasConsultantAvailability,
   hasRecentActualActivity,
@@ -209,6 +210,7 @@ type HuntConsultant = {
   adresse: string | null;
   postnummer: string | null;
   poststed: string | null;
+  availability_blocked_until?: string | null;
 };
 
 type MatchLeadBase = {
@@ -306,7 +308,7 @@ const DL_QUERY_KEYS = {
   tasks: ["dl-tasks-v9"] as const,
   foresporsler: ["dl-foresporsler-v9"] as const,
   techProfiles: ["dl-tech-profiles-v9"] as const,
-  consultants: ["dl-available-consultants-v9"] as const,
+  consultants: crmQueryKeys.contacts.designLabHuntConsultants(),
 } as const;
 
 const AVAILABLE_CONSULTANT_SELECT =
@@ -768,6 +770,24 @@ export default function DesignLabContacts() {
   const { data: availableConsultants = [] } = useQuery({
     queryKey: DL_QUERY_KEYS.consultants,
     queryFn: async () => {
+      const withAvailabilityBlocks = async (consultants: HuntConsultant[]) => {
+        const consultantIds = consultants.map((consultant) => consultant.id);
+        const { data: activeOppdrag, error: oppdragError } = consultantIds.length
+          ? await supabase
+              .from("stacq_oppdrag")
+              .select("ansatt_id, slutt_dato, forny_dato")
+              .in("ansatt_id", consultantIds)
+              .in("status", ["Aktiv", "Oppstart"])
+          : { data: [], error: null };
+        if (oppdragError) throw oppdragError;
+
+        const availabilityBlockedByAnsattId = getConsultantAvailabilityBlockDates(activeOppdrag || []);
+        return consultants.map((consultant) => ({
+          ...consultant,
+          availability_blocked_until: availabilityBlockedByAnsattId.get(consultant.id) || null,
+        }));
+      };
+
       const { data, error } = await supabase
         .from("stacq_ansatte")
         .select(AVAILABLE_CONSULTANT_SELECT)
@@ -781,14 +801,15 @@ export default function DesignLabContacts() {
           .in("status", ["AKTIV/SIGNERT", "Ledig"])
           .not("tilgjengelig_fra", "is", null);
         if (fallback.error) throw fallback.error;
-        return (fallback.data || []).map((consultant) => ({
+        const normalized = (fallback.data || []).map((consultant) => ({
           ...consultant,
           adresse: null,
           postnummer: null,
           poststed: null,
         }));
+        return withAvailabilityBlocks(normalized as HuntConsultant[]);
       }
-      return data || [];
+      return withAvailabilityBlocks((data || []) as HuntConsultant[]);
     },
     staleTime: 5 * 60 * 1000,
   });
@@ -796,7 +817,7 @@ export default function DesignLabContacts() {
   const sortedConsultants = useMemo(() => {
     return sortHuntConsultants(
       (availableConsultants as HuntConsultant[]).filter((consultant) =>
-        hasConsultantAvailability(consultant.tilgjengelig_fra) && !isEmployeeEndDatePassed(consultant.slutt_dato),
+        hasConsultantAvailability(consultant.tilgjengelig_fra, consultant.availability_blocked_until) && !isEmployeeEndDatePassed(consultant.slutt_dato),
       ),
     );
   }, [availableConsultants]);
@@ -2548,7 +2569,7 @@ export default function DesignLabContacts() {
             <div className="flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: "none" }}>
               {sortedConsultants.map((con) => {
                 const isSelected = selectedConsultantId === con.id;
-                const meta = getConsultantAvailabilityMeta(con.tilgjengelig_fra);
+                const meta = getConsultantAvailabilityMeta(con.tilgjengelig_fra, con.availability_blocked_until);
                 const nameParts = con.navn.split(" ");
                 const initials = (nameParts[0]?.[0] || "") + (nameParts[nameParts.length - 1]?.[0] || "");
                 const toneColor = isSelected
