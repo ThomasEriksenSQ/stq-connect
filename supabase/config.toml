@@ -83,3 +83,6 @@ verify_jwt = false
 
 [functions.task-due-reminder]
 verify_jwt = false
+
+[functions.tripletex-okonomis]
+verify_jwt = true

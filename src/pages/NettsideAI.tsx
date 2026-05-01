@@ -8,7 +8,7 @@ import { format } from "date-fns";
 import * as pdfjsLib from "pdfjs-dist";
 import mammoth from "mammoth";
 
-pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.worker.min.mjs";
 import { nb } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 

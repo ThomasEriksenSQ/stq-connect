@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
-import * as XLSX from "xlsx";
 import {
   Bar,
   BarChart,
@@ -51,6 +50,7 @@ import {
 import { useCrmNavigation } from "@/lib/crmNavigation";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
+import { excelCellToText, readFirstSheetObjects } from "@/lib/readExcel";
 
 type FinnAnnonse = FinnAnnonseInput & {
   created_at: string | null;
@@ -1375,22 +1375,27 @@ function ImportModal({ open, onClose, refetch }: { open: boolean; onClose: () =>
   const [processResult, setProcessResult] = useState<ProcessFinnImportResult | null>(null);
   const [fileName, setFileName] = useState("");
 
-  const handleFile = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFile = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
+    if (!file.name.toLowerCase().endsWith(".xlsx")) {
+      toast({
+        title: "Ugyldig filtype",
+        description: "Kun .xlsx-filer støttes.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setFileName(file.name);
 
-    const reader = new FileReader();
-    reader.onload = (loadEvent) => {
-      const data = new Uint8Array(loadEvent.target!.result as ArrayBuffer);
-      const workbook = XLSX.read(data, { type: "array" });
-      const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-      const json = XLSX.utils.sheet_to_json<Record<string, unknown>>(worksheet, { defval: "" });
+    try {
+      const json = await readFirstSheetObjects(file);
 
       const mapped = json
         .map((row) => {
           const dato = excelDate(row["Dato"] || row["dato"]);
-          const selskap = String(row["Selskap"] || row["selskap"] || "").trim();
+          const selskap = excelCellToText(row["Selskap"] || row["selskap"] || null).trim();
           if (!dato || !selskap) return null;
 
           const lower = selskap.toLowerCase();
@@ -1401,23 +1406,28 @@ function ImportModal({ open, onClose, refetch }: { open: boolean; onClose: () =>
             uke: getIsoWeekStr(parseISO(dato)),
             selskap,
             stillingsrolle:
-              String(row["Stillingsrolle"] || row["stillingsrolle"] || row["Rolle"] || row["rolle"] || "").trim() ||
+              excelCellToText(row["Stillingsrolle"] || row["stillingsrolle"] || row["Rolle"] || row["rolle"] || null).trim() ||
               null,
-            lokasjon: String(row["Lokasjon"] || row["lokasjon"] || row["Sted"] || row["sted"] || "").trim() || null,
-            teknologier: String(row["Teknologier"] || row["teknologier"] || "").trim() || null,
-            lenke: String(row["Lenke"] || row["lenke"] || row["URL"] || row["url"] || "").trim() || null,
-            kontaktnavn: String(row["Kontaktnavn"] || row["kontaktnavn"] || "").trim() || null,
+            lokasjon: excelCellToText(row["Lokasjon"] || row["lokasjon"] || row["Sted"] || row["sted"] || null).trim() || null,
+            teknologier: excelCellToText(row["Teknologier"] || row["teknologier"] || null).trim() || null,
+            lenke: excelCellToText(row["Lenke"] || row["lenke"] || row["URL"] || row["url"] || null).trim() || null,
+            kontaktnavn: excelCellToText(row["Kontaktnavn"] || row["kontaktnavn"] || null).trim() || null,
             kontakt_epost:
-              String(row["Kontakt epost"] || row["kontakt_epost"] || row["Kontakt_epost"] || "").trim() || null,
+              excelCellToText(row["Kontakt epost"] || row["kontakt_epost"] || row["Kontakt_epost"] || null).trim() || null,
             kontakt_telefon:
-              String(row["Kontakt telefon"] || row["kontakt_telefon"] || row["Kontakt_telefon"] || "").trim() || null,
+              excelCellToText(row["Kontakt telefon"] || row["kontakt_telefon"] || row["Kontakt_telefon"] || null).trim() || null,
           };
         })
         .filter(Boolean);
 
       setRows(mapped as FinnImportRow[]);
-    };
-    reader.readAsArrayBuffer(file);
+    } catch (error) {
+      toast({
+        title: "Feil",
+        description: error instanceof Error ? error.message : "Kunne ikke lese Excel-filen",
+        variant: "destructive",
+      });
+    }
   };
 
   const doImport = async () => {
@@ -1526,7 +1536,7 @@ function ImportModal({ open, onClose, refetch }: { open: boolean; onClose: () =>
         </DialogHeader>
 
         <div className="space-y-4">
-          <Input type="file" accept=".xlsx,.xls" onChange={handleFile} />
+          <Input type="file" accept=".xlsx" onChange={handleFile} />
           {fileName && (
             <p className="text-[0.8125rem] text-muted-foreground">
               {fileName} - {rows.length} rader
@@ -1602,8 +1612,9 @@ function ImportModal({ open, onClose, refetch }: { open: boolean; onClose: () =>
 
 function excelDate(value: unknown): string | null {
   if (!value) return null;
+  if (value instanceof Date && !Number.isNaN(value.valueOf())) return value.toISOString().slice(0, 10);
   if (typeof value === "number") {
-    const date = new Date((value - 25569) * 86400 * 1000);
+    const date = new Date(Date.UTC(1899, 11, 30) + value * 86400 * 1000);
     return date.toISOString().slice(0, 10);
   }
 

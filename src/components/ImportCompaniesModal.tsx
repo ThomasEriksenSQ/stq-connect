@@ -6,8 +6,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { toast } from "@/components/ui/sonner";
 import { Upload, CheckCircle2, AlertTriangle, XCircle, Loader2, ArrowRight } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
-import * as XLSX from "xlsx";
 import { findBestCompanyMatch, normalizeCompanyName } from "@/lib/companyMatch";
+import { excelCellToText, readFirstSheetObjects } from "@/lib/readExcel";
 
 type ParsedRow = {
   selskap: string;
@@ -75,20 +75,17 @@ export function ImportCompaniesModal({ open, onOpenChange }: { open: boolean; on
   const [dragOver, setDragOver] = useState(false);
 
   const handleFile = useCallback(async (file: File) => {
-    const buf = await file.arrayBuffer();
-    const wb = XLSX.read(buf, { type: "array" });
-    const ws = wb.Sheets[wb.SheetNames[0]];
-    const json = XLSX.utils.sheet_to_json<Record<string, unknown>>(ws);
+    const json = await readFirstSheetObjects(file);
 
     const parsed: ParsedRow[] = json.map((r) => ({
-      selskap: String(r["Selskap"] || r["selskap"] || "").trim(),
-      bransje: String(r["Bransje"] || r["bransje"] || "").trim(),
-      sted: String(r["Sted"] || r["sted"] || "").trim(),
-      url: String(r["URL"] || r["url"] || r["Url"] || "").trim(),
-      linkedin: String(r["Linkedin"] || r["linkedin"] || r["LinkedIn"] || "").trim(),
-      org_nr: String(r["Organisasjonsnummer"] || r["organisasjonsnummer"] || r["Org.nr"] || "").replace(/\D/g, "").trim(),
-      ansatte: String(r["Antall ansatte"] || r["antall_ansatte"] || "").trim(),
-      kontaktpersoner: String(r["Kontaktpersoner"] || r["kontaktpersoner"] || "").trim(),
+      selskap: excelCellToText(r["Selskap"] || r["selskap"] || null).trim(),
+      bransje: excelCellToText(r["Bransje"] || r["bransje"] || null).trim(),
+      sted: excelCellToText(r["Sted"] || r["sted"] || null).trim(),
+      url: excelCellToText(r["URL"] || r["url"] || r["Url"] || null).trim(),
+      linkedin: excelCellToText(r["Linkedin"] || r["linkedin"] || r["LinkedIn"] || null).trim(),
+      org_nr: excelCellToText(r["Organisasjonsnummer"] || r["organisasjonsnummer"] || r["Org.nr"] || null).replace(/\D/g, "").trim(),
+      ansatte: excelCellToText(r["Antall ansatte"] || r["antall_ansatte"] || null).trim(),
+      kontaktpersoner: excelCellToText(r["Kontaktpersoner"] || r["kontaktpersoner"] || null).trim(),
     })).filter((r) => r.selskap);
 
     const [{ data: existing, error: existingError }, { data: aliases, error: aliasesError }] = await Promise.all([
@@ -147,7 +144,7 @@ export function ImportCompaniesModal({ open, onOpenChange }: { open: boolean; on
     e.preventDefault();
     setDragOver(false);
     const f = e.dataTransfer.files[0];
-    if (f && f.name.endsWith(".xlsx")) handleFile(f);
+    if (f && f.name.toLowerCase().endsWith(".xlsx")) handleFile(f);
     else toast.error("Kun .xlsx-filer støttes");
   }, [handleFile]);
 

@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
 
 const TRIPLETEX_BASE_URL = "https://tripletex.no/v2";
@@ -32,6 +33,41 @@ function jsonResponse(body: unknown, status = 200) {
       "Cache-Control": "no-store",
     },
   });
+}
+
+async function requireAdmin(req: Request) {
+  const authHeader = req.headers.get("Authorization");
+  if (!authHeader?.startsWith("Bearer ")) {
+    return jsonResponse({ error: "Unauthorized" }, 401);
+  }
+
+  const supabaseUrl = Deno.env.get("SUPABASE_URL");
+  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  if (!supabaseUrl || !serviceRoleKey) {
+    return jsonResponse({ error: "Supabase auth secrets mangler." }, 500);
+  }
+
+  const supabase = createClient(supabaseUrl, serviceRoleKey, {
+    auth: { persistSession: false },
+  });
+  const token = authHeader.replace("Bearer ", "");
+  const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+  if (authError || !user) {
+    return jsonResponse({ error: "Unauthorized" }, 401);
+  }
+
+  const { data: isAdmin, error: roleError } = await supabase.rpc("has_role", {
+    _user_id: user.id,
+    _role: "admin",
+  });
+  if (roleError) {
+    return jsonResponse({ error: roleError.message }, 500);
+  }
+  if (!isAdmin) {
+    return jsonResponse({ error: "Forbidden" }, 403);
+  }
+
+  return null;
 }
 
 function getOsloDateParts(date: Date) {
@@ -218,6 +254,9 @@ serve(async (req) => {
   }
 
   try {
+    const authErrorResponse = await requireAdmin(req);
+    if (authErrorResponse) return authErrorResponse;
+
     const consumerToken = Deno.env.get("TRIPLETEX_CONSUMER_TOKEN");
     const employeeToken = Deno.env.get("TRIPLETEX_EMPLOYEE_TOKEN");
 

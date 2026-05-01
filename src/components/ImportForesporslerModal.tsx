@@ -6,8 +6,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { toast } from "@/components/ui/sonner";
 import { Upload, CheckCircle2, Loader2, ArrowRight } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
-import * as XLSX from "xlsx";
 import { normalizeCompanyName } from "@/lib/companyMatch";
+import { excelCellToText, readFirstSheetRows, type ExcelCell } from "@/lib/readExcel";
 
 type ParsedRow = {
   mottatt: string;
@@ -33,11 +33,12 @@ function normalizeType(raw: string): string {
   return raw.trim() || "DIR";
 }
 
-function parseExcelDate(v: any): string {
+function parseExcelDate(v: ExcelCell): string {
   if (!v) return "";
+  if (v instanceof Date) return v.toISOString().slice(0, 10);
   if (typeof v === "number") {
-    const d = XLSX.SSF.parse_date_code(v);
-    if (d) return `${d.y}-${String(d.m).padStart(2, "0")}-${String(d.d).padStart(2, "0")}`;
+    const date = new Date(Date.UTC(1899, 11, 30) + v * 24 * 60 * 60 * 1000);
+    return date.toISOString().slice(0, 10);
   }
   const s = String(v).trim();
   // MM/DD/YY or MM/DD/YYYY
@@ -60,28 +61,25 @@ export function ImportForesporslerModal({ open, onOpenChange }: { open: boolean;
   const [dragOver, setDragOver] = useState(false);
 
   const handleFile = useCallback(async (file: File) => {
-    const buf = await file.arrayBuffer();
-    const wb = XLSX.read(buf, { type: "array" });
-    const ws = wb.Sheets[wb.SheetNames[0]];
-    const json: any[][] = XLSX.utils.sheet_to_json(ws, { header: 1 });
+    const json = await readFirstSheetRows(file);
 
     // Skip header row
     const dataRows = json.slice(1).filter((r) => r.length >= 4 && r[3]);
 
     const parsed: ParsedRow[] = dataRows.map((r) => {
-      const techRaw = String(r[7] || "").trim();
+      const techRaw = excelCellToText(r[7]).trim();
       const teknologier = techRaw
         ? techRaw.split(/,\s*/).map((t: string) => t.trim()).filter(Boolean)
         : [];
       return {
         mottatt: parseExcelDate(r[1]),
         frist: parseExcelDate(r[2]),
-        selskap: String(r[3] || "").trim(),
-        sted: String(r[4] || "").trim(),
-        type: normalizeType(String(r[5] || "")),
-        referanse: String(r[6] || "").trim(),
+        selskap: excelCellToText(r[3]).trim(),
+        sted: excelCellToText(r[4]).trim(),
+        type: normalizeType(excelCellToText(r[5])),
+        referanse: excelCellToText(r[6]).trim(),
         teknologier,
-        kommentar: String(r[8] || "").trim(),
+        kommentar: excelCellToText(r[8]).trim(),
       };
     });
 
@@ -133,7 +131,7 @@ export function ImportForesporslerModal({ open, onOpenChange }: { open: boolean;
     e.preventDefault();
     setDragOver(false);
     const f = e.dataTransfer.files[0];
-    if (f && f.name.endsWith(".xlsx")) handleFile(f);
+    if (f && f.name.toLowerCase().endsWith(".xlsx")) handleFile(f);
     else toast.error("Kun .xlsx-filer støttes");
   }, [handleFile]);
 
