@@ -28,7 +28,7 @@ type OkonomiResponse = {
 
 type RowDefinition = {
   label: string;
-  values: number[];
+  values: Array<number | null>;
   ytd: number;
   emphasis?: "default" | "subtotal" | "total";
   tone?: "default" | "result";
@@ -53,6 +53,14 @@ function formatCurrency(value: number) {
 function formatPercent(value: number) {
   if (!Number.isFinite(value)) return "0,0%";
   return `${value.toLocaleString("nb-NO", { maximumFractionDigits: 1, minimumFractionDigits: 1 })}%`;
+}
+
+function getMonthReadyKey(month: string) {
+  return `2026-${month}`;
+}
+
+function getReadyValue(month: OkonomiMonth, readyMonthKeys: Set<string>, value: number) {
+  return readyMonthKeys.has(getMonthReadyKey(month.month)) ? value : null;
 }
 
 function LoadingTable() {
@@ -136,6 +144,7 @@ export default function Okonomi() {
   const navigate = useNavigate();
   const { signOut, user } = useAuth();
   const [textSize] = usePersistentState<TextSize>("dl-text-size", "M");
+  const [readyMonths, setReadyMonths] = usePersistentState<Record<string, boolean>>("okonomi-ready-months-2026", {});
   const [months, setMonths] = useState<OkonomiMonth[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -180,6 +189,18 @@ export default function Okonomi() {
   }, [loadOkonomi]);
 
   const monthLabels = useMemo(() => months.map((entry) => entry.month), [months]);
+  const readyMonthKeys = useMemo(() => {
+    return new Set(months.filter((month) => readyMonths[getMonthReadyKey(month.month)]).map((month) => getMonthReadyKey(month.month)));
+  }, [months, readyMonths]);
+  const readyMonthsList = useMemo(() => months.filter((month) => readyMonthKeys.has(getMonthReadyKey(month.month))), [months, readyMonthKeys]);
+
+  const toggleReadyMonth = (month: string) => {
+    const key = getMonthReadyKey(month);
+    setReadyMonths((current) => ({
+      ...current,
+      [key]: !current[key],
+    }));
+  };
 
   const rows = useMemo<RowDefinition[]>(() => {
     const driftsresultat = months.map(
@@ -189,52 +210,52 @@ export default function Okonomi() {
     const rowDefinitions: RowDefinition[] = [
       {
         label: "Omsetning",
-        values: months.map((entry) => entry.omsetning),
-        ytd: months.reduce((sum, entry) => sum + entry.omsetning, 0),
+        values: months.map((entry) => getReadyValue(entry, readyMonthKeys, entry.omsetning)),
+        ytd: readyMonthsList.reduce((sum, entry) => sum + entry.omsetning, 0),
         emphasis: "default",
       },
       {
         label: "Lønnskostnader",
-        values: months.map((entry) => entry.lonnskostnader),
-        ytd: months.reduce((sum, entry) => sum + entry.lonnskostnader, 0),
+        values: months.map((entry) => getReadyValue(entry, readyMonthKeys, entry.lonnskostnader)),
+        ytd: readyMonthsList.reduce((sum, entry) => sum + entry.lonnskostnader, 0),
         emphasis: "default",
       },
       {
         label: "Andre driftskostnader",
-        values: months.map((entry) => entry.andreDriftskostnader),
-        ytd: months.reduce((sum, entry) => sum + entry.andreDriftskostnader, 0),
+        values: months.map((entry) => getReadyValue(entry, readyMonthKeys, entry.andreDriftskostnader)),
+        ytd: readyMonthsList.reduce((sum, entry) => sum + entry.andreDriftskostnader, 0),
         emphasis: "default",
       },
       {
         label: "Driftsresultat",
-        values: driftsresultat,
-        ytd: driftsresultat.reduce((sum, value) => sum + value, 0),
+        values: months.map((entry, index) => getReadyValue(entry, readyMonthKeys, driftsresultat[index] || 0)),
+        ytd: readyMonthsList.reduce((sum, entry) => sum + entry.omsetning - entry.lonnskostnader - entry.andreDriftskostnader, 0),
         emphasis: "subtotal",
         tone: "result",
       },
       {
         label: "Finansnetto",
-        values: months.map((entry) => entry.finansnetto),
-        ytd: months.reduce((sum, entry) => sum + entry.finansnetto, 0),
+        values: months.map((entry) => getReadyValue(entry, readyMonthKeys, entry.finansnetto)),
+        ytd: readyMonthsList.reduce((sum, entry) => sum + entry.finansnetto, 0),
         emphasis: "default",
         tone: "result",
       },
       {
         label: "Resultat før skatt",
-        values: months.map((entry) => entry.resultatForSkatt),
-        ytd: months.reduce((sum, entry) => sum + entry.resultatForSkatt, 0),
+        values: months.map((entry) => getReadyValue(entry, readyMonthKeys, entry.resultatForSkatt)),
+        ytd: readyMonthsList.reduce((sum, entry) => sum + entry.resultatForSkatt, 0),
         emphasis: "total",
         tone: "result",
       },
     ];
 
     return rowDefinitions;
-  }, [months]);
+  }, [months, readyMonthKeys, readyMonthsList]);
 
   const metrics = useMemo<MetricDefinition[]>(() => {
-    const omsetningYtd = months.reduce((sum, entry) => sum + entry.omsetning, 0);
-    const resultatYtd = months.reduce((sum, entry) => sum + entry.resultatForSkatt, 0);
-    const latest = months.at(-1);
+    const omsetningYtd = readyMonthsList.reduce((sum, entry) => sum + entry.omsetning, 0);
+    const resultatYtd = readyMonthsList.reduce((sum, entry) => sum + entry.resultatForSkatt, 0);
+    const latest = readyMonthsList.at(-1);
     const latestResult = latest?.resultatForSkatt ?? 0;
     const margin = omsetningYtd > 0 ? (resultatYtd / omsetningYtd) * 100 : 0;
 
@@ -242,7 +263,7 @@ export default function Okonomi() {
       {
         label: "Omsetning YTD",
         value: formatCurrency(omsetningYtd),
-        sub: `${months.length} måneder`,
+        sub: `${readyMonthsList.length} av ${months.length} måneder ferdig`,
         icon: Banknote,
       },
       {
@@ -262,12 +283,12 @@ export default function Okonomi() {
       {
         label: "Siste måned",
         value: latest ? formatCurrency(latestResult) : "0 kr",
-        sub: latest?.month ?? "Ingen periode",
+        sub: latest ? `${latest.month} er ferdig` : "Ingen måneder ferdig",
         icon: RefreshCw,
         tone: latestResult < 0 ? "negative" : "positive",
       },
     ];
-  }, [months]);
+  }, [months.length, readyMonthsList]);
 
   return (
     <div
@@ -377,11 +398,11 @@ export default function Okonomi() {
                                   row.emphasis !== "default" && "font-medium",
                                 )}
                                 style={{
-                                  color: row.tone === "result" && value < 0 ? C.danger : C.text,
+                                  color: value === null ? C.textGhost : row.tone === "result" && value < 0 ? C.danger : C.text,
                                   fontWeight: row.emphasis === "total" ? 650 : undefined,
                                 }}
                               >
-                                {formatCurrency(value)}
+                                {value === null ? "Ikke klart" : formatCurrency(value)}
                               </TableCell>
                             ))}
                             <TableCell
@@ -395,6 +416,43 @@ export default function Okonomi() {
                             </TableCell>
                           </TableRow>
                         ))}
+                        <TableRow className="transition-colors" style={{ borderColor: C.borderLight, background: C.panel }}>
+                          <TableCell
+                            className="sticky left-0 z-10 font-medium"
+                            style={{ background: C.panel, color: C.text, fontWeight: 650 }}
+                          >
+                            Måned klar
+                          </TableCell>
+                          {monthLabels.map((month) => {
+                            const ready = readyMonths[getMonthReadyKey(month)] === true;
+                            return (
+                              <TableCell key={`ready-${month}`} className="text-right">
+                                <label className="inline-flex cursor-pointer select-none items-center justify-end gap-2">
+                                  <input
+                                    type="checkbox"
+                                    checked={ready}
+                                    onChange={() => toggleReadyMonth(month)}
+                                    aria-label={`Marker ${month} som ferdig`}
+                                    className="h-4 w-4 rounded border-border accent-[var(--dl-accent-check)]"
+                                    style={{ ["--dl-accent-check" as string]: C.accent }}
+                                  />
+                                  <span
+                                    style={{
+                                      color: ready ? C.success : C.textFaint,
+                                      fontSize: 12,
+                                      fontWeight: ready ? 650 : 500,
+                                    }}
+                                  >
+                                    {ready ? "Ferdig" : "Ikke klart"}
+                                  </span>
+                                </label>
+                              </TableCell>
+                            );
+                          })}
+                          <TableCell className="text-right" style={{ color: C.textMuted, fontSize: 12, fontWeight: 600 }}>
+                            {readyMonthsList.length}/{months.length} ferdig
+                          </TableCell>
+                        </TableRow>
                       </TableBody>
                     </Table>
                   </div>
