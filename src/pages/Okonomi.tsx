@@ -24,12 +24,17 @@ type OkonomiMonth = {
 
 type OkonomiResponse = {
   months: OkonomiMonth[];
+  previousYearMonths?: OkonomiMonth[];
+  year?: number;
+  previousYear?: number;
 };
 
 type RowDefinition = {
   label: string;
   values: Array<number | null>;
+  previousValues: Array<number | null>;
   ytd: number;
+  previousYtd: number;
   emphasis?: "default" | "subtotal" | "total";
   tone?: "default" | "result";
 };
@@ -53,6 +58,24 @@ function formatCurrency(value: number) {
 function formatPercent(value: number) {
   if (!Number.isFinite(value)) return "0,0%";
   return `${value.toLocaleString("nb-NO", { maximumFractionDigits: 1, minimumFractionDigits: 1 })}%`;
+}
+
+function getChangePercent(current: number | null, previous: number | null) {
+  if (current === null || previous === null || previous === 0) return null;
+  return ((current - previous) / Math.abs(previous)) * 100;
+}
+
+function formatChangePercent(value: number | null) {
+  if (value === null) return "n/a";
+  const prefix = value > 0 ? "+" : "";
+  return `${prefix}${formatPercent(value)}`;
+}
+
+function getChangeColor(value: number | null) {
+  if (value === null) return C.textGhost;
+  if (value > 0) return C.success;
+  if (value < 0) return C.danger;
+  return C.textFaint;
 }
 
 function getMonthReadyKey(month: string) {
@@ -146,6 +169,8 @@ export default function Okonomi() {
   const [textSize] = usePersistentState<TextSize>("dl-text-size", "M");
   const [readyMonths, setReadyMonths] = usePersistentState<Record<string, boolean>>("okonomi-ready-months-2026", {});
   const [months, setMonths] = useState<OkonomiMonth[]>([]);
+  const [previousYearMonths, setPreviousYearMonths] = useState<OkonomiMonth[]>([]);
+  const [previousYear, setPreviousYear] = useState(2025);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -165,12 +190,15 @@ export default function Okonomi() {
 
       if (!cancelled?.()) {
         setMonths(data.months);
+        setPreviousYearMonths(data.previousYearMonths || []);
+        setPreviousYear(data.previousYear || 2025);
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : "Kunne ikke hente økonomidata.";
       if (!cancelled?.()) {
         setError(message);
         setMonths([]);
+        setPreviousYearMonths([]);
       }
     } finally {
       if (!cancelled?.()) {
@@ -193,6 +221,13 @@ export default function Okonomi() {
     return new Set(months.filter((month) => readyMonths[getMonthReadyKey(month.month)]).map((month) => getMonthReadyKey(month.month)));
   }, [months, readyMonths]);
   const readyMonthsList = useMemo(() => months.filter((month) => readyMonthKeys.has(getMonthReadyKey(month.month))), [months, readyMonthKeys]);
+  const previousByMonth = useMemo(() => {
+    return new Map(previousYearMonths.map((entry) => [entry.month, entry]));
+  }, [previousYearMonths]);
+  const readyPreviousMonthsList = useMemo(
+    () => readyMonthsList.map((month) => previousByMonth.get(month.month)).filter((month): month is OkonomiMonth => Boolean(month)),
+    [previousByMonth, readyMonthsList],
+  );
 
   const toggleReadyMonth = (month: string) => {
     const key = getMonthReadyKey(month);
@@ -206,70 +241,89 @@ export default function Okonomi() {
     const driftsresultat = months.map(
       (entry) => entry.omsetning - entry.lonnskostnader - entry.andreDriftskostnader,
     );
+    const previousDriftsresultatByMonth = new Map(
+      previousYearMonths.map((entry) => [entry.month, entry.omsetning - entry.lonnskostnader - entry.andreDriftskostnader]),
+    );
 
     const rowDefinitions: RowDefinition[] = [
       {
         label: "Omsetning",
         values: months.map((entry) => getReadyValue(entry, readyMonthKeys, entry.omsetning)),
+        previousValues: months.map((entry) => getReadyValue(entry, readyMonthKeys, previousByMonth.get(entry.month)?.omsetning ?? 0)),
         ytd: readyMonthsList.reduce((sum, entry) => sum + entry.omsetning, 0),
+        previousYtd: readyPreviousMonthsList.reduce((sum, entry) => sum + entry.omsetning, 0),
         emphasis: "default",
       },
       {
         label: "Lønnskostnader",
         values: months.map((entry) => getReadyValue(entry, readyMonthKeys, entry.lonnskostnader)),
+        previousValues: months.map((entry) => getReadyValue(entry, readyMonthKeys, previousByMonth.get(entry.month)?.lonnskostnader ?? 0)),
         ytd: readyMonthsList.reduce((sum, entry) => sum + entry.lonnskostnader, 0),
+        previousYtd: readyPreviousMonthsList.reduce((sum, entry) => sum + entry.lonnskostnader, 0),
         emphasis: "default",
       },
       {
         label: "Andre driftskostnader",
         values: months.map((entry) => getReadyValue(entry, readyMonthKeys, entry.andreDriftskostnader)),
+        previousValues: months.map((entry) => getReadyValue(entry, readyMonthKeys, previousByMonth.get(entry.month)?.andreDriftskostnader ?? 0)),
         ytd: readyMonthsList.reduce((sum, entry) => sum + entry.andreDriftskostnader, 0),
+        previousYtd: readyPreviousMonthsList.reduce((sum, entry) => sum + entry.andreDriftskostnader, 0),
         emphasis: "default",
       },
       {
         label: "Driftsresultat",
         values: months.map((entry, index) => getReadyValue(entry, readyMonthKeys, driftsresultat[index] || 0)),
+        previousValues: months.map((entry) => getReadyValue(entry, readyMonthKeys, previousDriftsresultatByMonth.get(entry.month) ?? 0)),
         ytd: readyMonthsList.reduce((sum, entry) => sum + entry.omsetning - entry.lonnskostnader - entry.andreDriftskostnader, 0),
+        previousYtd: readyPreviousMonthsList.reduce((sum, entry) => sum + entry.omsetning - entry.lonnskostnader - entry.andreDriftskostnader, 0),
         emphasis: "subtotal",
         tone: "result",
       },
       {
         label: "Finansnetto",
         values: months.map((entry) => getReadyValue(entry, readyMonthKeys, entry.finansnetto)),
+        previousValues: months.map((entry) => getReadyValue(entry, readyMonthKeys, previousByMonth.get(entry.month)?.finansnetto ?? 0)),
         ytd: readyMonthsList.reduce((sum, entry) => sum + entry.finansnetto, 0),
+        previousYtd: readyPreviousMonthsList.reduce((sum, entry) => sum + entry.finansnetto, 0),
         emphasis: "default",
         tone: "result",
       },
       {
         label: "Resultat før skatt",
         values: months.map((entry) => getReadyValue(entry, readyMonthKeys, entry.resultatForSkatt)),
+        previousValues: months.map((entry) => getReadyValue(entry, readyMonthKeys, previousByMonth.get(entry.month)?.resultatForSkatt ?? 0)),
         ytd: readyMonthsList.reduce((sum, entry) => sum + entry.resultatForSkatt, 0),
+        previousYtd: readyPreviousMonthsList.reduce((sum, entry) => sum + entry.resultatForSkatt, 0),
         emphasis: "total",
         tone: "result",
       },
     ];
 
     return rowDefinitions;
-  }, [months, readyMonthKeys, readyMonthsList]);
+  }, [months, previousByMonth, previousYearMonths, readyMonthKeys, readyMonthsList, readyPreviousMonthsList]);
 
   const metrics = useMemo<MetricDefinition[]>(() => {
     const omsetningYtd = readyMonthsList.reduce((sum, entry) => sum + entry.omsetning, 0);
     const resultatYtd = readyMonthsList.reduce((sum, entry) => sum + entry.resultatForSkatt, 0);
+    const previousOmsetningYtd = readyPreviousMonthsList.reduce((sum, entry) => sum + entry.omsetning, 0);
+    const previousResultatYtd = readyPreviousMonthsList.reduce((sum, entry) => sum + entry.resultatForSkatt, 0);
     const latest = readyMonthsList.at(-1);
     const latestResult = latest?.resultatForSkatt ?? 0;
+    const previousLatestResult = latest ? previousByMonth.get(latest.month)?.resultatForSkatt ?? null : null;
     const margin = omsetningYtd > 0 ? (resultatYtd / omsetningYtd) * 100 : 0;
 
     return [
       {
         label: "Omsetning YTD",
         value: formatCurrency(omsetningYtd),
-        sub: `${readyMonthsList.length} av ${months.length} måneder ferdig`,
+        sub: `${formatChangePercent(getChangePercent(omsetningYtd, previousOmsetningYtd))} mot ${previousYear}`,
         icon: Banknote,
+        tone: getChangePercent(omsetningYtd, previousOmsetningYtd) !== null && getChangePercent(omsetningYtd, previousOmsetningYtd)! < 0 ? "negative" : "positive",
       },
       {
         label: "Resultat YTD",
         value: formatCurrency(resultatYtd),
-        sub: "Før skatt",
+        sub: `${formatChangePercent(getChangePercent(resultatYtd, previousResultatYtd))} mot ${previousYear}`,
         icon: TrendingUp,
         tone: resultatYtd < 0 ? "negative" : "positive",
       },
@@ -283,12 +337,12 @@ export default function Okonomi() {
       {
         label: "Siste måned",
         value: latest ? formatCurrency(latestResult) : "0 kr",
-        sub: latest ? `${latest.month} er ferdig` : "Ingen måneder ferdig",
+        sub: latest ? `${formatChangePercent(getChangePercent(latestResult, previousLatestResult))} mot ${latest.month} ${previousYear}` : "Ingen måneder ferdig",
         icon: RefreshCw,
         tone: latestResult < 0 ? "negative" : "positive",
       },
     ];
-  }, [months.length, readyMonthsList]);
+  }, [months.length, previousByMonth, previousYear, readyMonthsList, readyPreviousMonthsList]);
 
   return (
     <div
@@ -337,7 +391,7 @@ export default function Okonomi() {
                     <div className="min-w-0">
                       <h2 style={{ color: C.text, fontSize: 13, fontWeight: 650 }}>Resultatregnskap</h2>
                       <p className="mt-0.5" style={{ color: C.textFaint, fontSize: 12 }}>
-                        Jan til inneværende måned · YTD i siste kolonne
+                        Jan til inneværende måned · YTD i siste kolonne · prosent mot {previousYear}
                       </p>
                     </div>
                     <span style={{ color: C.textMuted, fontSize: 12, fontWeight: 500 }}>Tripletex</span>
@@ -402,7 +456,19 @@ export default function Okonomi() {
                                   fontWeight: row.emphasis === "total" ? 650 : undefined,
                                 }}
                               >
-                                {value === null ? "Ikke klart" : formatCurrency(value)}
+                                {value === null ? (
+                                  "Ikke klart"
+                                ) : (
+                                  <>
+                                    <div>{formatCurrency(value)}</div>
+                                    <div
+                                      className="mt-0.5"
+                                      style={{ color: getChangeColor(getChangePercent(value, row.previousValues[index])), fontSize: 11, fontWeight: 600 }}
+                                    >
+                                      {formatChangePercent(getChangePercent(value, row.previousValues[index]))}
+                                    </div>
+                                  </>
+                                )}
                               </TableCell>
                             ))}
                             <TableCell
@@ -412,7 +478,13 @@ export default function Okonomi() {
                                 fontWeight: row.emphasis === "default" ? 600 : 700,
                               }}
                             >
-                              {formatCurrency(row.ytd)}
+                              <div>{formatCurrency(row.ytd)}</div>
+                              <div
+                                className="mt-0.5"
+                                style={{ color: getChangeColor(getChangePercent(row.ytd, row.previousYtd)), fontSize: 11, fontWeight: 650 }}
+                              >
+                                {formatChangePercent(getChangePercent(row.ytd, row.previousYtd))}
+                              </div>
                             </TableCell>
                           </TableRow>
                         ))}

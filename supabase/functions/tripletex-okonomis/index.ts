@@ -24,6 +24,13 @@ type OkonomiMonth = {
   resultatForSkatt: number;
 };
 
+type OkonomiResponse = {
+  months: OkonomiMonth[];
+  previousYearMonths: OkonomiMonth[];
+  year: number;
+  previousYear: number;
+};
+
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
@@ -141,11 +148,11 @@ async function createSessionToken(consumerToken: string, employeeToken: string) 
   return sessionToken;
 }
 
-async function fetchLedgerPostings(sessionToken: string, monthIndex: number) {
+async function fetchLedgerPostings(sessionToken: string, year: number, monthIndex: number) {
   const month = monthIndex + 1;
-  const dateFrom = `${REPORT_YEAR}-${String(month).padStart(2, "0")}-01`;
+  const dateFrom = `${year}-${String(month).padStart(2, "0")}-01`;
   // Tripletex treats dateTo as exclusive, so we must use the first day of the next month.
-  const nextMonthDate = new Date(Date.UTC(REPORT_YEAR, monthIndex + 1, 1));
+  const nextMonthDate = new Date(Date.UTC(year, monthIndex + 1, 1));
   const dateTo = `${nextMonthDate.getUTCFullYear()}-${String(nextMonthDate.getUTCMonth() + 1).padStart(2, "0")}-${String(
     nextMonthDate.getUTCDate(),
   ).padStart(2, "0")}`;
@@ -174,7 +181,7 @@ async function fetchLedgerPostings(sessionToken: string, monthIndex: number) {
     );
 
     if (!response.ok) {
-      const message = payload?.message ?? `Kunne ikke hente hovedboksposteringer for ${MONTH_LABELS[monthIndex]}.`;
+      const message = payload?.message ?? `Kunne ikke hente hovedboksposteringer for ${MONTH_LABELS[monthIndex]} ${year}.`;
       throw new Error(message);
     }
 
@@ -271,18 +278,34 @@ serve(async (req) => {
 
     const monthIndexes = getMonthIndexesToFetch();
     if (monthIndexes.length === 0) {
-      return jsonResponse({ months: [] });
+      return jsonResponse({
+        months: [],
+        previousYearMonths: [],
+        year: REPORT_YEAR,
+        previousYear: REPORT_YEAR - 1,
+      } satisfies OkonomiResponse);
     }
 
     const sessionToken = await createSessionToken(consumerToken, employeeToken);
     const months = await Promise.all(
       monthIndexes.map(async (monthIndex) => {
-        const postings = await fetchLedgerPostings(sessionToken, monthIndex);
+        const postings = await fetchLedgerPostings(sessionToken, REPORT_YEAR, monthIndex);
+        return aggregateMonth(monthIndex, postings);
+      }),
+    );
+    const previousYearMonths = await Promise.all(
+      monthIndexes.map(async (monthIndex) => {
+        const postings = await fetchLedgerPostings(sessionToken, REPORT_YEAR - 1, monthIndex);
         return aggregateMonth(monthIndex, postings);
       }),
     );
 
-    return jsonResponse({ months });
+    return jsonResponse({
+      months,
+      previousYearMonths,
+      year: REPORT_YEAR,
+      previousYear: REPORT_YEAR - 1,
+    } satisfies OkonomiResponse);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Ukjent feil ved henting av økonomidata.";
     return jsonResponse({ error: message }, 500);
