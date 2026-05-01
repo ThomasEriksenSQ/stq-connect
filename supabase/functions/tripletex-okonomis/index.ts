@@ -19,6 +19,7 @@ type OkonomiMonth = {
   month: string;
   omsetning: number;
   lonnskostnader: number;
+  varekostnad: number;
   andreDriftskostnader: number;
   finansnetto: number;
   resultatForSkatt: number;
@@ -205,6 +206,7 @@ function roundAmount(value: number) {
 function aggregateMonth(monthIndex: number, postings: TripletexPosting[]): OkonomiMonth {
   let omsetning = 0;
   let lonnskostnader = 0;
+  let varekostnad = 0;
   let andreDriftskostnader = 0;
   let finansinntekter = 0;
   let finanskostnader = 0;
@@ -227,7 +229,12 @@ function aggregateMonth(monthIndex: number, postings: TripletexPosting[]): Okono
       continue;
     }
 
-    if ((accountNumber >= 4000 && accountNumber <= 4999) || (accountNumber >= 6000 && accountNumber <= 7999)) {
+    if (accountNumber >= 4000 && accountNumber <= 4999) {
+      varekostnad += amount;
+      continue;
+    }
+
+    if (accountNumber >= 6000 && accountNumber <= 7999) {
       andreDriftskostnader += amount;
       continue;
     }
@@ -243,12 +250,13 @@ function aggregateMonth(monthIndex: number, postings: TripletexPosting[]): Okono
   }
 
   const finansnetto = finansinntekter - finanskostnader;
-  const resultatForSkatt = omsetning - lonnskostnader - andreDriftskostnader + finansinntekter - finanskostnader;
+  const resultatForSkatt = omsetning - lonnskostnader - varekostnad - andreDriftskostnader + finansinntekter - finanskostnader;
 
   return {
     month: MONTH_LABELS[monthIndex],
     omsetning: roundAmount(omsetning),
     lonnskostnader: roundAmount(lonnskostnader),
+    varekostnad: roundAmount(varekostnad),
     andreDriftskostnader: roundAmount(andreDriftskostnader),
     finansnetto: roundAmount(finansnetto),
     resultatForSkatt: roundAmount(resultatForSkatt),

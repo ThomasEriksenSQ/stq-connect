@@ -17,6 +17,7 @@ type OkonomiMonth = {
   month: string;
   omsetning: number;
   lonnskostnader: number;
+  varekostnad?: number;
   andreDriftskostnader: number;
   finansnetto: number;
   resultatForSkatt: number;
@@ -66,7 +67,7 @@ function getChangePercent(current: number | null, previous: number | null) {
 }
 
 function formatChangePercent(value: number | null) {
-  if (value === null) return "n/a";
+  if (value === null) return "-";
   const prefix = value > 0 ? "+" : "";
   return `${prefix}${formatPercent(value)}`;
 }
@@ -84,6 +85,14 @@ function getMonthReadyKey(month: string) {
 
 function getReadyValue(month: OkonomiMonth, readyMonthKeys: Set<string>, value: number) {
   return readyMonthKeys.has(getMonthReadyKey(month.month)) ? value : null;
+}
+
+function getVarekostnad(month: OkonomiMonth | undefined) {
+  return month?.varekostnad ?? 0;
+}
+
+function getDriftsresultat(month: OkonomiMonth) {
+  return month.omsetning - month.lonnskostnader - getVarekostnad(month) - month.andreDriftskostnader;
 }
 
 function LoadingTable() {
@@ -238,11 +247,9 @@ export default function Okonomi() {
   };
 
   const rows = useMemo<RowDefinition[]>(() => {
-    const driftsresultat = months.map(
-      (entry) => entry.omsetning - entry.lonnskostnader - entry.andreDriftskostnader,
-    );
+    const driftsresultat = months.map(getDriftsresultat);
     const previousDriftsresultatByMonth = new Map(
-      previousYearMonths.map((entry) => [entry.month, entry.omsetning - entry.lonnskostnader - entry.andreDriftskostnader]),
+      previousYearMonths.map((entry) => [entry.month, getDriftsresultat(entry)]),
     );
 
     const rowDefinitions: RowDefinition[] = [
@@ -263,6 +270,14 @@ export default function Okonomi() {
         emphasis: "default",
       },
       {
+        label: "Varekostnad",
+        values: months.map((entry) => getReadyValue(entry, readyMonthKeys, getVarekostnad(entry))),
+        previousValues: months.map((entry) => getReadyValue(entry, readyMonthKeys, getVarekostnad(previousByMonth.get(entry.month)))),
+        ytd: readyMonthsList.reduce((sum, entry) => sum + getVarekostnad(entry), 0),
+        previousYtd: readyPreviousMonthsList.reduce((sum, entry) => sum + getVarekostnad(entry), 0),
+        emphasis: "default",
+      },
+      {
         label: "Andre driftskostnader",
         values: months.map((entry) => getReadyValue(entry, readyMonthKeys, entry.andreDriftskostnader)),
         previousValues: months.map((entry) => getReadyValue(entry, readyMonthKeys, previousByMonth.get(entry.month)?.andreDriftskostnader ?? 0)),
@@ -274,8 +289,8 @@ export default function Okonomi() {
         label: "Driftsresultat",
         values: months.map((entry, index) => getReadyValue(entry, readyMonthKeys, driftsresultat[index] || 0)),
         previousValues: months.map((entry) => getReadyValue(entry, readyMonthKeys, previousDriftsresultatByMonth.get(entry.month) ?? 0)),
-        ytd: readyMonthsList.reduce((sum, entry) => sum + entry.omsetning - entry.lonnskostnader - entry.andreDriftskostnader, 0),
-        previousYtd: readyPreviousMonthsList.reduce((sum, entry) => sum + entry.omsetning - entry.lonnskostnader - entry.andreDriftskostnader, 0),
+        ytd: readyMonthsList.reduce((sum, entry) => sum + getDriftsresultat(entry), 0),
+        previousYtd: readyPreviousMonthsList.reduce((sum, entry) => sum + getDriftsresultat(entry), 0),
         emphasis: "subtotal",
         tone: "result",
       },
@@ -391,7 +406,7 @@ export default function Okonomi() {
                     <div className="min-w-0">
                       <h2 style={{ color: C.text, fontSize: 13, fontWeight: 650 }}>Resultatregnskap</h2>
                       <p className="mt-0.5" style={{ color: C.textFaint, fontSize: 12 }}>
-                        Jan til inneværende måned · YTD i siste kolonne · prosent mot {previousYear}
+                        Jan til inneværende måned · YTD i siste kolonnepar · prosent mot {previousYear}
                       </p>
                     </div>
                     <span style={{ color: C.textMuted, fontSize: 12, fontWeight: 500 }}>Tripletex</span>
@@ -404,90 +419,104 @@ export default function Okonomi() {
                           <TableHead className="sticky left-0 z-10 min-w-[220px] font-semibold" style={{ background: C.surfaceAlt, color: C.text }}>
                             Kategori
                           </TableHead>
-                          {monthLabels.map((month) => (
-                            <TableHead key={month} className="min-w-[120px] text-right font-semibold" style={{ background: C.surfaceAlt, color: C.text }}>
+                          {monthLabels.flatMap((month) => [
+                            <TableHead key={`${month}-value`} className="min-w-[120px] text-right font-semibold" style={{ background: C.surfaceAlt, color: C.text }}>
                               {month}
-                            </TableHead>
-                          ))}
-                          <TableHead className="min-w-[140px] text-right font-semibold" style={{ background: C.surfaceAlt, color: C.text }}>
+                            </TableHead>,
+                            <TableHead key={`${month}-change`} className="min-w-[72px] text-right font-semibold" style={{ background: C.surfaceAlt, color: C.textMuted }}>
+                              %
+                            </TableHead>,
+                          ])}
+                          <TableHead className="min-w-[130px] text-right font-semibold" style={{ background: C.surfaceAlt, color: C.text }}>
                             YTD
+                          </TableHead>
+                          <TableHead className="min-w-[72px] text-right font-semibold" style={{ background: C.surfaceAlt, color: C.textMuted }}>
+                            %
                           </TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {rows.map((row) => (
-                          <TableRow
-                            key={row.label}
-                            className="transition-colors"
-                            style={{
-                              borderColor: C.borderLight,
-                              background:
-                                row.emphasis === "total"
-                                  ? C.filterActiveBg
-                                  : row.emphasis === "subtotal"
-                                    ? C.surfaceAlt
-                                    : C.panel,
-                            }}
-                          >
-                            <TableCell
-                              className="sticky left-0 z-10 font-medium"
+                        {rows.map((row) => {
+                          const ytdChange = getChangePercent(row.ytd, row.previousYtd);
+
+                          return (
+                            <TableRow
+                              key={row.label}
+                              className="transition-colors"
                               style={{
+                                borderColor: C.borderLight,
                                 background:
                                   row.emphasis === "total"
                                     ? C.filterActiveBg
                                     : row.emphasis === "subtotal"
                                       ? C.surfaceAlt
                                       : C.panel,
-                                color: C.text,
-                                fontWeight: row.emphasis === "default" ? 500 : 650,
                               }}
                             >
-                              {row.label}
-                            </TableCell>
-                            {row.values.map((value, index) => (
                               <TableCell
-                                key={`${row.label}-${monthLabels[index]}`}
-                                className={cn(
-                                  "text-right tabular-nums",
-                                  row.emphasis !== "default" && "font-medium",
-                                )}
+                                className="sticky left-0 z-10 font-medium"
                                 style={{
-                                  color: value === null ? C.textGhost : row.tone === "result" && value < 0 ? C.danger : C.text,
-                                  fontWeight: row.emphasis === "total" ? 650 : undefined,
+                                  background:
+                                    row.emphasis === "total"
+                                      ? C.filterActiveBg
+                                      : row.emphasis === "subtotal"
+                                        ? C.surfaceAlt
+                                        : C.panel,
+                                  color: C.text,
+                                  fontWeight: row.emphasis === "default" ? 500 : 650,
                                 }}
                               >
-                                {value === null ? (
-                                  "Ikke klart"
-                                ) : (
-                                  <>
-                                    <div>{formatCurrency(value)}</div>
-                                    <div
-                                      className="mt-0.5"
-                                      style={{ color: getChangeColor(getChangePercent(value, row.previousValues[index])), fontSize: 11, fontWeight: 600 }}
-                                    >
-                                      {formatChangePercent(getChangePercent(value, row.previousValues[index]))}
-                                    </div>
-                                  </>
-                                )}
+                                {row.label}
                               </TableCell>
-                            ))}
-                            <TableCell
-                              className="text-right tabular-nums"
-                              style={{
-                                color: row.tone === "result" && row.ytd < 0 ? C.danger : C.text,
-                                fontWeight: row.emphasis === "default" ? 600 : 700,
-                              }}
-                            >
-                              <div>{formatCurrency(row.ytd)}</div>
-                              <div
-                                className="mt-0.5"
-                                style={{ color: getChangeColor(getChangePercent(row.ytd, row.previousYtd)), fontSize: 11, fontWeight: 650 }}
+                              {row.values.flatMap((value, index) => {
+                                const change = getChangePercent(value, row.previousValues[index]);
+                                const month = monthLabels[index];
+
+                                return [
+                                  <TableCell
+                                    key={`${row.label}-${month}-value`}
+                                    className={cn(
+                                      "text-right tabular-nums",
+                                      row.emphasis !== "default" && "font-medium",
+                                    )}
+                                    style={{
+                                      color: value === null ? C.textGhost : row.tone === "result" && value < 0 ? C.danger : C.text,
+                                      fontWeight: row.emphasis === "total" ? 650 : undefined,
+                                    }}
+                                  >
+                                    {value === null ? "Ikke klart" : formatCurrency(value)}
+                                  </TableCell>,
+                                  <TableCell
+                                    key={`${row.label}-${month}-change`}
+                                    className="text-right tabular-nums"
+                                    style={{
+                                      color: value === null ? C.textGhost : getChangeColor(change),
+                                      fontSize: 12,
+                                      fontWeight: 650,
+                                    }}
+                                  >
+                                    {value === null ? "" : formatChangePercent(change)}
+                                  </TableCell>,
+                                ];
+                              })}
+                              <TableCell
+                                className="text-right tabular-nums"
+                                style={{
+                                  color: row.tone === "result" && row.ytd < 0 ? C.danger : C.text,
+                                  fontWeight: row.emphasis === "default" ? 600 : 700,
+                                }}
                               >
-                                {formatChangePercent(getChangePercent(row.ytd, row.previousYtd))}
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        ))}
+                                {formatCurrency(row.ytd)}
+                              </TableCell>
+                              <TableCell
+                                className="text-right tabular-nums"
+                                style={{ color: getChangeColor(ytdChange), fontSize: 12, fontWeight: 700 }}
+                              >
+                                {formatChangePercent(ytdChange)}
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
                         <TableRow className="transition-colors" style={{ borderColor: C.borderLight, background: C.panel }}>
                           <TableCell
                             className="sticky left-0 z-10 font-medium"
@@ -495,10 +524,10 @@ export default function Okonomi() {
                           >
                             Måned klar
                           </TableCell>
-                          {monthLabels.map((month) => {
+                          {monthLabels.flatMap((month) => {
                             const ready = readyMonths[getMonthReadyKey(month)] === true;
-                            return (
-                              <TableCell key={`ready-${month}`} className="text-right">
+                            return [
+                              <TableCell key={`ready-${month}-value`} className="text-right">
                                 <label className="inline-flex cursor-pointer select-none items-center justify-end gap-2">
                                   <input
                                     type="checkbox"
@@ -518,12 +547,14 @@ export default function Okonomi() {
                                     {ready ? "Ferdig" : "Ikke klart"}
                                   </span>
                                 </label>
-                              </TableCell>
-                            );
+                              </TableCell>,
+                              <TableCell key={`ready-${month}-change`} aria-hidden="true" />,
+                            ];
                           })}
                           <TableCell className="text-right" style={{ color: C.textMuted, fontSize: 12, fontWeight: 600 }}>
                             {readyMonthsList.length}/{months.length} ferdig
                           </TableCell>
+                          <TableCell aria-hidden="true" />
                         </TableRow>
                       </TableBody>
                     </Table>
