@@ -133,6 +133,10 @@ import {
 import { coerceDisplayText, normalizeOutlookMailItems } from "@/lib/outlookMail";
 import { C, SIGNAL_COLORS } from "@/theme";
 import { useCrmNavigation } from "@/lib/crmNavigation";
+import {
+  buildActiveCompanyContactMap,
+  normalizeCompanyLinkedRecord,
+} from "@/lib/companyActivityLinks";
 
 /** Wrapper for company notes — opens edit on click but allows text selection. */
 function CompanyNotesEditTrigger({ onEdit, children }: { onEdit: () => void; children: React.ReactNode }) {
@@ -620,13 +624,17 @@ export function CompanyCardContent({
       }),
     [contacts],
   );
+  const activeCompanyContactsById = useMemo(
+    () => buildActiveCompanyContactMap(sanitizedContacts),
+    [sanitizedContacts],
+  );
 
   const { data: companyActivities = [] } = useQuery({
     queryKey: crmQueryKeys.companies.activities(companyId),
     queryFn: async () => {
       const { data, error } = await supabase
         .from("activities")
-        .select("*, contacts(first_name, last_name)")
+        .select("*")
         .eq("company_id", companyId)
         .order("created_at", { ascending: false });
       if (error) throw error;
@@ -641,8 +649,9 @@ export function CompanyCardContent({
       if (contactIds.length === 0) return [];
       const { data, error } = await supabase
         .from("activities")
-        .select("*, contacts(first_name, last_name)")
+        .select("*")
         .in("contact_id", contactIds)
+        .or(`company_id.is.null,company_id.eq.${companyId}`)
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data;
@@ -652,24 +661,20 @@ export function CompanyCardContent({
 
   const activities = useMemo(() => {
     const allActivitiesMap = new Map<string, any>();
-    const normalizeActivity = (activity: any, index: number) => ({
-      ...activity,
-      id: safeText(activity?.id) || `activity-${index}`,
-      created_at: safeText(activity?.created_at),
-      subject: safeText(activity?.subject),
-      description: safeText(activity?.description) || null,
-      type: safeText(activity?.type),
-      created_by: safeText(activity?.created_by) || null,
-      contact_id: safeText(activity?.contact_id) || null,
-      contacts:
-        activity?.contacts && typeof activity.contacts === "object"
-          ? {
-              ...activity.contacts,
-              first_name: safeText((activity.contacts as any)?.first_name),
-              last_name: safeText((activity.contacts as any)?.last_name),
-            }
-          : null,
-    });
+    const normalizeActivity = (activity: any, index: number) =>
+      normalizeCompanyLinkedRecord(
+        {
+          ...activity,
+          id: safeText(activity?.id) || `activity-${index}`,
+          created_at: safeText(activity?.created_at),
+          subject: safeText(activity?.subject),
+          description: safeText(activity?.description) || null,
+          type: safeText(activity?.type),
+          created_by: safeText(activity?.created_by) || null,
+          contact_id: safeText(activity?.contact_id) || null,
+        },
+        activeCompanyContactsById,
+      );
 
     companyActivities.forEach((activity: any, index: number) => {
       const normalized = normalizeActivity(activity, index);
@@ -683,14 +688,14 @@ export function CompanyCardContent({
     return Array.from(allActivitiesMap.values()).sort(
       (a, b) => (parseValidDate(b.created_at)?.getTime() ?? -Infinity) - (parseValidDate(a.created_at)?.getTime() ?? -Infinity),
     );
-  }, [companyActivities, contactActivities]);
+  }, [activeCompanyContactsById, companyActivities, contactActivities]);
 
   const { data: companyTasks = [] } = useQuery({
     queryKey: crmQueryKeys.companies.tasks(companyId),
     queryFn: async () => {
       const { data, error } = await supabase
         .from("tasks")
-        .select("*, contacts(first_name, last_name)")
+        .select("*")
         .eq("company_id", companyId)
         .neq("status", "done")
         .order("due_date", { ascending: true, nullsFirst: false });
@@ -706,8 +711,9 @@ export function CompanyCardContent({
       if (contactIds.length === 0) return [];
       const { data, error } = await supabase
         .from("tasks")
-        .select("*, contacts(first_name, last_name)")
+        .select("*")
         .in("contact_id", contactIds)
+        .or(`company_id.is.null,company_id.eq.${companyId}`)
         .neq("status", "done")
         .order("due_date", { ascending: true, nullsFirst: false });
       if (error) throw error;
@@ -735,12 +741,14 @@ export function CompanyCardContent({
   contactTasks.forEach((t) => {
     if (!allTasksMap.has(t.id)) allTasksMap.set(t.id, t);
   });
-  const tasks = Array.from(allTasksMap.values()).sort((a, b) => {
-    if (!a.due_date && !b.due_date) return 0;
-    if (!a.due_date) return 1;
-    if (!b.due_date) return -1;
-    return new Date(a.due_date).getTime() - new Date(b.due_date).getTime();
-  });
+  const tasks = Array.from(allTasksMap.values())
+    .map((task) => normalizeCompanyLinkedRecord(task, activeCompanyContactsById))
+    .sort((a, b) => {
+      if (!a.due_date && !b.due_date) return 0;
+      if (!a.due_date) return 1;
+      if (!b.due_date) return -1;
+      return new Date(a.due_date).getTime() - new Date(b.due_date).getTime();
+    });
 
   const updateMutation = useMutation({
     mutationFn: async (updates: Record<string, unknown>) => {
