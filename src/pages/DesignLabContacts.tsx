@@ -1264,12 +1264,6 @@ export default function DesignLabContacts() {
     void softDeleteContacts();
   }, [invalidateDesignLabQueries, isLoading, isLoadingParity, parityContacts, rawContacts]);
 
-  useEffect(() => {
-    if (!selectedId || isLoading || isLoadingParity) return;
-    if (contacts.some((contact) => contact.id === selectedId)) return;
-    setSelectedId(null);
-  }, [contacts, isLoading, isLoadingParity, selectedId]);
-
   const selectedConsultant = useMemo(
     () => sortedConsultants.find((consultant) => consultant.id === selectedConsultantId) ?? null,
     [selectedConsultantId, sortedConsultants],
@@ -2228,7 +2222,7 @@ export default function DesignLabContacts() {
     [getMatchLeadHref, navigate],
   );
 
-  const sel = selectedId ? (contacts.find((c) => c.id === selectedId) ?? null) : null;
+  const selectedListContact = selectedId ? (contacts.find((contact) => contact.id === selectedId) ?? null) : null;
 
   const renderMobileContactRow = useCallback((contact: NormalizedContact) => {
     const isActive = selectedId === contact.id;
@@ -3129,7 +3123,7 @@ export default function DesignLabContacts() {
               className="bg-transparent hover:bg-[rgba(0,0,0,0.04)] transition-colors data-[resize-handle-active]:bg-[rgba(94,106,210,0.12)]"
             />
             <ResizablePanel defaultSize={62} minSize={34}>
-              {sel ? (
+              {selectedId ? (
                 <div
                   className="h-full flex flex-col"
                   style={{ background: C.panel, borderLeft: `1px solid ${C.borderLight}` }}
@@ -3144,11 +3138,11 @@ export default function DesignLabContacts() {
                   </div>
                   <div className="flex-1 overflow-y-auto px-6 py-5 dl-v8-theme">
                     <RenderErrorBoundary
-                      resetKey={sel.id}
+                      resetKey={selectedId}
                       fallbackMessage="Kunne ikke laste kontaktkortet. Prøv en annen kontakt eller last siden på nytt."
                     >
                       <ContactCardContent
-                        contactId={sel.id}
+                        contactId={selectedId}
                         editable
                         enableProfileEditMode
                         headerPaddingTop={12}
@@ -3192,20 +3186,20 @@ export default function DesignLabContacts() {
         </div>
       </main>
       <DesignLabEntitySheet
-        open={isMobile && Boolean(sel)}
+        open={isMobile && Boolean(selectedId)}
         onOpenChange={(open) => {
           if (!open) setSelectedId(null);
         }}
         contentClassName="dl-v8-theme"
       >
-        {isMobile && sel ? (
+        {isMobile && selectedId ? (
           <div className="dl-detail-scroll">
             <RenderErrorBoundary
-              resetKey={sel.id}
+              resetKey={selectedId}
               fallbackMessage="Kunne ikke laste kontaktkortet. Prøv en annen kontakt eller last siden på nytt."
             >
               <ContactCardContent
-                contactId={sel.id}
+                contactId={selectedId}
                 editable
                 enableProfileEditMode
                 headerPaddingTop={12}
@@ -3245,8 +3239,14 @@ export default function DesignLabContacts() {
         }))}
         companies={companiesList}
         selectedContact={
-          sel
-            ? { id: sel.id, firstName: sel.firstName, lastName: sel.lastName, email: sel.email, signal: sel.signal }
+          selectedListContact
+            ? {
+                id: selectedListContact.id,
+                firstName: selectedListContact.firstName,
+                lastName: selectedListContact.lastName,
+                email: selectedListContact.email,
+                signal: selectedListContact.signal,
+              }
             : null
         }
         onSelectContact={(id) => {
