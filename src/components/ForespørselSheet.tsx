@@ -450,6 +450,7 @@ export function ForespørselSheet({
   const [oppdragKonsulentNavn, setOppdragKonsulentNavn] = useState("");
   const [oppdragUtpris, setOppdragUtpris] = useState("");
   const [oppdragInnpris, setOppdragInnpris] = useState("");
+  const [oppdragEkstraKostnad, setOppdragEkstraKostnad] = useState("");
   const [oppdragStartDato, setOppdragStartDato] = useState("");
   const [oppdragFornyDato, setOppdragFornyDato] = useState("");
   const [oppdragKommentar, setOppdragKommentar] = useState("");
@@ -1085,6 +1086,7 @@ export function ForespørselSheet({
       setOppdragKonsulentNavn(konsulentNavn || "");
       setOppdragUtpris("");
       setOppdragInnpris("");
+      setOppdragEkstraKostnad("");
       setOppdragStartDato("");
       setOppdragFornyDato("");
       setOppdragKommentar("");
@@ -1113,6 +1115,7 @@ export function ForespørselSheet({
           dealType: row.type || "DIR",
           utpris: oppdragUtpris,
           tilKonsulent: oppdragInnpris,
+          ekstraKostnad: oppdragEkstraKostnad,
           startDato: oppdragStartDato ? new Date(oppdragStartDato) : undefined,
           fornyDato: oppdragFornyDato ? new Date(oppdragFornyDato) : undefined,
           kommentar: oppdragKommentar,
@@ -1941,6 +1944,19 @@ export function ForespørselSheet({
                   className="mt-1 text-[0.875rem]"
                 />
               </div>
+            </div>
+            <div>
+              <label className={LABEL}>Ekstra kostnad / time</label>
+              <Input
+                type="number"
+                value={oppdragEkstraKostnad}
+                onChange={(e) => setOppdragEkstraKostnad(e.target.value)}
+                placeholder="f.eks. 80"
+                className="mt-1 text-[0.875rem]"
+              />
+              <p className="mt-1 text-[0.75rem] text-muted-foreground">
+                Trekkes fra timesprisen. Brukes for deal-avtaler, bonus-forpliktelser e.l.
+              </p>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>

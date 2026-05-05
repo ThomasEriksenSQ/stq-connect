@@ -13,6 +13,7 @@ describe("oppdragForm", () => {
         selskapId: "company-1",
         utpris: "1 500,50",
         tilKonsulent: "1 050",
+        ekstraKostnad: "80",
       }),
     );
 
@@ -22,6 +23,7 @@ describe("oppdragForm", () => {
     expect(payload.kandidat).toBe("Anders Nilsen");
     expect(payload.utpris).toBe(1500.5);
     expect(payload.til_konsulent).toBe(1050);
+    expect(payload.ekstra_kostnad).toBe(80);
   });
 
   it("builds payload for eksterne with relation", () => {
