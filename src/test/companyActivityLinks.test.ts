@@ -27,6 +27,7 @@ describe("companyActivityLinks", () => {
     ).toMatchObject({
       id: "activity-1",
       contact_id: "active-contact",
+      contact_link_state: "active",
       contacts: {
         first_name: "Torgeir",
         last_name: "Troite",
@@ -34,19 +35,41 @@ describe("companyActivityLinks", () => {
     });
   });
 
-  it("removes contact links that are not active company contacts", () => {
+  it("keeps a historical name without an active contact link", () => {
     expect(
       normalizeCompanyLinkedRecord(
         {
           id: "activity-2",
           contact_id: "deleted-contact",
-          contacts: { first_name: "Deleted", last_name: "Contact" },
+          contacts: { first_name: "Torgeir", last_name: "Troite" },
         },
         contactsById,
       ),
     ).toMatchObject({
       id: "activity-2",
       contact_id: null,
+      contact_link_state: "historical",
+      contacts: {
+        first_name: "Torgeir",
+        last_name: "Troite",
+      },
+    });
+  });
+
+  it("removes contact display when no historical name exists", () => {
+    expect(
+      normalizeCompanyLinkedRecord(
+        {
+          id: "activity-2b",
+          contact_id: "deleted-contact",
+          contacts: null,
+        },
+        contactsById,
+      ),
+    ).toMatchObject({
+      id: "activity-2b",
+      contact_id: null,
+      contact_link_state: "none",
       contacts: null,
     });
   });
@@ -64,6 +87,28 @@ describe("companyActivityLinks", () => {
     ).toMatchObject({
       id: "activity-3",
       contact_id: null,
+      contact_link_state: "historical",
+      contacts: {
+        first_name: "No",
+        last_name: "Link",
+      },
+    });
+  });
+
+  it("drops blank ids and blank names", () => {
+    expect(
+      normalizeCompanyLinkedRecord(
+        {
+          id: "activity-4",
+          contact_id: " ",
+          contacts: { first_name: " ", last_name: "" },
+        },
+        contactsById,
+      ),
+    ).toMatchObject({
+      id: "activity-4",
+      contact_id: null,
+      contact_link_state: "none",
       contacts: null,
     });
   });

@@ -96,6 +96,7 @@ import {
   Eye,
   EyeOff,
   X,
+  Info,
 } from "lucide-react";
 import { toast } from "@/components/ui/sonner";
 import { format, isPast, isToday, getYear } from "date-fns";
@@ -634,7 +635,7 @@ export function CompanyCardContent({
     queryFn: async () => {
       const { data, error } = await supabase
         .from("activities")
-        .select("*")
+        .select("*, contacts(first_name, last_name)")
         .eq("company_id", companyId)
         .order("created_at", { ascending: false });
       if (error) throw error;
@@ -695,7 +696,7 @@ export function CompanyCardContent({
     queryFn: async () => {
       const { data, error } = await supabase
         .from("tasks")
-        .select("*")
+        .select("*, contacts(first_name, last_name)")
         .eq("company_id", companyId)
         .neq("status", "done")
         .order("due_date", { ascending: true, nullsFirst: false });
@@ -1214,9 +1215,9 @@ export function CompanyCardContent({
               const dueDate = parseValidDate(task.due_date);
               const overdue = dueDate ? isPast(dueDate) && !isToday(dueDate) : false;
               const today = dueDate ? isToday(dueDate) : false;
-              const contactName = (task.contacts as any)?.first_name
-                ? `${(task.contacts as any).first_name} ${(task.contacts as any).last_name}`
-                : null;
+              const contactFirstName = safeText((task.contacts as any)?.first_name);
+              const contactLastName = safeText((task.contacts as any)?.last_name);
+              const contactName = [contactFirstName, contactLastName].filter(Boolean).join(" ").trim() || null;
               const {
                 title: displayTitle,
                 category: displayCategory,
@@ -1240,13 +1241,11 @@ export function CompanyCardContent({
                   <div className="flex-1 min-w-0">
                     <div className="text-[1.0625rem] font-bold text-foreground">{displayTitle}</div>
                     {contactName && (
-                      <a
-                        href={task.contact_id ? getContactPath(task.contact_id) : undefined}
-                        onClick={(e) => e.stopPropagation()}
-                        className="text-[0.8125rem] font-semibold text-blue-600 hover:underline block mt-0.5"
-                      >
-                        → {contactName}
-                      </a>
+                      <CompanyContactReference
+                        contactId={task.contact_id}
+                        contactName={contactName}
+                        linkState={task.contact_link_state}
+                      />
                     )}
                     {displayDesc && !/^\[.+\]$/.test(displayDesc.trim()) && (
                       <p className="text-[0.875rem] text-foreground/70 truncate mt-0.5">{displayDesc}</p>
@@ -2928,6 +2927,54 @@ function CompanyEmailRow({ email }: { email: any }) {
   );
 }
 
+function CompanyContactReference({
+  contactId,
+  contactName,
+  linkState,
+}: {
+  contactId?: string | null;
+  contactName: string;
+  linkState?: string | null;
+}) {
+  const { getContactPath } = useCrmNavigation();
+  const isActiveContact = linkState === "active" && Boolean(contactId);
+
+  if (isActiveContact && contactId) {
+    return (
+      <a
+        href={getContactPath(contactId)}
+        onClick={(event) => event.stopPropagation()}
+        className="text-[0.8125rem] font-semibold text-blue-600 hover:underline block mt-0.5"
+      >
+        → {contactName}
+      </a>
+    );
+  }
+
+  return (
+    <span
+      className="mt-0.5 flex w-fit items-center gap-1.5 text-[0.8125rem] font-semibold text-muted-foreground/70"
+      onClick={(event) => event.stopPropagation()}
+    >
+      <span>→ {contactName}</span>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span
+            tabIndex={0}
+            className="inline-flex h-4 w-4 items-center justify-center rounded-full text-muted-foreground/70 hover:text-muted-foreground focus:outline-none focus-visible:ring-1 focus-visible:ring-primary/40"
+            aria-label="Historisk kontakt"
+          >
+            <Info className="h-3.5 w-3.5" />
+          </span>
+        </TooltipTrigger>
+        <TooltipContent>
+          Historisk kontakt på aktiviteten. Personen er ikke en aktiv kontakt i CRM.
+        </TooltipContent>
+      </Tooltip>
+    </span>
+  );
+}
+
 /* ── Company Activity Row (with inline edit) ── */
 function CompanyActivityRow({
   activity,
@@ -2943,7 +2990,6 @@ function CompanyActivityRow({
   navigate: (path: string) => void;
 }) {
   const queryClient = useQueryClient();
-  const { getContactPath } = useCrmNavigation();
   const [editing, setEditing] = useState(false);
   const [editTitle, setEditTitle] = useState("");
   const [editCategory, setEditCategory] = useState("");
@@ -3119,13 +3165,11 @@ function CompanyActivityRow({
               <span className="text-[1.0625rem] font-bold text-foreground">{displayTitle}</span>
 
               {contactName && (
-                <a
-                  href={activity.contact_id ? getContactPath(activity.contact_id) : undefined}
-                  onClick={(e) => e.stopPropagation()}
-                  className="text-[0.8125rem] font-semibold text-blue-600 hover:underline block mt-0.5"
-                >
-                  → {contactName}
-                </a>
+                <CompanyContactReference
+                  contactId={activity.contact_id}
+                  contactName={contactName}
+                  linkState={activity.contact_link_state}
+                />
               )}
 
               {cleanDesc && (
