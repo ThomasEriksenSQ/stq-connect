@@ -84,6 +84,7 @@ export function AnsattDetailSheet({ open, onClose, ansatt, openInEditMode, autoR
 
   const [form, setForm] = useState({
     navn: "",
+    ansatt_id: "",
     epost: "",
     tlf: "",
     adresse: "",
@@ -106,6 +107,7 @@ export function AnsattDetailSheet({ open, onClose, ansatt, openInEditMode, autoR
       setEditing(true);
       setForm({
         navn: "",
+        ansatt_id: "",
         epost: "",
         tlf: "",
         adresse: "",
@@ -125,6 +127,7 @@ export function AnsattDetailSheet({ open, onClose, ansatt, openInEditMode, autoR
       setEditing(false);
       setForm({
         navn: ansatt.navn || "",
+        ansatt_id: ansatt.ansatt_id?.toString() || "",
         epost: ansatt.epost || "",
         tlf: ansatt.tlf || "",
         adresse: addressFields.address,
@@ -276,6 +279,7 @@ export function AnsattDetailSheet({ open, onClose, ansatt, openInEditMode, autoR
     );
     const payload: any = {
       navn: form.navn.trim(),
+      ansatt_id: form.ansatt_id ? parseInt(form.ansatt_id, 10) : null,
       epost: form.epost.trim() || null,
       tlf: form.tlf.trim() || null,
       adresse: form.adresse.trim() || null,
@@ -480,6 +484,19 @@ export function AnsattDetailSheet({ open, onClose, ansatt, openInEditMode, autoR
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className={LABEL}>Tripletex ansatt-ID</label>
+                  <Input
+                    type="number"
+                    value={form.ansatt_id}
+                    onChange={(e) => set("ansatt_id", e.target.value)}
+                    placeholder="F.eks. 13"
+                    className="mt-1 text-[0.875rem]"
+                  />
+                  <p className="text-[0.6875rem] text-muted-foreground mt-1">
+                    Brukes av økonomi/Tripletex-koblinger.
+                  </p>
+                </div>
                 <div>
                   <label className={LABEL}>Epost</label>
                   <Input

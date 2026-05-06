@@ -125,7 +125,6 @@ type MappingForm = {
   stacqOppdragId: string;
   tripletexEmployeeId: string;
   tripletexProjectId: string;
-  tripletexProjectNumber: string;
   projectName: string;
   activeFrom: string;
   activeTo: string;
@@ -136,6 +135,27 @@ type EmployeeMetricDefinition = {
   label: string;
   chartLabel: string;
   kind: "hours" | "percent" | "currency";
+};
+
+type EmployeeFinanceMonth = {
+  month: string;
+  billableHours: number | null;
+  coverage: number | null;
+  revenue: number | null;
+  costs: number | null;
+  result: number | null;
+  salaryCost: number | null;
+  sickPayCost: number | null;
+};
+
+type EmployeeFinanceRow = {
+  ansatt_id: number;
+  months: EmployeeFinanceMonth[];
+};
+
+type EmployeeFinanceResponse = {
+  year: number;
+  employees: EmployeeFinanceRow[];
 };
 
 type OkonomiMonthStatus = {
@@ -178,7 +198,6 @@ const EMPTY_MAPPING_FORM: MappingForm = {
   stacqOppdragId: MANUAL_ASSIGNMENT_VALUE,
   tripletexEmployeeId: "",
   tripletexProjectId: "",
-  tripletexProjectNumber: "",
   projectName: "",
   activeFrom: "",
   activeTo: "",
@@ -438,6 +457,10 @@ export default function Okonomi() {
   const [savingMapping, setSavingMapping] = useState(false);
   const [deletingMappingId, setDeletingMappingId] = useState<string | null>(null);
   const [employeeMappingNotice, setEmployeeMappingNotice] = useState<string | null>(null);
+  const [employeeYear, setEmployeeYear] = useState(2026);
+  const [employeeFinanceRows, setEmployeeFinanceRows] = useState<EmployeeFinanceRow[]>([]);
+  const [employeeFinanceLoading, setEmployeeFinanceLoading] = useState(false);
+  const [employeeFinanceError, setEmployeeFinanceError] = useState<string | null>(null);
   const [employeesLoading, setEmployeesLoading] = useState(false);
   const [employeesError, setEmployeesError] = useState<string | null>(null);
   const [months, setMonths] = useState<OkonomiMonth[]>([]);
@@ -583,6 +606,35 @@ export default function Okonomi() {
     }
   }, []);
 
+  const loadEmployeeFinance = useCallback(async (targetYear: number, cancelled?: () => boolean) => {
+    try {
+      setEmployeeFinanceLoading(true);
+      setEmployeeFinanceError(null);
+
+      const { data, error: invokeError } = await supabase.functions.invoke<EmployeeFinanceResponse>("tripletex-ansatt-okonomi", {
+        body: { year: targetYear },
+      });
+
+      if (invokeError) {
+        throw invokeError;
+      }
+
+      if (!cancelled?.()) {
+        setEmployeeFinanceRows(data?.employees || []);
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Kunne ikke hente ansattøkonomi fra Tripletex.";
+      if (!cancelled?.()) {
+        setEmployeeFinanceRows([]);
+        setEmployeeFinanceError(message);
+      }
+    } finally {
+      if (!cancelled?.()) {
+        setEmployeeFinanceLoading(false);
+      }
+    }
+  }, []);
+
   useEffect(() => {
     let cancelled = false;
     void loadOkonomi(() => cancelled);
@@ -602,6 +654,17 @@ export default function Okonomi() {
       cancelled = true;
     };
   }, [activeView, loadEmployees]);
+
+  useEffect(() => {
+    if (activeView !== "ansatte") return;
+
+    let cancelled = false;
+    void loadEmployeeFinance(employeeYear, () => cancelled);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeView, employeeYear, loadEmployeeFinance]);
 
   useEffect(() => {
     const channel = supabase
@@ -831,6 +894,9 @@ export default function Okonomi() {
   }, [activeChartYears, chartMode, chartMonthsByYear, readyMonths]);
   const showPayrollPeriodizationInfo = chartMode === "resultat" || chartMode === "margin" || chartMode === "lonnskostnader";
   const selectedEmployeeMetric = useMemo(() => getEmployeeMetric(employeeMetric), [employeeMetric]);
+  const employeeFinanceByEmployee = useMemo(() => {
+    return new Map(employeeFinanceRows.map((entry) => [entry.ansatt_id, entry]));
+  }, [employeeFinanceRows]);
   const activeEmployeeMappingsByEmployee = useMemo(() => {
     const map = new Map<number, EmployeeTripletexMapping[]>();
 
@@ -867,11 +933,14 @@ export default function Okonomi() {
     return filteredEmployees.map((employee) => ({
       employee,
       status: getEmployeeLifecycleStatus(employee),
-      values: MONTH_LABELS.map(() => null as number | null),
+      values: MONTH_LABELS.map((month) => {
+        const financeMonth = employeeFinanceByEmployee.get(employee.id)?.months.find((entry) => entry.month === month);
+        return financeMonth?.[employeeMetric] ?? null;
+      }),
       mappings: activeEmployeeMappingsByEmployee.get(employee.id) || [],
       assignments: employeeAssignmentsByEmployee.get(employee.id) || [],
     }));
-  }, [activeEmployeeMappingsByEmployee, employeeAssignmentsByEmployee, filteredEmployees]);
+  }, [activeEmployeeMappingsByEmployee, employeeAssignmentsByEmployee, employeeFinanceByEmployee, employeeMetric, filteredEmployees]);
   const hasEmployeeMetricData = useMemo(() => {
     return employeeTableRows.some((row) => row.values.some((value) => value !== null));
   }, [employeeTableRows]);
@@ -923,6 +992,7 @@ export default function Okonomi() {
     setMappingEmployeeId(employee.id);
     setMappingForm({
       ...EMPTY_MAPPING_FORM,
+      tripletexEmployeeId: employee.ansatt_id ? String(employee.ansatt_id) : "",
       stacqOppdragId: firstAssignment ? String(firstAssignment.id) : MANUAL_ASSIGNMENT_VALUE,
       tripletexProjectId: firstAssignment?.oppdrag_id ? String(firstAssignment.oppdrag_id) : "",
       projectName: firstAssignment?.kunde || "",
@@ -937,8 +1007,7 @@ export default function Okonomi() {
     const selectedAssignment = selectedEmployeeAssignments.find((assignment) => String(assignment.id) === mappingForm.stacqOppdragId);
     const tripletexEmployeeId = parseOptionalInteger(mappingForm.tripletexEmployeeId);
     const tripletexProjectId = parseOptionalInteger(mappingForm.tripletexProjectId);
-    const tripletexProjectNumber = mappingForm.tripletexProjectNumber.trim();
-    const hasReference = tripletexEmployeeId !== null || tripletexProjectId !== null || tripletexProjectNumber.length > 0;
+    const hasReference = tripletexEmployeeId !== null || tripletexProjectId !== null;
 
     if (!hasReference) {
       toast.error("Legg inn Tripletex ansatt-ID eller prosjekt-ID.");
@@ -946,6 +1015,24 @@ export default function Okonomi() {
     }
 
     setSavingMapping(true);
+
+    if (tripletexEmployeeId !== null && selectedMappingEmployee.ansatt_id !== tripletexEmployeeId) {
+      const { error: employeeUpdateError } = await supabase
+        .from("stacq_ansatte")
+        .update({ ansatt_id: tripletexEmployeeId, updated_at: new Date().toISOString() })
+        .eq("id", selectedMappingEmployee.id);
+
+      if (employeeUpdateError) {
+        setSavingMapping(false);
+        toast.error(employeeUpdateError.message || "Kunne ikke lagre Tripletex ansatt-ID på ansattkortet.");
+        return;
+      }
+
+      setEmployees((current) =>
+        current.map((employee) => employee.id === selectedMappingEmployee.id ? { ...employee, ansatt_id: tripletexEmployeeId } : employee),
+      );
+    }
+
     const { data, error: saveError } = await supabase
       .from("okonomi_ansatt_tripletex_mapping" as never)
       .insert({
@@ -953,10 +1040,10 @@ export default function Okonomi() {
         stacq_oppdrag_id: selectedAssignment?.id ?? null,
         tripletex_employee_id: tripletexEmployeeId,
         tripletex_project_id: tripletexProjectId,
-        tripletex_project_number: tripletexProjectNumber || null,
+        tripletex_project_number: null,
         project_name: mappingForm.projectName.trim() || selectedAssignment?.kunde || null,
-        active_from: mappingForm.activeFrom || selectedAssignment?.start_dato || null,
-        active_to: mappingForm.activeTo || selectedAssignment?.slutt_dato || null,
+        active_from: selectedAssignment?.start_dato || null,
+        active_to: selectedAssignment?.slutt_dato || null,
         source: "crm",
         created_by: user?.id ?? null,
         updated_at: new Date().toISOString(),
@@ -1040,8 +1127,15 @@ export default function Okonomi() {
             </div>
           </div>
           <DesignLabGhostAction
-            onClick={() => activeView === "ansatte" ? void loadEmployees() : void loadOkonomi()}
-            disabled={activeView === "ansatte" ? employeesLoading : loading}
+            onClick={() => {
+              if (activeView === "ansatte") {
+                void loadEmployees();
+                void loadEmployeeFinance(employeeYear);
+                return;
+              }
+              void loadOkonomi();
+            }}
+            disabled={activeView === "ansatte" ? employeesLoading || employeeFinanceLoading : loading}
           >
             <RefreshCw style={{ width: 14, height: 14 }} />
             Oppdater
@@ -1383,15 +1477,31 @@ export default function Okonomi() {
                         <div className="min-w-0">
                           <h2 style={{ color: C.text, fontSize: 13, fontWeight: 650 }}>Ansatte</h2>
                           <p className="mt-0.5" style={{ color: C.textFaint, fontSize: 12 }}>
-                            {employeeTableRows.length} {employeeStatusFilter.toLowerCase()}e · {selectedEmployeeMetric.label} · {year}
+                            {employeeTableRows.length} {employeeStatusFilter.toLowerCase()}e · {selectedEmployeeMetric.label} · {employeeYear}
                           </p>
                           {employeeMappingNotice ? (
                             <p className="mt-1" style={{ color: C.warning, fontSize: 12 }}>
                               {employeeMappingNotice}
                             </p>
                           ) : null}
+                          {employeeFinanceError ? (
+                            <p className="mt-1" style={{ color: C.danger, fontSize: 12 }}>
+                              {employeeFinanceError}
+                            </p>
+                          ) : null}
                         </div>
                         <div className="flex max-w-full flex-col items-start gap-2 sm:items-end">
+                          <div className="flex flex-wrap gap-2 sm:justify-end">
+                            {DEFAULT_CHART_YEARS.map((chartYear) => (
+                              <ChartModeButton
+                                key={chartYear}
+                                active={employeeYear === chartYear}
+                                onClick={() => setEmployeeYear(chartYear)}
+                              >
+                                {chartYear}
+                              </ChartModeButton>
+                            ))}
+                          </div>
                           <div className="flex flex-wrap gap-2 sm:justify-end">
                             {EMPLOYEE_STATUS_FILTERS.map((statusFilter) => (
                               <ChartModeButton
@@ -1528,7 +1638,7 @@ export default function Okonomi() {
                               color: hasEmployeeMetricData ? C.success : C.textMuted,
                             }}
                           >
-                            {hasEmployeeMetricData ? "Tripletex" : "Kobling venter"}
+                            {employeeFinanceLoading ? "Henter Tripletex" : hasEmployeeMetricData ? "Tripletex" : "Kobling venter"}
                           </span>
                         </div>
 
@@ -1537,7 +1647,7 @@ export default function Okonomi() {
                             <div className="pointer-events-none absolute inset-x-4 top-4 z-10 flex items-start gap-2 rounded-md px-3 py-2" style={{ border: `1px solid ${C.borderLight}`, background: C.surface }}>
                               <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" style={{ color: C.textMuted }} />
                               <p style={{ color: C.textMuted, fontSize: 12, lineHeight: 1.4 }}>
-                                Legg inn Tripletex ansatt- og prosjektkoblinger før tall vises.
+                                {employeeFinanceLoading ? "Henter ansattøkonomi fra Tripletex." : "Legg inn Tripletex ansatt- og prosjektkoblinger før tall vises."}
                               </p>
                             </div>
                           ) : null}
@@ -1685,7 +1795,7 @@ export default function Okonomi() {
                     </label>
 
                     <label className="space-y-1">
-                      <span style={{ color: C.textMuted, fontSize: 12, fontWeight: 650 }}>Tripletex ansatt-ID</span>
+                      <span style={{ color: C.textMuted, fontSize: 12, fontWeight: 650 }}>Tripletex ansatt-ID / ansattnummer</span>
                       <input
                         value={mappingForm.tripletexEmployeeId}
                         onChange={(event) => setMappingForm((current) => ({ ...current, tripletexEmployeeId: event.target.value }))}
@@ -1693,6 +1803,9 @@ export default function Okonomi() {
                         className="h-9 w-full rounded-md border px-3 text-[13px]"
                         style={{ borderColor: C.borderLight, background: C.panel, color: C.text }}
                       />
+                      <p style={{ color: C.textFaint, fontSize: 11 }}>
+                        Lagres også på ansattkortet.
+                      </p>
                     </label>
 
                     <label className="space-y-1">
@@ -1704,16 +1817,9 @@ export default function Okonomi() {
                         className="h-9 w-full rounded-md border px-3 text-[13px]"
                         style={{ borderColor: C.borderLight, background: C.panel, color: C.text }}
                       />
-                    </label>
-
-                    <label className="space-y-1">
-                      <span style={{ color: C.textMuted, fontSize: 12, fontWeight: 650 }}>Prosjektnummer</span>
-                      <input
-                        value={mappingForm.tripletexProjectNumber}
-                        onChange={(event) => setMappingForm((current) => ({ ...current, tripletexProjectNumber: event.target.value }))}
-                        className="h-9 w-full rounded-md border px-3 text-[13px]"
-                        style={{ borderColor: C.borderLight, background: C.panel, color: C.text }}
-                      />
+                      <p style={{ color: C.textFaint, fontSize: 11 }}>
+                        Hentes fra CRM-oppdraget når det finnes.
+                      </p>
                     </label>
 
                     <label className="space-y-1">
@@ -1726,27 +1832,15 @@ export default function Okonomi() {
                       />
                     </label>
 
-                    <label className="space-y-1">
-                      <span style={{ color: C.textMuted, fontSize: 12, fontWeight: 650 }}>Aktiv fra</span>
-                      <input
-                        type="date"
-                        value={mappingForm.activeFrom}
-                        onChange={(event) => setMappingForm((current) => ({ ...current, activeFrom: event.target.value }))}
-                        className="h-9 w-full rounded-md border px-3 text-[13px]"
-                        style={{ borderColor: C.borderLight, background: C.panel, color: C.text }}
-                      />
-                    </label>
-
-                    <label className="space-y-1">
-                      <span style={{ color: C.textMuted, fontSize: 12, fontWeight: 650 }}>Aktiv til</span>
-                      <input
-                        type="date"
-                        value={mappingForm.activeTo}
-                        onChange={(event) => setMappingForm((current) => ({ ...current, activeTo: event.target.value }))}
-                        className="h-9 w-full rounded-md border px-3 text-[13px]"
-                        style={{ borderColor: C.borderLight, background: C.panel, color: C.text }}
-                      />
-                    </label>
+                    <div className="space-y-1 rounded-md px-3 py-2 md:col-span-2" style={{ border: `1px solid ${C.borderLight}`, background: C.panel }}>
+                      <span style={{ color: C.textMuted, fontSize: 12, fontWeight: 650 }}>Periode</span>
+                      <p style={{ color: C.text, fontSize: 13, fontWeight: 600 }}>
+                        {formatDateShort(mappingForm.activeFrom)} - {formatDateShort(mappingForm.activeTo)}
+                      </p>
+                      <p style={{ color: C.textFaint, fontSize: 11 }}>
+                        Aktiv fra/til hentes fra valgt CRM-oppdrag og endres på oppdraget, ikke her.
+                      </p>
+                    </div>
                   </div>
 
                   <div className="flex justify-end">
