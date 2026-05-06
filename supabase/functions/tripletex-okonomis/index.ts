@@ -4,6 +4,7 @@ import { corsHeaders } from "../_shared/cors.ts";
 
 const TRIPLETEX_BASE_URL = "https://tripletex.no/v2";
 const REPORT_YEAR = 2026;
+const REPORT_YEARS = [2024, 2025, 2026];
 const MONTH_LABELS = ["Jan", "Feb", "Mar", "Apr", "Mai", "Jun", "Jul", "Aug", "Sep", "Okt", "Nov", "Des"];
 
 type TripletexPosting = {
@@ -28,6 +29,10 @@ type OkonomiMonth = {
 type OkonomiResponse = {
   months: OkonomiMonth[];
   previousYearMonths: OkonomiMonth[];
+  years: Array<{
+    year: number;
+    months: OkonomiMonth[];
+  }>;
   year: number;
   previousYear: number;
 };
@@ -101,15 +106,15 @@ function formatOsloDate(date: Date) {
   return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 }
 
-function getMonthIndexesToFetch() {
+function getMonthIndexesToFetch(yearToFetch: number) {
   const now = new Date();
   const { year, month } = getOsloDateParts(now);
 
-  if (year < REPORT_YEAR) {
+  if (year < yearToFetch) {
     return [];
   }
 
-  const lastMonthIndex = year > REPORT_YEAR ? 11 : Math.min(month - 1, 11);
+  const lastMonthIndex = year > yearToFetch ? 11 : Math.min(month - 1, 11);
   return Array.from({ length: lastMonthIndex + 1 }, (_, index) => index);
 }
 
@@ -263,6 +268,17 @@ function aggregateMonth(monthIndex: number, postings: TripletexPosting[]): Okono
   };
 }
 
+async function fetchYearMonths(sessionToken: string, year: number) {
+  const monthIndexes = getMonthIndexesToFetch(year);
+
+  return Promise.all(
+    monthIndexes.map(async (monthIndex) => {
+      const postings = await fetchLedgerPostings(sessionToken, year, monthIndex);
+      return aggregateMonth(monthIndex, postings);
+    }),
+  );
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -284,33 +300,30 @@ serve(async (req) => {
       );
     }
 
-    const monthIndexes = getMonthIndexesToFetch();
-    if (monthIndexes.length === 0) {
+    if (getMonthIndexesToFetch(REPORT_YEAR).length === 0) {
       return jsonResponse({
         months: [],
         previousYearMonths: [],
+        years: [],
         year: REPORT_YEAR,
         previousYear: REPORT_YEAR - 1,
       } satisfies OkonomiResponse);
     }
 
     const sessionToken = await createSessionToken(consumerToken, employeeToken);
-    const months = await Promise.all(
-      monthIndexes.map(async (monthIndex) => {
-        const postings = await fetchLedgerPostings(sessionToken, REPORT_YEAR, monthIndex);
-        return aggregateMonth(monthIndex, postings);
-      }),
+    const years = await Promise.all(
+      REPORT_YEARS.map(async (targetYear) => ({
+        year: targetYear,
+        months: await fetchYearMonths(sessionToken, targetYear),
+      })),
     );
-    const previousYearMonths = await Promise.all(
-      monthIndexes.map(async (monthIndex) => {
-        const postings = await fetchLedgerPostings(sessionToken, REPORT_YEAR - 1, monthIndex);
-        return aggregateMonth(monthIndex, postings);
-      }),
-    );
+    const months = years.find((entry) => entry.year === REPORT_YEAR)?.months ?? [];
+    const previousYearMonths = years.find((entry) => entry.year === REPORT_YEAR - 1)?.months ?? [];
 
     return jsonResponse({
       months,
       previousYearMonths,
+      years,
       year: REPORT_YEAR,
       previousYear: REPORT_YEAR - 1,
     } satisfies OkonomiResponse);
