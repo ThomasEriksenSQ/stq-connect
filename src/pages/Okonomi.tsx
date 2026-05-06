@@ -14,7 +14,6 @@ import {
 } from "recharts";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { DesignLabMobileNavButton, DesignLabSidebar } from "@/components/designlab/DesignLabSidebar";
 import { DesignLabGhostAction } from "@/components/designlab/system";
 import { getDesignLabTextSizeStyle, type TextSize } from "@/components/designlab/TextSizeControl";
@@ -245,19 +244,17 @@ function formatChartValue(mode: ChartMode, value: number) {
 function ChartModeButton({
   active,
   children,
-  info,
   onClick,
 }: {
   active: boolean;
   children: React.ReactNode;
-  info?: string;
   onClick: () => void;
 }) {
-  const button = (
+  return (
     <button
       type="button"
       onClick={onClick}
-      className="inline-flex h-8 items-center gap-1.5 px-3 text-[12px] font-medium transition-colors"
+      className="h-8 px-3 text-[12px] font-medium transition-colors"
       style={{
         border: `1px solid ${active ? C.accent : C.borderLight}`,
         background: active ? C.accentBg : C.surface,
@@ -266,31 +263,7 @@ function ChartModeButton({
       }}
     >
       {children}
-      {info ? (
-        <span
-          className="inline-flex h-4 w-4 items-center justify-center rounded-full"
-          style={{
-            border: `1px solid ${active ? C.accent : C.border}`,
-            background: active ? C.surface : C.surfaceAlt,
-            color: active ? C.accent : C.textFaint,
-          }}
-          aria-label={info}
-        >
-          <Info className="h-3 w-3" />
-        </span>
-      ) : null}
     </button>
-  );
-
-  if (!info) return button;
-
-  return (
-    <Tooltip>
-      <TooltipTrigger asChild>{button}</TooltipTrigger>
-      <TooltipContent side="top" className="max-w-[240px] text-[12px]">
-        {info}
-      </TooltipContent>
-    </Tooltip>
   );
 }
 
@@ -622,6 +595,7 @@ export default function Okonomi() {
       return point;
     });
   }, [activeChartYears, chartMode, chartMonthsByYear, readyMonths]);
+  const showPayrollPeriodizationInfo = chartMode === "resultat" || chartMode === "margin" || chartMode === "lonnskostnader";
 
   return (
     <div
@@ -854,16 +828,16 @@ export default function Okonomi() {
                       </div>
                       <div className="flex flex-col items-start gap-2 sm:items-end">
                         <div className="flex flex-wrap gap-2 sm:justify-end">
-                          <ChartModeButton active={chartMode === "resultat"} info={PAYROLL_PERIODIZATION_INFO} onClick={() => setChartMode("resultat")}>
+                          <ChartModeButton active={chartMode === "resultat"} onClick={() => setChartMode("resultat")}>
                             Resultat
                           </ChartModeButton>
                           <ChartModeButton active={chartMode === "omsetning"} onClick={() => setChartMode("omsetning")}>
                             Omsetning
                           </ChartModeButton>
-                          <ChartModeButton active={chartMode === "margin"} info={PAYROLL_PERIODIZATION_INFO} onClick={() => setChartMode("margin")}>
+                          <ChartModeButton active={chartMode === "margin"} onClick={() => setChartMode("margin")}>
                             Margin
                           </ChartModeButton>
-                          <ChartModeButton active={chartMode === "lonnskostnader"} info={PAYROLL_PERIODIZATION_INFO} onClick={() => setChartMode("lonnskostnader")}>
+                          <ChartModeButton active={chartMode === "lonnskostnader"} onClick={() => setChartMode("lonnskostnader")}>
                             Lønn
                           </ChartModeButton>
                           <ChartModeButton active={chartMode === "varekostnad"} onClick={() => setChartMode("varekostnad")}>
@@ -887,9 +861,25 @@ export default function Okonomi() {
                       </div>
                     </div>
 
-                    <div className="mt-5 h-[340px] md:h-[380px] xl:h-[clamp(360px,42vh,520px)]">
+                    <div className="relative mt-5 h-[340px] md:h-[380px] xl:h-[clamp(360px,42vh,520px)]">
+                      {showPayrollPeriodizationInfo ? (
+                        <div
+                          className="pointer-events-none absolute left-3 top-3 z-10 inline-flex max-w-[calc(100%-24px)] items-center gap-2 rounded-md px-2.5 py-1.5"
+                          style={{
+                            border: `1px solid ${C.warning}`,
+                            background: C.warningBg,
+                            color: C.warning,
+                            boxShadow: C.shadow,
+                          }}
+                        >
+                          <Info className="h-3.5 w-3.5 shrink-0" />
+                          <span className="truncate" style={{ fontSize: 12, fontWeight: 600 }}>
+                            {PAYROLL_PERIODIZATION_INFO}
+                          </span>
+                        </div>
+                      ) : null}
                       <ResponsiveContainer width="100%" height="100%">
-                        <LineChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                        <LineChart data={chartData} margin={{ top: showPayrollPeriodizationInfo ? 50 : 10, right: 10, left: 0, bottom: 0 }}>
                           <CartesianGrid strokeDasharray="3 3" stroke={C.borderLight} />
                           <XAxis dataKey="month" tick={{ fontSize: 11, fill: C.textFaint }} stroke={C.border} />
                           <YAxis
