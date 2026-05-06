@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { AlertCircle, Banknote, ChartNoAxesCombined, CircleSlash, RefreshCw, TrendingUp } from "lucide-react";
+import { AlertCircle, Banknote, ChartNoAxesCombined, CircleSlash, Info, RefreshCw, TrendingUp } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import {
   CartesianGrid,
@@ -14,6 +14,7 @@ import {
 } from "recharts";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { DesignLabMobileNavButton, DesignLabSidebar } from "@/components/designlab/DesignLabSidebar";
 import { DesignLabGhostAction } from "@/components/designlab/system";
 import { getDesignLabTextSizeStyle, type TextSize } from "@/components/designlab/TextSizeControl";
@@ -85,6 +86,8 @@ const CHART_YEAR_COLORS: Record<number, string> = {
   2025: C.accent,
   2026: C.success,
 };
+
+const PAYROLL_PERIODIZATION_INFO = "Kan vise feil p.g.a feil periodisering av lønn";
 
 function formatCurrency(value: number) {
   return `${currencyFormatter.format(Math.round(value)).replace(/\u00A0/g, " ")} kr`;
@@ -242,17 +245,19 @@ function formatChartValue(mode: ChartMode, value: number) {
 function ChartModeButton({
   active,
   children,
+  info,
   onClick,
 }: {
   active: boolean;
   children: React.ReactNode;
+  info?: string;
   onClick: () => void;
 }) {
-  return (
+  const button = (
     <button
       type="button"
       onClick={onClick}
-      className="h-8 px-3 text-[12px] font-medium transition-colors"
+      className="inline-flex h-8 items-center gap-1.5 px-3 text-[12px] font-medium transition-colors"
       style={{
         border: `1px solid ${active ? C.accent : C.borderLight}`,
         background: active ? C.accentBg : C.surface,
@@ -261,7 +266,31 @@ function ChartModeButton({
       }}
     >
       {children}
+      {info ? (
+        <span
+          className="inline-flex h-4 w-4 items-center justify-center rounded-full"
+          style={{
+            border: `1px solid ${active ? C.accent : C.border}`,
+            background: active ? C.surface : C.surfaceAlt,
+            color: active ? C.accent : C.textFaint,
+          }}
+          aria-label={info}
+        >
+          <Info className="h-3 w-3" />
+        </span>
+      ) : null}
     </button>
+  );
+
+  if (!info) return button;
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>{button}</TooltipTrigger>
+      <TooltipContent side="top" className="max-w-[240px] text-[12px]">
+        {info}
+      </TooltipContent>
+    </Tooltip>
   );
 }
 
@@ -825,16 +854,16 @@ export default function Okonomi() {
                       </div>
                       <div className="flex flex-col items-start gap-2 sm:items-end">
                         <div className="flex flex-wrap gap-2 sm:justify-end">
-                          <ChartModeButton active={chartMode === "resultat"} onClick={() => setChartMode("resultat")}>
+                          <ChartModeButton active={chartMode === "resultat"} info={PAYROLL_PERIODIZATION_INFO} onClick={() => setChartMode("resultat")}>
                             Resultat
                           </ChartModeButton>
                           <ChartModeButton active={chartMode === "omsetning"} onClick={() => setChartMode("omsetning")}>
                             Omsetning
                           </ChartModeButton>
-                          <ChartModeButton active={chartMode === "margin"} onClick={() => setChartMode("margin")}>
+                          <ChartModeButton active={chartMode === "margin"} info={PAYROLL_PERIODIZATION_INFO} onClick={() => setChartMode("margin")}>
                             Margin
                           </ChartModeButton>
-                          <ChartModeButton active={chartMode === "lonnskostnader"} onClick={() => setChartMode("lonnskostnader")}>
+                          <ChartModeButton active={chartMode === "lonnskostnader"} info={PAYROLL_PERIODIZATION_INFO} onClick={() => setChartMode("lonnskostnader")}>
                             Lønn
                           </ChartModeButton>
                           <ChartModeButton active={chartMode === "varekostnad"} onClick={() => setChartMode("varekostnad")}>
