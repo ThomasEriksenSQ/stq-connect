@@ -14,6 +14,7 @@ import {
 } from "recharts";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { DesignLabMobileNavButton, DesignLabSidebar } from "@/components/designlab/DesignLabSidebar";
 import { DesignLabGhostAction } from "@/components/designlab/system";
 import { getDesignLabTextSizeStyle, type TextSize } from "@/components/designlab/TextSizeControl";
@@ -21,7 +22,8 @@ import { C } from "@/components/designlab/theme";
 import { useAuth } from "@/hooks/useAuth";
 import { usePersistentState } from "@/hooks/usePersistentState";
 import { supabase } from "@/integrations/supabase/client";
-import { cn } from "@/lib/utils";
+import { getEmployeeLifecycleStatus } from "@/lib/employeeStatus";
+import { cn, getInitials } from "@/lib/utils";
 
 type OkonomiMonth = {
   month: string;
@@ -66,6 +68,49 @@ type MetricDefinition = {
 
 type ChartMode = "resultat" | "omsetning" | "margin" | "lonnskostnader" | "varekostnad" | "andreDriftskostnader";
 
+type OkonomiPageView = "okonomi" | "ansatte";
+
+type EmployeeStatusFilter = "Aktiv" | "Sluttet";
+
+type EmployeeMetric =
+  | "billableHours"
+  | "coverage"
+  | "revenue"
+  | "costs"
+  | "result"
+  | "salaryCost"
+  | "sickPayCost";
+
+type EmployeeRow = {
+  id: number;
+  ansatt_id: number | null;
+  navn: string;
+  bilde_url: string | null;
+  start_dato: string | null;
+  slutt_dato: string | null;
+  status: string | null;
+};
+
+type EmployeePortraitRow = {
+  ansatt_id: number;
+  portrait_url: string | null;
+};
+
+type EmployeeTripletexMapping = {
+  ansatt_id: number;
+  tripletex_employee_id: number | null;
+  tripletex_project_id: number | null;
+  active_from: string | null;
+  active_to: string | null;
+};
+
+type EmployeeMetricDefinition = {
+  key: EmployeeMetric;
+  label: string;
+  chartLabel: string;
+  kind: "hours" | "percent" | "currency";
+};
+
 type OkonomiMonthStatus = {
   year: number;
   month: string;
@@ -87,6 +132,18 @@ const CHART_YEAR_COLORS: Record<number, string> = {
 };
 
 const PAYROLL_PERIODIZATION_INFO = "Kan vise feil p.g.a feil periodisering av lønn";
+
+const EMPLOYEE_METRICS: EmployeeMetricDefinition[] = [
+  { key: "billableHours", label: "Fakturerte timer", chartLabel: "Fakturerte timer", kind: "hours" },
+  { key: "coverage", label: "Dekningsgrad", chartLabel: "Dekningsgrad", kind: "percent" },
+  { key: "revenue", label: "Omsetning", chartLabel: "Omsetning", kind: "currency" },
+  { key: "costs", label: "Kostnader", chartLabel: "Kostnader", kind: "currency" },
+  { key: "result", label: "Resultat", chartLabel: "Resultat", kind: "currency" },
+  { key: "salaryCost", label: "Lønnskost", chartLabel: "Lønnskostnad", kind: "currency" },
+  { key: "sickPayCost", label: "Sykelønn", chartLabel: "Sykelønnkostnad", kind: "currency" },
+];
+
+const EMPLOYEE_STATUS_FILTERS: EmployeeStatusFilter[] = ["Aktiv", "Sluttet"];
 
 function formatCurrency(value: number) {
   return `${currencyFormatter.format(Math.round(value)).replace(/\u00A0/g, " ")} kr`;
@@ -241,6 +298,35 @@ function formatChartValue(mode: ChartMode, value: number) {
   return formatCurrency(value);
 }
 
+function getEmployeeMetric(metric: EmployeeMetric) {
+  return EMPLOYEE_METRICS.find((entry) => entry.key === metric) || EMPLOYEE_METRICS[0];
+}
+
+function formatEmployeeMetricValue(metric: EmployeeMetricDefinition, value: number | null) {
+  if (value === null) return "-";
+  if (metric.kind === "percent") return formatPercent(value);
+  if (metric.kind === "hours") {
+    return `${value.toLocaleString("nb-NO", { maximumFractionDigits: 1, minimumFractionDigits: 0 })} t`;
+  }
+
+  return formatCurrency(value);
+}
+
+function formatEmployeeAxisValue(metric: EmployeeMetricDefinition, value: number) {
+  if (metric.kind === "percent") return `${Math.round(value)}%`;
+  if (metric.kind === "hours") return `${Math.round(value)}t`;
+  return formatCompactCurrency(value);
+}
+
+function isMappingActiveForYear(mapping: EmployeeTripletexMapping, targetYear: number) {
+  const yearStart = new Date(targetYear, 0, 1).getTime();
+  const yearEnd = new Date(targetYear, 11, 31).getTime();
+  const activeFrom = mapping.active_from ? new Date(mapping.active_from).getTime() : null;
+  const activeTo = mapping.active_to ? new Date(mapping.active_to).getTime() : null;
+
+  return (activeFrom === null || activeFrom <= yearEnd) && (activeTo === null || activeTo >= yearStart);
+}
+
 function ChartModeButton({
   active,
   children,
@@ -276,11 +362,20 @@ export default function Okonomi() {
   const navigate = useNavigate();
   const { signOut, user } = useAuth();
   const [textSize] = usePersistentState<TextSize>("dl-text-size", "M");
+  const [activeView, setActiveView] = useState<OkonomiPageView>("okonomi");
   const [readyMonths, setReadyMonths] = useState<Record<string, boolean>>({});
   const [savingReadyMonth, setSavingReadyMonth] = useState<string | null>(null);
   const [readyError, setReadyError] = useState<string | null>(null);
   const [chartMode, setChartMode] = useState<ChartMode>("resultat");
   const [visibleChartYears, setVisibleChartYears] = useState<number[]>(DEFAULT_CHART_YEARS);
+  const [employeeStatusFilter, setEmployeeStatusFilter] = useState<EmployeeStatusFilter>("Aktiv");
+  const [employeeMetric, setEmployeeMetric] = useState<EmployeeMetric>("billableHours");
+  const [employees, setEmployees] = useState<EmployeeRow[]>([]);
+  const [employeePortraits, setEmployeePortraits] = useState<Record<number, string>>({});
+  const [employeeMappings, setEmployeeMappings] = useState<EmployeeTripletexMapping[]>([]);
+  const [employeeMappingNotice, setEmployeeMappingNotice] = useState<string | null>(null);
+  const [employeesLoading, setEmployeesLoading] = useState(false);
+  const [employeesError, setEmployeesError] = useState<string | null>(null);
   const [months, setMonths] = useState<OkonomiMonth[]>([]);
   const [previousYearMonths, setPreviousYearMonths] = useState<OkonomiMonth[]>([]);
   const [yearSeries, setYearSeries] = useState<OkonomiYearData[]>([]);
@@ -293,7 +388,7 @@ export default function Okonomi() {
     try {
       setReadyError(null);
       const { data, error: readyLoadError } = await supabase
-        .from("okonomi_month_status" as any)
+        .from("okonomi_month_status" as never)
         .select("year, month, ready")
         .eq("year", targetYear);
 
@@ -360,6 +455,63 @@ export default function Okonomi() {
     }
   }, [loadReadyMonths]);
 
+  const loadEmployees = useCallback(async (cancelled?: () => boolean) => {
+    try {
+      setEmployeesLoading(true);
+      setEmployeesError(null);
+      setEmployeeMappingNotice(null);
+
+      const { data: employeeData, error: employeeLoadError } = await supabase
+        .from("stacq_ansatte")
+        .select("id, ansatt_id, navn, bilde_url, start_dato, slutt_dato, status")
+        .order("navn", { ascending: true });
+
+      if (employeeLoadError) {
+        throw employeeLoadError;
+      }
+
+      const [{ data: portraitData }, mappingResult] = await Promise.all([
+        supabase
+          .from("cv_documents")
+          .select("ansatt_id, portrait_url")
+          .not("portrait_url", "is", null),
+        supabase
+          .from("okonomi_ansatt_tripletex_mapping" as never)
+          .select("ansatt_id, tripletex_employee_id, tripletex_project_id, active_from, active_to"),
+      ]);
+
+      if (!cancelled?.()) {
+        const nextPortraits = Object.fromEntries(
+          ((portraitData || []) as EmployeePortraitRow[])
+            .filter((entry) => entry.portrait_url)
+            .map((entry) => [entry.ansatt_id, entry.portrait_url as string]),
+        );
+
+        setEmployees((employeeData || []) as EmployeeRow[]);
+        setEmployeePortraits(nextPortraits);
+
+        if (mappingResult.error) {
+          setEmployeeMappings([]);
+          setEmployeeMappingNotice("Tripletex-kobling er ikke satt opp i dette miljøet ennå.");
+        } else {
+          setEmployeeMappings((mappingResult.data || []) as EmployeeTripletexMapping[]);
+        }
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Kunne ikke hente ansatte.";
+      if (!cancelled?.()) {
+        setEmployeesError(message);
+        setEmployees([]);
+        setEmployeePortraits({});
+        setEmployeeMappings([]);
+      }
+    } finally {
+      if (!cancelled?.()) {
+        setEmployeesLoading(false);
+      }
+    }
+  }, []);
+
   useEffect(() => {
     let cancelled = false;
     void loadOkonomi(() => cancelled);
@@ -368,6 +520,17 @@ export default function Okonomi() {
       cancelled = true;
     };
   }, [loadOkonomi]);
+
+  useEffect(() => {
+    if (activeView !== "ansatte") return;
+
+    let cancelled = false;
+    void loadEmployees(() => cancelled);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeView, loadEmployees]);
 
   useEffect(() => {
     const channel = supabase
@@ -433,7 +596,7 @@ export default function Okonomi() {
     }));
 
     const { error: saveError } = await supabase
-      .from("okonomi_month_status" as any)
+      .from("okonomi_month_status" as never)
       .upsert(
         {
           year,
@@ -577,7 +740,7 @@ export default function Okonomi() {
         tone: latestResult < 0 ? "negative" : "positive",
       },
     ];
-  }, [months.length, previousByMonth, previousYear, readyMonthsList, readyPreviousMonthsList]);
+  }, [previousByMonth, previousYear, readyMonthsList, readyPreviousMonthsList]);
 
   const chartData = useMemo(() => {
     return MONTH_LABELS.map((monthLabel) => {
@@ -596,6 +759,50 @@ export default function Okonomi() {
     });
   }, [activeChartYears, chartMode, chartMonthsByYear, readyMonths]);
   const showPayrollPeriodizationInfo = chartMode === "resultat" || chartMode === "margin" || chartMode === "lonnskostnader";
+  const selectedEmployeeMetric = useMemo(() => getEmployeeMetric(employeeMetric), [employeeMetric]);
+  const activeEmployeeMappingsByEmployee = useMemo(() => {
+    const map = new Map<number, EmployeeTripletexMapping[]>();
+
+    employeeMappings
+      .filter((mapping) => isMappingActiveForYear(mapping, year))
+      .forEach((mapping) => {
+        const current = map.get(mapping.ansatt_id) || [];
+        current.push(mapping);
+        map.set(mapping.ansatt_id, current);
+      });
+
+    return map;
+  }, [employeeMappings, year]);
+  const filteredEmployees = useMemo(() => {
+    return employees.filter((employee) => {
+      const status = getEmployeeLifecycleStatus(employee);
+      if (employeeStatusFilter === "Sluttet") return status === "Sluttet";
+      return status !== "Sluttet";
+    });
+  }, [employeeStatusFilter, employees]);
+  const employeeTableRows = useMemo(() => {
+    return filteredEmployees.map((employee) => ({
+      employee,
+      status: getEmployeeLifecycleStatus(employee),
+      values: MONTH_LABELS.map(() => null as number | null),
+      mappings: activeEmployeeMappingsByEmployee.get(employee.id) || [],
+    }));
+  }, [activeEmployeeMappingsByEmployee, filteredEmployees]);
+  const hasEmployeeMetricData = useMemo(() => {
+    return employeeTableRows.some((row) => row.values.some((value) => value !== null));
+  }, [employeeTableRows]);
+  const employeeChartData = useMemo(() => {
+    return MONTH_LABELS.map((month, index) => {
+      const monthValues = employeeTableRows
+        .map((row) => row.values[index])
+        .filter((value): value is number => value !== null);
+
+      return {
+        month,
+        value: monthValues.length ? monthValues.reduce((sum, value) => sum + value, 0) : null,
+      };
+    });
+  }, [employeeTableRows]);
 
   return (
     <div
@@ -608,12 +815,45 @@ export default function Okonomi() {
         <header className="dl-shell-header flex shrink-0 flex-wrap items-center justify-between gap-3" style={{ borderBottom: `1px solid ${C.border}` }}>
           <div className="flex min-w-0 items-center gap-3">
             <DesignLabMobileNavButton navigate={navigate} signOut={signOut} user={user} activePath="/okonomi" />
-            <div className="flex items-baseline gap-2.5">
-              <h1 style={{ fontSize: 14, fontWeight: 600, color: C.text }}>Økonomi</h1>
-              <span style={{ fontSize: 13, color: C.textGhost, fontWeight: 500 }}>· {year}</span>
+            <div className="flex min-w-0 flex-wrap items-center gap-3">
+              <div className="flex items-baseline gap-2.5">
+                <h1 style={{ fontSize: 14, fontWeight: 600, color: C.text }}>Økonomi</h1>
+                <span style={{ fontSize: 13, color: C.textGhost, fontWeight: 500 }}>· {year}</span>
+              </div>
+              <div className="flex rounded-md p-0.5" style={{ border: `1px solid ${C.borderLight}`, background: C.surfaceAlt }}>
+                <button
+                  type="button"
+                  onClick={() => setActiveView("okonomi")}
+                  className="h-7 px-3 text-[12px] font-semibold transition-colors"
+                  style={{
+                    borderRadius: 6,
+                    background: activeView === "okonomi" ? C.panel : "transparent",
+                    color: activeView === "okonomi" ? C.accent : C.textMuted,
+                    boxShadow: activeView === "okonomi" ? C.shadow : "none",
+                  }}
+                >
+                  Økonomi
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveView("ansatte")}
+                  className="h-7 px-3 text-[12px] font-semibold transition-colors"
+                  style={{
+                    borderRadius: 6,
+                    background: activeView === "ansatte" ? C.panel : "transparent",
+                    color: activeView === "ansatte" ? C.accent : C.textMuted,
+                    boxShadow: activeView === "ansatte" ? C.shadow : "none",
+                  }}
+                >
+                  Ansatte
+                </button>
+              </div>
             </div>
           </div>
-          <DesignLabGhostAction onClick={() => void loadOkonomi()} disabled={loading}>
+          <DesignLabGhostAction
+            onClick={() => activeView === "ansatte" ? void loadEmployees() : void loadOkonomi()}
+            disabled={activeView === "ansatte" ? employeesLoading : loading}
+          >
             <RefreshCw style={{ width: 14, height: 14 }} />
             Oppdater
           </DesignLabGhostAction>
@@ -621,6 +861,8 @@ export default function Okonomi() {
 
         <div className="flex-1 min-h-0 overflow-auto">
           <div className="flex w-full flex-col gap-4 p-4 md:p-5" style={{ maxWidth: "none", margin: 0 }}>
+            {activeView === "okonomi" ? (
+              <>
             {loading ? <LoadingTable /> : null}
 
             {!loading && error ? (
@@ -933,6 +1175,213 @@ export default function Okonomi() {
                 </div>
               </>
             ) : null}
+              </>
+            ) : (
+              <>
+                {employeesLoading ? <LoadingTable /> : null}
+
+                {!employeesLoading && employeesError ? (
+                  <EmptyStatePanel title="Kunne ikke hente ansatte" text={employeesError} tone="danger" />
+                ) : null}
+
+                {!employeesLoading && !employeesError ? (
+                  <div className="flex flex-col gap-4 xl:grid xl:grid-cols-[minmax(780px,1.18fr)_minmax(440px,0.82fr)] xl:items-start">
+                    <section
+                      className="min-w-0 overflow-hidden"
+                      style={{ border: `1px solid ${C.border}`, background: C.panel, borderRadius: 8, boxShadow: C.shadow }}
+                    >
+                      <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3" style={{ borderBottom: `1px solid ${C.borderLight}` }}>
+                        <div className="min-w-0">
+                          <h2 style={{ color: C.text, fontSize: 13, fontWeight: 650 }}>Ansatte</h2>
+                          <p className="mt-0.5" style={{ color: C.textFaint, fontSize: 12 }}>
+                            {employeeTableRows.length} {employeeStatusFilter.toLowerCase()}e · {selectedEmployeeMetric.label} · {year}
+                          </p>
+                          {employeeMappingNotice ? (
+                            <p className="mt-1" style={{ color: C.warning, fontSize: 12 }}>
+                              {employeeMappingNotice}
+                            </p>
+                          ) : null}
+                        </div>
+                        <div className="flex max-w-full flex-col items-start gap-2 sm:items-end">
+                          <div className="flex flex-wrap gap-2 sm:justify-end">
+                            {EMPLOYEE_STATUS_FILTERS.map((statusFilter) => (
+                              <ChartModeButton
+                                key={statusFilter}
+                                active={employeeStatusFilter === statusFilter}
+                                onClick={() => setEmployeeStatusFilter(statusFilter)}
+                              >
+                                {statusFilter}
+                              </ChartModeButton>
+                            ))}
+                          </div>
+                          <div className="flex flex-wrap gap-2 sm:justify-end">
+                            {EMPLOYEE_METRICS.map((metric) => (
+                              <ChartModeButton
+                                key={metric.key}
+                                active={employeeMetric === metric.key}
+                                onClick={() => setEmployeeMetric(metric.key)}
+                              >
+                                {metric.label}
+                              </ChartModeButton>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="overflow-auto">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="hover:bg-transparent" style={{ borderColor: C.borderLight }}>
+                              <TableHead className="sticky left-0 z-10 min-w-[280px] font-semibold" style={{ background: C.surfaceAlt, color: C.text }}>
+                                Navn
+                              </TableHead>
+                              {MONTH_LABELS.map((month) => (
+                                <TableHead key={month} className="min-w-[112px] text-right font-semibold" style={{ background: C.surfaceAlt, color: C.text }}>
+                                  {month}
+                                </TableHead>
+                              ))}
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {employeeTableRows.length === 0 ? (
+                              <TableRow className="hover:bg-transparent" style={{ borderColor: C.borderLight }}>
+                                <TableCell colSpan={MONTH_LABELS.length + 1} style={{ color: C.textMuted, fontSize: 13 }}>
+                                  Ingen ansatte i dette filteret.
+                                </TableCell>
+                              </TableRow>
+                            ) : null}
+
+                            {employeeTableRows.map((row) => {
+                              const portrait = employeePortraits[row.employee.id] || row.employee.bilde_url || "";
+                              const hasTripletexEmployee = row.mappings.some((mapping) => mapping.tripletex_employee_id);
+                              const projectCount = new Set(row.mappings.map((mapping) => mapping.tripletex_project_id).filter(Boolean)).size;
+
+                              return (
+                                <TableRow key={row.employee.id} className="transition-colors" style={{ borderColor: C.borderLight, background: C.panel }}>
+                                  <TableCell className="sticky left-0 z-10" style={{ background: C.panel, color: C.text }}>
+                                    <div className="flex min-w-0 items-center gap-3">
+                                      <Avatar className="h-8 w-8" style={{ border: `1px solid ${C.borderLight}` }}>
+                                        <AvatarImage src={portrait} alt={row.employee.navn} />
+                                        <AvatarFallback style={{ background: C.surfaceAlt, color: C.textMuted, fontSize: 11, fontWeight: 700 }}>
+                                          {getInitials(row.employee.navn)}
+                                        </AvatarFallback>
+                                      </Avatar>
+                                      <div className="min-w-0">
+                                        <p className="truncate" style={{ color: C.text, fontSize: 13, fontWeight: 650 }}>
+                                          {row.employee.navn}
+                                        </p>
+                                        <p className="truncate" style={{ color: hasTripletexEmployee || projectCount > 0 ? C.success : C.textGhost, fontSize: 11 }}>
+                                          {hasTripletexEmployee || projectCount > 0
+                                            ? `${hasTripletexEmployee ? "Tripletex ansatt" : "Ansatt"} · ${projectCount} prosjekt`
+                                            : `${row.status} · mangler Tripletex-kobling`}
+                                        </p>
+                                      </div>
+                                    </div>
+                                  </TableCell>
+                                  {row.values.map((value, index) => (
+                                    <TableCell
+                                      key={`${row.employee.id}-${MONTH_LABELS[index]}`}
+                                      className="text-right tabular-nums"
+                                      style={{ color: value === null ? C.textGhost : C.text, fontSize: 12, fontWeight: value === null ? 500 : 650 }}
+                                    >
+                                      {formatEmployeeMetricValue(selectedEmployeeMetric, value)}
+                                    </TableCell>
+                                  ))}
+                                </TableRow>
+                              );
+                            })}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </section>
+
+                    <aside className="min-w-0 xl:sticky xl:top-5">
+                      <div
+                        className="min-w-0"
+                        style={{
+                          border: `1px solid ${C.border}`,
+                          background: C.panel,
+                          borderRadius: 8,
+                          boxShadow: C.shadow,
+                          padding: 18,
+                        }}
+                      >
+                        <div className="flex flex-wrap items-start justify-between gap-3">
+                          <div>
+                            <p style={{ color: C.textMuted, fontSize: 11, fontWeight: 650, letterSpacing: "0.08em", textTransform: "uppercase" }}>
+                              Ansattøkonomi
+                            </p>
+                            <h2 className="mt-1" style={{ color: C.text, fontSize: 15, fontWeight: 700 }}>
+                              {selectedEmployeeMetric.chartLabel}
+                            </h2>
+                            <p className="mt-1" style={{ color: C.textFaint, fontSize: 12 }}>
+                              Sum for {employeeStatusFilter.toLowerCase()}e ansatte
+                            </p>
+                          </div>
+                          <span
+                            className="inline-flex h-7 items-center rounded-md px-2.5 text-[12px] font-semibold"
+                            style={{
+                              border: `1px solid ${hasEmployeeMetricData ? C.success : C.borderLight}`,
+                              background: hasEmployeeMetricData ? C.successBg : C.surfaceAlt,
+                              color: hasEmployeeMetricData ? C.success : C.textMuted,
+                            }}
+                          >
+                            {hasEmployeeMetricData ? "Tripletex" : "Kobling venter"}
+                          </span>
+                        </div>
+
+                        <div className="relative mt-5 h-[340px] md:h-[380px] xl:h-[clamp(360px,42vh,520px)]">
+                          {!hasEmployeeMetricData ? (
+                            <div className="pointer-events-none absolute inset-x-4 top-4 z-10 flex items-start gap-2 rounded-md px-3 py-2" style={{ border: `1px solid ${C.borderLight}`, background: C.surface }}>
+                              <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" style={{ color: C.textMuted }} />
+                              <p style={{ color: C.textMuted, fontSize: 12, lineHeight: 1.4 }}>
+                                Legg inn Tripletex ansatt- og prosjektkoblinger før tall vises.
+                              </p>
+                            </div>
+                          ) : null}
+                          <ResponsiveContainer width="100%" height="100%">
+                            <LineChart data={employeeChartData} margin={{ top: hasEmployeeMetricData ? 10 : 58, right: 10, left: 0, bottom: 0 }}>
+                              <CartesianGrid strokeDasharray="3 3" stroke={C.borderLight} />
+                              <XAxis dataKey="month" tick={{ fontSize: 11, fill: C.textFaint }} stroke={C.border} />
+                              <YAxis
+                                tick={{ fontSize: 11, fill: C.textFaint }}
+                                stroke={C.border}
+                                tickFormatter={(value) => formatEmployeeAxisValue(selectedEmployeeMetric, Number(value))}
+                              />
+                              <ReTooltip
+                                contentStyle={{
+                                  background: C.surface,
+                                  border: `1px solid ${C.border}`,
+                                  borderRadius: 8,
+                                  color: C.text,
+                                  fontSize: 13,
+                                }}
+                                formatter={(value: number) => [formatEmployeeMetricValue(selectedEmployeeMetric, value), selectedEmployeeMetric.label]}
+                                labelFormatter={(label) => `${label} ${year}`}
+                              />
+                              <Line
+                                type="monotone"
+                                dataKey="value"
+                                name={selectedEmployeeMetric.label}
+                                stroke={C.accent}
+                                strokeWidth={2.25}
+                                connectNulls={false}
+                                dot={{ r: 2.25 }}
+                                activeDot={{ r: 4 }}
+                              />
+                            </LineChart>
+                          </ResponsiveContainer>
+                        </div>
+
+                        <p className="mt-3" style={{ color: C.textFaint, fontSize: 12, lineHeight: 1.45 }}>
+                          Koblingen bruker Tripletex employeeId og projectId per periode, slik at ansatte som har hatt flere prosjekter kan summeres korrekt.
+                        </p>
+                      </div>
+                    </aside>
+                  </div>
+                ) : null}
+              </>
+            )}
           </div>
         </div>
       </main>
