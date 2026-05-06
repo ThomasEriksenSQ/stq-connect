@@ -16,6 +16,13 @@ type MappingRow = {
   active_to: string | null;
 };
 
+type EmployeeRow = {
+  id: number;
+  ansatt_id: number | null;
+  start_dato: string | null;
+  slutt_dato: string | null;
+};
+
 type AssignmentRow = {
   id: number;
   oppdrag_id: number | null;
@@ -31,6 +38,11 @@ type TripletexPosting = {
   };
 };
 
+type TripletexTimesheetEntry = {
+  hours?: number | string | null;
+  chargeableHours?: number | string | null;
+};
+
 type EmployeeFinanceMonth = {
   month: string;
   billableHours: number | null;
@@ -44,6 +56,7 @@ type EmployeeFinanceMonth = {
 
 type EmployeeAccumulatorMonth = {
   touched: boolean;
+  hasTimesheetHours: boolean;
   billableHours: number;
   coverage: number | null;
   revenue: number;
@@ -51,6 +64,14 @@ type EmployeeAccumulatorMonth = {
   result: number;
   salaryCost: number;
   sickPayCost: number | null;
+};
+
+type EmployeeSource = {
+  id: number;
+  tripletexEmployeeIds: Set<number>;
+  start_dato: string | null;
+  slutt_dato: string | null;
+  mappings: MappingRow[];
 };
 
 function jsonResponse(body: unknown, status = 200) {
@@ -134,6 +155,13 @@ function getMonthDateRange(year: number, monthIndex: number) {
   return { dateFrom, dateTo };
 }
 
+function isMonthFetchable(year: number, monthIndex: number) {
+  const today = getOsloDateParts(new Date());
+  if (year < today.year) return true;
+  if (year > today.year) return false;
+  return monthIndex <= today.month - 1;
+}
+
 function parseDateValue(value: string | null | undefined) {
   if (!value) return null;
   const date = new Date(`${value}T00:00:00Z`);
@@ -162,6 +190,21 @@ function countWeekdays(year: number, monthIndex: number) {
   return count;
 }
 
+function parseFiniteNumber(value: unknown) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function parseAmount(value: unknown) {
+  return parseFiniteNumber(value) ?? 0;
+}
+
+function addWarning(warnings: string[], message: string) {
+  if (warnings.includes(message)) return;
+  if (warnings.length >= 5) return;
+  warnings.push(message);
+}
+
 async function parseJsonResponse<T>(response: Response) {
   const text = await response.text();
   if (!text) return null as T | null;
@@ -171,6 +214,13 @@ async function parseJsonResponse<T>(response: Response) {
   } catch {
     throw new Error(`Tripletex svarte med ugyldig JSON (${response.status}).`);
   }
+}
+
+function getPayloadValues<T>(payload: { values?: T[]; value?: T[] | T } | null) {
+  if (!payload) return [];
+  if (Array.isArray(payload.values)) return payload.values;
+  if (Array.isArray(payload.value)) return payload.value;
+  return [];
 }
 
 async function createSessionToken(consumerToken: string, employeeToken: string) {
@@ -193,6 +243,82 @@ async function createSessionToken(consumerToken: string, employeeToken: string) 
   }
 
   return sessionToken;
+}
+
+async function fetchEmployeeTotalHours(sessionToken: string, employeeId: number, year: number, monthIndex: number) {
+  const { dateFrom, dateTo } = getMonthDateRange(year, monthIndex);
+  const params = new URLSearchParams({
+    employeeId: String(employeeId),
+    startDate: dateFrom,
+    endDate: dateTo,
+    fields: "value",
+  });
+
+  const response = await fetch(`${TRIPLETEX_BASE_URL}/timesheet/entry/>totalHours?${params.toString()}`, {
+    headers: {
+      Authorization: `Basic ${btoa(`0:${sessionToken}`)}`,
+      Accept: "application/json",
+    },
+  });
+  const payload = await parseJsonResponse<{ value?: number | string; message?: string }>(response);
+
+  if (!response.ok) {
+    const message = payload?.message ?? `Kunne ikke hente timer for Tripletex-ansatt ${employeeId}.`;
+    throw new Error(message);
+  }
+
+  return parseAmount(payload?.value);
+}
+
+async function fetchProjectTimesheetHours(
+  sessionToken: string,
+  employeeId: number,
+  projectId: number,
+  year: number,
+  monthIndex: number,
+) {
+  const { dateFrom, dateTo } = getMonthDateRange(year, monthIndex);
+  const pageSize = 1000;
+  let totalHours = 0;
+  let from = 0;
+
+  while (true) {
+    const params = new URLSearchParams({
+      dateFrom,
+      dateTo,
+      employeeId: String(employeeId),
+      projectId: String(projectId),
+      from: String(from),
+      count: String(pageSize),
+      fields: "hours,chargeableHours",
+    });
+
+    const response = await fetch(`${TRIPLETEX_BASE_URL}/timesheet/entry?${params.toString()}`, {
+      headers: {
+        Authorization: `Basic ${btoa(`0:${sessionToken}`)}`,
+        Accept: "application/json",
+      },
+    });
+    const payload = await parseJsonResponse<{ values?: TripletexTimesheetEntry[]; value?: TripletexTimesheetEntry[]; message?: string }>(
+      response,
+    );
+
+    if (!response.ok) {
+      const message = payload?.message ?? `Kunne ikke hente prosjekttimer for Tripletex-prosjekt ${projectId}.`;
+      throw new Error(message);
+    }
+
+    const entries = getPayloadValues(payload);
+    for (const entry of entries) {
+      const chargeableHours = parseFiniteNumber(entry.chargeableHours);
+      totalHours += chargeableHours ?? parseAmount(entry.hours);
+    }
+
+    if (entries.length < pageSize) break;
+    from += entries.length;
+  }
+
+  return totalHours;
 }
 
 async function fetchProjectLedgerPostings(sessionToken: string, projectId: number, year: number, monthIndex: number) {
@@ -278,6 +404,7 @@ function aggregatePostings(postings: TripletexPosting[], hourlyRate: number | nu
 function createEmptyAccumulatorMonths(): EmployeeAccumulatorMonth[] {
   return MONTH_LABELS.map(() => ({
     touched: false,
+    hasTimesheetHours: false,
     billableHours: 0,
     coverage: null,
     revenue: 0,
@@ -290,6 +417,39 @@ function createEmptyAccumulatorMonths(): EmployeeAccumulatorMonth[] {
 
 function roundMetric(value: number) {
   return Math.round(value * 10) / 10;
+}
+
+function ensureEmployeeSource(sources: Map<number, EmployeeSource>, employeeId: number) {
+  let source = sources.get(employeeId);
+  if (!source) {
+    source = {
+      id: employeeId,
+      tripletexEmployeeIds: new Set<number>(),
+      start_dato: null,
+      slutt_dato: null,
+      mappings: [],
+    };
+    sources.set(employeeId, source);
+  }
+
+  return source;
+}
+
+function getMappingAssignment(mapping: MappingRow, assignments: Map<number, AssignmentRow>) {
+  return mapping.stacq_oppdrag_id ? assignments.get(mapping.stacq_oppdrag_id) : undefined;
+}
+
+function getMappingProjectId(mapping: MappingRow, assignments: Map<number, AssignmentRow>) {
+  const assignment = getMappingAssignment(mapping, assignments);
+  return mapping.tripletex_project_id ?? assignment?.oppdrag_id ?? null;
+}
+
+function getMappingActiveFrom(mapping: MappingRow, assignment: AssignmentRow | undefined, source: EmployeeSource) {
+  return mapping.active_from ?? assignment?.start_dato ?? source.start_dato;
+}
+
+function getMappingActiveTo(mapping: MappingRow, assignment: AssignmentRow | undefined, source: EmployeeSource) {
+  return mapping.active_to ?? assignment?.slutt_dato ?? source.slutt_dato;
 }
 
 serve(async (req) => {
@@ -316,16 +476,46 @@ serve(async (req) => {
       );
     }
 
+    const warnings: string[] = [];
     const supabase = createAdminClient();
-    const { data: mappingsData, error: mappingsError } = await supabase
-      .from("okonomi_ansatt_tripletex_mapping")
-      .select("ansatt_id, stacq_oppdrag_id, tripletex_employee_id, tripletex_project_id, active_from, active_to");
+    const [employeesResult, mappingsResult] = await Promise.all([
+      supabase
+        .from("stacq_ansatte")
+        .select("id, ansatt_id, start_dato, slutt_dato")
+        .not("ansatt_id", "is", null),
+      supabase
+        .from("okonomi_ansatt_tripletex_mapping")
+        .select("ansatt_id, stacq_oppdrag_id, tripletex_employee_id, tripletex_project_id, active_from, active_to"),
+    ]);
 
-    if (mappingsError) throw mappingsError;
+    if (employeesResult.error) throw employeesResult.error;
 
-    const mappings = (mappingsData || []) as MappingRow[];
-    if (mappings.length === 0) {
-      return jsonResponse({ year, employees: [] });
+    const employees = (employeesResult.data || []) as EmployeeRow[];
+    const mappings = mappingsResult.error ? [] : (mappingsResult.data || []) as MappingRow[];
+    if (mappingsResult.error) {
+      addWarning(warnings, "Tripletex-prosjektkobling er ikke tilgjengelig. Viser timer fra ansatt-ID der den finnes.");
+    }
+
+    const sources = new Map<number, EmployeeSource>();
+    for (const employee of employees) {
+      const source = ensureEmployeeSource(sources, employee.id);
+      source.start_dato = employee.start_dato;
+      source.slutt_dato = employee.slutt_dato;
+      if (employee.ansatt_id) {
+        source.tripletexEmployeeIds.add(employee.ansatt_id);
+      }
+    }
+
+    for (const mapping of mappings) {
+      const source = ensureEmployeeSource(sources, mapping.ansatt_id);
+      source.mappings.push(mapping);
+      if (mapping.tripletex_employee_id) {
+        source.tripletexEmployeeIds.add(mapping.tripletex_employee_id);
+      }
+    }
+
+    if (sources.size === 0) {
+      return jsonResponse({ year, employees: [], warnings });
     }
 
     const assignmentIds = Array.from(new Set(mappings.map((mapping) => mapping.stacq_oppdrag_id).filter(Boolean))) as number[];
@@ -341,41 +531,102 @@ serve(async (req) => {
     const assignments = new Map(((assignmentsData || []) as AssignmentRow[]).map((assignment) => [assignment.id, assignment]));
     const sessionToken = await createSessionToken(consumerToken, employeeToken);
     const ledgerCache = new Map<string, Promise<TripletexPosting[]>>();
+    const employeeTotalHoursCache = new Map<string, Promise<number>>();
+    const projectTimesheetHoursCache = new Map<string, Promise<number>>();
     const employeeMonths = new Map<number, EmployeeAccumulatorMonth[]>();
 
-    for (const mapping of mappings) {
-      const assignment = mapping.stacq_oppdrag_id ? assignments.get(mapping.stacq_oppdrag_id) : undefined;
-      const projectId = mapping.tripletex_project_id ?? assignment?.oppdrag_id ?? null;
-      if (!projectId) continue;
-
-      const activeFrom = mapping.active_from ?? assignment?.start_dato ?? null;
-      const activeTo = mapping.active_to ?? assignment?.slutt_dato ?? null;
-      const monthlyAccumulator = employeeMonths.get(mapping.ansatt_id) ?? createEmptyAccumulatorMonths();
-      const hourlyRate = assignment?.utpris ?? null;
+    for (const source of sources.values()) {
+      const months = createEmptyAccumulatorMonths();
+      const tripletexEmployeeIds = Array.from(source.tripletexEmployeeIds);
 
       for (let monthIndex = 0; monthIndex < MONTH_LABELS.length; monthIndex += 1) {
-        if (!overlapsMonth(activeFrom, activeTo, year, monthIndex)) continue;
+        if (!isMonthFetchable(year, monthIndex)) continue;
 
-        const cacheKey = `${projectId}-${year}-${monthIndex}`;
-        if (!ledgerCache.has(cacheKey)) {
-          ledgerCache.set(cacheKey, fetchProjectLedgerPostings(sessionToken, projectId, year, monthIndex));
+        const sourceActive = overlapsMonth(source.start_dato, source.slutt_dato, year, monthIndex);
+        const activeMappings = source.mappings.filter((mapping) => {
+          const assignment = getMappingAssignment(mapping, assignments);
+          return overlapsMonth(
+            getMappingActiveFrom(mapping, assignment, source),
+            getMappingActiveTo(mapping, assignment, source),
+            year,
+            monthIndex,
+          );
+        });
+        const month = months[monthIndex];
+        const projectHourKeys = new Set<string>();
+
+        for (const mapping of activeMappings) {
+          const projectId = getMappingProjectId(mapping, assignments);
+          const employeeId = mapping.tripletex_employee_id ?? tripletexEmployeeIds[0] ?? null;
+          if (!projectId || !employeeId) continue;
+
+          const cacheKey = `${employeeId}-${projectId}-${year}-${monthIndex}`;
+          if (projectHourKeys.has(cacheKey)) continue;
+          projectHourKeys.add(cacheKey);
+
+          try {
+            if (!projectTimesheetHoursCache.has(cacheKey)) {
+              projectTimesheetHoursCache.set(cacheKey, fetchProjectTimesheetHours(sessionToken, employeeId, projectId, year, monthIndex));
+            }
+            month.billableHours += await projectTimesheetHoursCache.get(cacheKey)!;
+            month.hasTimesheetHours = true;
+            month.touched = true;
+          } catch {
+            addWarning(warnings, "Kunne ikke hente prosjekttimer fra Tripletex for enkelte koblinger.");
+          }
         }
 
-        const postings = await ledgerCache.get(cacheKey)!;
-        const metrics = aggregatePostings(postings, hourlyRate);
-        const month = monthlyAccumulator[monthIndex];
-        month.touched = true;
-        month.billableHours += metrics.billableHours;
-        month.revenue += metrics.revenue;
-        month.costs += metrics.costs;
-        month.result += metrics.result;
-        month.salaryCost += metrics.salaryCost;
+        if (!month.hasTimesheetHours && sourceActive && tripletexEmployeeIds.length > 0) {
+          for (const employeeId of tripletexEmployeeIds) {
+            const cacheKey = `${employeeId}-${year}-${monthIndex}`;
+            try {
+              if (!employeeTotalHoursCache.has(cacheKey)) {
+                employeeTotalHoursCache.set(cacheKey, fetchEmployeeTotalHours(sessionToken, employeeId, year, monthIndex));
+              }
+              month.billableHours += await employeeTotalHoursCache.get(cacheKey)!;
+              month.hasTimesheetHours = true;
+              month.touched = true;
+            } catch {
+              addWarning(warnings, "Kunne ikke hente timer fra Tripletex for enkelte ansatte.");
+            }
+          }
+        }
+
+        const ledgerKeys = new Set<string>();
+        for (const mapping of activeMappings) {
+          const assignment = getMappingAssignment(mapping, assignments);
+          const projectId = getMappingProjectId(mapping, assignments);
+          if (!projectId) continue;
+
+          const cacheKey = `${projectId}-${year}-${monthIndex}`;
+          if (ledgerKeys.has(cacheKey)) continue;
+          ledgerKeys.add(cacheKey);
+
+          try {
+            if (!ledgerCache.has(cacheKey)) {
+              ledgerCache.set(cacheKey, fetchProjectLedgerPostings(sessionToken, projectId, year, monthIndex));
+            }
+
+            const postings = await ledgerCache.get(cacheKey)!;
+            const metrics = aggregatePostings(postings, assignment?.utpris ?? null);
+            month.touched = true;
+            if (!month.hasTimesheetHours) {
+              month.billableHours += metrics.billableHours;
+            }
+            month.revenue += metrics.revenue;
+            month.costs += metrics.costs;
+            month.result += metrics.result;
+            month.salaryCost += metrics.salaryCost;
+          } catch {
+            addWarning(warnings, "Kunne ikke hente prosjektøkonomi fra Tripletex for enkelte koblinger.");
+          }
+        }
       }
 
-      employeeMonths.set(mapping.ansatt_id, monthlyAccumulator);
+      employeeMonths.set(source.id, months);
     }
 
-    const employees = Array.from(employeeMonths.entries()).map(([ansattId, months]) => ({
+    const employeesResponse = Array.from(employeeMonths.entries()).map(([ansattId, months]) => ({
       ansatt_id: ansattId,
       months: months.map((month, monthIndex): EmployeeFinanceMonth => {
         const possibleHours = countWeekdays(year, monthIndex) * STANDARD_DAY_HOURS;
@@ -394,7 +645,7 @@ serve(async (req) => {
       }),
     }));
 
-    return jsonResponse({ year, employees });
+    return jsonResponse({ year, employees: employeesResponse, warnings });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Ukjent feil ved henting av ansattøkonomi.";
     return jsonResponse({ error: message }, 500);

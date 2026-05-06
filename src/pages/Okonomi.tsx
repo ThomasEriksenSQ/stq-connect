@@ -72,7 +72,7 @@ type ChartMode = "resultat" | "omsetning" | "margin" | "lonnskostnader" | "varek
 
 type OkonomiPageView = "okonomi" | "ansatte";
 
-type EmployeeStatusFilter = "Aktiv" | "Sluttet";
+type EmployeeStatusFilter = "Aktiv" | "Kommende" | "Sluttet";
 
 type EmployeeMetric =
   | "billableHours"
@@ -156,6 +156,7 @@ type EmployeeFinanceRow = {
 type EmployeeFinanceResponse = {
   year: number;
   employees: EmployeeFinanceRow[];
+  warnings?: string[];
 };
 
 type OkonomiMonthStatus = {
@@ -190,7 +191,7 @@ const EMPLOYEE_METRICS: EmployeeMetricDefinition[] = [
   { key: "sickPayCost", label: "Sykelønn", chartLabel: "Sykelønnkostnad", kind: "currency" },
 ];
 
-const EMPLOYEE_STATUS_FILTERS: EmployeeStatusFilter[] = ["Aktiv", "Sluttet"];
+const EMPLOYEE_STATUS_FILTERS: EmployeeStatusFilter[] = ["Aktiv", "Kommende", "Sluttet"];
 
 const MANUAL_ASSIGNMENT_VALUE = "__manual__";
 
@@ -396,6 +397,12 @@ function formatEmployeeAxisValue(metric: EmployeeMetricDefinition, value: number
   return formatCompactCurrency(value);
 }
 
+function getEmployeeFilterSummaryLabel(filter: EmployeeStatusFilter) {
+  if (filter === "Aktiv") return "aktive";
+  if (filter === "Kommende") return "kommende";
+  return "sluttede";
+}
+
 function isMappingActiveForYear(mapping: EmployeeTripletexMapping, targetYear: number) {
   const yearStart = new Date(targetYear, 0, 1).getTime();
   const yearEnd = new Date(targetYear, 11, 31).getTime();
@@ -461,6 +468,7 @@ export default function Okonomi() {
   const [employeeFinanceRows, setEmployeeFinanceRows] = useState<EmployeeFinanceRow[]>([]);
   const [employeeFinanceLoading, setEmployeeFinanceLoading] = useState(false);
   const [employeeFinanceError, setEmployeeFinanceError] = useState<string | null>(null);
+  const [employeeFinanceWarnings, setEmployeeFinanceWarnings] = useState<string[]>([]);
   const [employeesLoading, setEmployeesLoading] = useState(false);
   const [employeesError, setEmployeesError] = useState<string | null>(null);
   const [months, setMonths] = useState<OkonomiMonth[]>([]);
@@ -610,6 +618,7 @@ export default function Okonomi() {
     try {
       setEmployeeFinanceLoading(true);
       setEmployeeFinanceError(null);
+      setEmployeeFinanceWarnings([]);
 
       const { data, error: invokeError } = await supabase.functions.invoke<EmployeeFinanceResponse>("tripletex-ansatt-okonomi", {
         body: { year: targetYear },
@@ -621,12 +630,14 @@ export default function Okonomi() {
 
       if (!cancelled?.()) {
         setEmployeeFinanceRows(data?.employees || []);
+        setEmployeeFinanceWarnings(data?.warnings || []);
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : "Kunne ikke hente ansattøkonomi fra Tripletex.";
       if (!cancelled?.()) {
         setEmployeeFinanceRows([]);
         setEmployeeFinanceError(message);
+        setEmployeeFinanceWarnings([]);
       }
     } finally {
       if (!cancelled?.()) {
@@ -901,7 +912,7 @@ export default function Okonomi() {
     const map = new Map<number, EmployeeTripletexMapping[]>();
 
     employeeMappings
-      .filter((mapping) => isMappingActiveForYear(mapping, year))
+      .filter((mapping) => isMappingActiveForYear(mapping, employeeYear))
       .forEach((mapping) => {
         const current = map.get(mapping.ansatt_id) || [];
         current.push(mapping);
@@ -909,7 +920,7 @@ export default function Okonomi() {
       });
 
     return map;
-  }, [employeeMappings, year]);
+  }, [employeeMappings, employeeYear]);
   const employeeAssignmentsByEmployee = useMemo(() => {
     const map = new Map<number, EmployeeAssignment[]>();
 
@@ -926,7 +937,7 @@ export default function Okonomi() {
     return employees.filter((employee) => {
       const status = getEmployeeLifecycleStatus(employee);
       if (employeeStatusFilter === "Sluttet") return status === "Sluttet";
-      return status !== "Sluttet";
+      return status === employeeStatusFilter;
     });
   }, [employeeStatusFilter, employees]);
   const employeeTableRows = useMemo(() => {
@@ -1477,7 +1488,7 @@ export default function Okonomi() {
                         <div className="min-w-0">
                           <h2 style={{ color: C.text, fontSize: 13, fontWeight: 650 }}>Ansatte</h2>
                           <p className="mt-0.5" style={{ color: C.textFaint, fontSize: 12 }}>
-                            {employeeTableRows.length} {employeeStatusFilter.toLowerCase()}e · {selectedEmployeeMetric.label} · {employeeYear}
+                            {employeeTableRows.length} {getEmployeeFilterSummaryLabel(employeeStatusFilter)} · {selectedEmployeeMetric.label} · {employeeYear}
                           </p>
                           {employeeMappingNotice ? (
                             <p className="mt-1" style={{ color: C.warning, fontSize: 12 }}>
@@ -1487,6 +1498,11 @@ export default function Okonomi() {
                           {employeeFinanceError ? (
                             <p className="mt-1" style={{ color: C.danger, fontSize: 12 }}>
                               {employeeFinanceError}
+                            </p>
+                          ) : null}
+                          {employeeFinanceWarnings.length > 0 ? (
+                            <p className="mt-1" style={{ color: C.warning, fontSize: 12 }}>
+                              {employeeFinanceWarnings.slice(0, 2).join(" ")}
                             </p>
                           ) : null}
                         </div>
@@ -1531,8 +1547,17 @@ export default function Okonomi() {
                         <Table>
                           <TableHeader>
                             <TableRow className="hover:bg-transparent" style={{ borderColor: C.borderLight }}>
-                              <TableHead className="sticky left-0 z-10 min-w-[280px] font-semibold" style={{ background: C.surfaceAlt, color: C.text }}>
+                              <TableHead className="sticky left-0 z-10 min-w-[260px] font-semibold" style={{ background: C.surfaceAlt, color: C.text }}>
                                 Navn
+                              </TableHead>
+                              <TableHead className="min-w-[108px] font-semibold" style={{ background: C.surfaceAlt, color: C.text }}>
+                                Status
+                              </TableHead>
+                              <TableHead className="min-w-[96px] text-right font-semibold" style={{ background: C.surfaceAlt, color: C.text }}>
+                                Oppdrag
+                              </TableHead>
+                              <TableHead className="min-w-[156px] font-semibold" style={{ background: C.surfaceAlt, color: C.text }}>
+                                Kobling
                               </TableHead>
                               {MONTH_LABELS.map((month) => (
                                 <TableHead key={month} className="min-w-[112px] text-right font-semibold" style={{ background: C.surfaceAlt, color: C.text }}>
@@ -1544,7 +1569,7 @@ export default function Okonomi() {
                           <TableBody>
                             {employeeTableRows.length === 0 ? (
                               <TableRow className="hover:bg-transparent" style={{ borderColor: C.borderLight }}>
-                                <TableCell colSpan={MONTH_LABELS.length + 1} style={{ color: C.textMuted, fontSize: 13 }}>
+                                <TableCell colSpan={MONTH_LABELS.length + 4} style={{ color: C.textMuted, fontSize: 13 }}>
                                   Ingen ansatte i dette filteret.
                                 </TableCell>
                               </TableRow>
@@ -1552,9 +1577,11 @@ export default function Okonomi() {
 
                             {employeeTableRows.map((row) => {
                               const portrait = employeePortraits[row.employee.id] || row.employee.bilde_url || "";
-                              const hasTripletexEmployee = row.mappings.some((mapping) => mapping.tripletex_employee_id);
+                              const hasTripletexEmployee = Boolean(row.employee.ansatt_id) || row.mappings.some((mapping) => mapping.tripletex_employee_id);
                               const projectCount = new Set(row.mappings.map((mapping) => mapping.tripletex_project_id).filter(Boolean)).size;
                               const assignmentCount = row.assignments.length;
+                              const statusColor = row.status === "Sluttet" ? C.textGhost : row.status === "Kommende" ? C.warning : C.success;
+                              const statusBackground = row.status === "Sluttet" ? C.surfaceAlt : row.status === "Kommende" ? C.warningBg : C.successBg;
 
                               return (
                                 <TableRow key={row.employee.id} className="transition-colors" style={{ borderColor: C.borderLight, background: C.panel }}>
@@ -1571,11 +1598,6 @@ export default function Okonomi() {
                                           <p className="truncate" style={{ color: C.text, fontSize: 13, fontWeight: 650 }}>
                                             {row.employee.navn}
                                           </p>
-                                          <p className="truncate" style={{ color: hasTripletexEmployee || projectCount > 0 ? C.success : C.textGhost, fontSize: 11 }}>
-                                            {hasTripletexEmployee || projectCount > 0
-                                              ? `${hasTripletexEmployee ? "Tripletex ansatt" : "Ansatt"} · ${projectCount} prosjekt`
-                                              : `${row.status} · ${assignmentCount} CRM-oppdrag · mangler Tripletex-kobling`}
-                                          </p>
                                         </div>
                                       </div>
                                       <button
@@ -1589,6 +1611,22 @@ export default function Okonomi() {
                                         Koble
                                       </button>
                                     </div>
+                                  </TableCell>
+                                  <TableCell style={{ color: statusColor, fontSize: 12, fontWeight: 650 }}>
+                                    <span
+                                      className="inline-flex h-6 items-center rounded-md px-2"
+                                      style={{ background: statusBackground, color: statusColor }}
+                                    >
+                                      {row.status}
+                                    </span>
+                                  </TableCell>
+                                  <TableCell className="text-right tabular-nums" style={{ color: C.text, fontSize: 12, fontWeight: 650 }}>
+                                    {assignmentCount}
+                                  </TableCell>
+                                  <TableCell style={{ color: hasTripletexEmployee || projectCount > 0 ? C.success : C.textGhost, fontSize: 12, fontWeight: 600 }}>
+                                    {hasTripletexEmployee || projectCount > 0
+                                      ? `${hasTripletexEmployee ? "Ansatt-ID" : "Uten ansatt-ID"} · ${projectCount} prosjekt`
+                                      : "Mangler"}
                                   </TableCell>
                                   {row.values.map((value, index) => (
                                     <TableCell
@@ -1627,7 +1665,7 @@ export default function Okonomi() {
                               {selectedEmployeeMetric.chartLabel}
                             </h2>
                             <p className="mt-1" style={{ color: C.textFaint, fontSize: 12 }}>
-                              Sum for {employeeStatusFilter.toLowerCase()}e ansatte
+                              Sum for {getEmployeeFilterSummaryLabel(employeeStatusFilter)} ansatte
                             </p>
                           </div>
                           <span
@@ -1669,7 +1707,7 @@ export default function Okonomi() {
                                   fontSize: 13,
                                 }}
                                 formatter={(value: number) => [formatEmployeeMetricValue(selectedEmployeeMetric, value), selectedEmployeeMetric.label]}
-                                labelFormatter={(label) => `${label} ${year}`}
+                                labelFormatter={(label) => `${label} ${employeeYear}`}
                               />
                               <Line
                                 type="monotone"
