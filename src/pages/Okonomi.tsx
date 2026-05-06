@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { AlertCircle, Banknote, ChartNoAxesCombined, CircleSlash, Info, Link2, Plus, RefreshCw, Trash2, TrendingUp } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import {
+  Bar,
+  BarChart,
   CartesianGrid,
   Legend,
   Line,
@@ -73,6 +75,12 @@ type ChartMode = "resultat" | "omsetning" | "margin" | "lonnskostnader" | "varek
 type OkonomiPageView = "okonomi" | "ansatte";
 
 type EmployeeStatusFilter = "Aktiv" | "Kommende" | "Sluttet";
+
+type EmployeeChartYearFilter = number | "Alle år";
+
+type EmployeeChartMode = "samlet" | "enkeltvis";
+
+type EmployeeChartKind = "graf" | "stolpe";
 
 type EmployeeMetric =
   | "billableHours"
@@ -159,6 +167,14 @@ type EmployeeFinanceResponse = {
   warnings?: string[];
 };
 
+type EmployeeChartSeries = {
+  key: string;
+  label: string;
+  color: string;
+  year: number;
+  employeeId?: number;
+};
+
 type OkonomiMonthStatus = {
   year: number;
   month: string;
@@ -178,6 +194,10 @@ const CHART_YEAR_COLORS: Record<number, string> = {
   2025: C.accent,
   2026: C.success,
 };
+
+const EMPLOYEE_SERIES_COLORS = [C.accent, C.success, C.warning, C.danger, "#38bdf8", "#a78bfa", "#f97316", "#14b8a6", "#f43f5e"];
+
+const EMPLOYEE_CHART_YEAR_FILTERS: EmployeeChartYearFilter[] = [...DEFAULT_CHART_YEARS, "Alle år"];
 
 const PAYROLL_PERIODIZATION_INFO = "Kan vise feil p.g.a feil periodisering av lønn";
 
@@ -466,9 +486,14 @@ export default function Okonomi() {
   const [employeeMappingNotice, setEmployeeMappingNotice] = useState<string | null>(null);
   const [employeeYear, setEmployeeYear] = useState(2026);
   const [employeeFinanceRows, setEmployeeFinanceRows] = useState<EmployeeFinanceRow[]>([]);
+  const [employeeFinanceByYear, setEmployeeFinanceByYear] = useState<Record<number, EmployeeFinanceRow[]>>({});
   const [employeeFinanceLoading, setEmployeeFinanceLoading] = useState(false);
   const [employeeFinanceError, setEmployeeFinanceError] = useState<string | null>(null);
   const [employeeFinanceWarnings, setEmployeeFinanceWarnings] = useState<string[]>([]);
+  const [forceRefreshingEmployeeFinance, setForceRefreshingEmployeeFinance] = useState(false);
+  const [employeeChartYearFilter, setEmployeeChartYearFilter] = useState<EmployeeChartYearFilter>("Alle år");
+  const [employeeChartMode, setEmployeeChartMode] = useState<EmployeeChartMode>("samlet");
+  const [employeeChartKind, setEmployeeChartKind] = useState<EmployeeChartKind>("graf");
   const [employeesLoading, setEmployeesLoading] = useState(false);
   const [employeesError, setEmployeesError] = useState<string | null>(null);
   const [months, setMonths] = useState<OkonomiMonth[]>([]);
@@ -614,14 +639,18 @@ export default function Okonomi() {
     }
   }, []);
 
-  const loadEmployeeFinance = useCallback(async (targetYear: number, cancelled?: () => boolean) => {
+  const loadEmployeeFinance = useCallback(async (targetYear: number, cancelled?: () => boolean, forceRefresh = false) => {
+    const isPrimaryLoad = targetYear === employeeYear;
+
     try {
-      setEmployeeFinanceLoading(true);
-      setEmployeeFinanceError(null);
-      setEmployeeFinanceWarnings([]);
+      if (isPrimaryLoad) {
+        setEmployeeFinanceLoading(true);
+        setEmployeeFinanceError(null);
+        setEmployeeFinanceWarnings([]);
+      }
 
       const { data, error: invokeError } = await supabase.functions.invoke<EmployeeFinanceResponse>("tripletex-ansatt-okonomi", {
-        body: { year: targetYear },
+        body: { year: targetYear, forceRefresh },
       });
 
       if (invokeError) {
@@ -629,22 +658,31 @@ export default function Okonomi() {
       }
 
       if (!cancelled?.()) {
-        setEmployeeFinanceRows(data?.employees || []);
-        setEmployeeFinanceWarnings(data?.warnings || []);
+        const rows = data?.employees || [];
+        setEmployeeFinanceByYear((current) => ({ ...current, [targetYear]: rows }));
+
+        if (targetYear === employeeYear) {
+          setEmployeeFinanceRows(rows);
+          setEmployeeFinanceWarnings(data?.warnings || []);
+        }
       }
+
+      return true;
     } catch (err) {
       const message = err instanceof Error ? err.message : "Kunne ikke hente ansattøkonomi fra Tripletex.";
-      if (!cancelled?.()) {
+      if (!cancelled?.() && isPrimaryLoad) {
         setEmployeeFinanceRows([]);
         setEmployeeFinanceError(message);
         setEmployeeFinanceWarnings([]);
       }
+
+      return false;
     } finally {
-      if (!cancelled?.()) {
+      if (!cancelled?.() && isPrimaryLoad) {
         setEmployeeFinanceLoading(false);
       }
     }
-  }, []);
+  }, [employeeYear]);
 
   useEffect(() => {
     let cancelled = false;
@@ -676,6 +714,27 @@ export default function Okonomi() {
       cancelled = true;
     };
   }, [activeView, employeeYear, loadEmployeeFinance]);
+
+  useEffect(() => {
+    const cachedRows = employeeFinanceByYear[employeeYear];
+    if (cachedRows) {
+      setEmployeeFinanceRows(cachedRows);
+    }
+  }, [employeeFinanceByYear, employeeYear]);
+
+  useEffect(() => {
+    if (activeView !== "ansatte") return;
+
+    let cancelled = false;
+    DEFAULT_CHART_YEARS.forEach((chartYear) => {
+      if (chartYear === employeeYear || employeeFinanceByYear[chartYear]) return;
+      void loadEmployeeFinance(chartYear, () => cancelled);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeView, employeeFinanceByYear, employeeYear, loadEmployeeFinance]);
 
   useEffect(() => {
     const channel = supabase
@@ -955,18 +1014,64 @@ export default function Okonomi() {
   const hasEmployeeMetricData = useMemo(() => {
     return employeeTableRows.some((row) => row.values.some((value) => value !== null));
   }, [employeeTableRows]);
-  const employeeChartData = useMemo(() => {
-    return MONTH_LABELS.map((month, index) => {
-      const monthValues = employeeTableRows
-        .map((row) => row.values[index])
-        .filter((value): value is number => value !== null);
+  const employeeChartYears = useMemo(() => {
+    return employeeChartYearFilter === "Alle år" ? DEFAULT_CHART_YEARS : [employeeChartYearFilter];
+  }, [employeeChartYearFilter]);
+  const employeeChartSeries = useMemo<EmployeeChartSeries[]>(() => {
+    if (employeeChartMode === "samlet") {
+      return employeeChartYears.map((chartYear, index) => ({
+        key: `sum_${chartYear}`,
+        label: `${chartYear} samlet`,
+        color: getChartYearColor(chartYear, index),
+        year: chartYear,
+      }));
+    }
 
-      return {
-        month,
-        value: monthValues.length ? monthValues.reduce((sum, value) => sum + value, 0) : null,
-      };
+    return employeeChartYears.flatMap((chartYear, yearIndex) =>
+      filteredEmployees.map((employee, employeeIndex) => ({
+        key: `employee_${chartYear}_${employee.id}`,
+        label: employeeChartYearFilter === "Alle år" ? `${employee.navn} ${chartYear}` : employee.navn,
+        color: EMPLOYEE_SERIES_COLORS[(employeeIndex + yearIndex * 3) % EMPLOYEE_SERIES_COLORS.length],
+        year: chartYear,
+        employeeId: employee.id,
+      })),
+    );
+  }, [employeeChartMode, employeeChartYearFilter, employeeChartYears, filteredEmployees]);
+  const employeeChartData = useMemo(() => {
+    const filteredEmployeeIds = new Set(filteredEmployees.map((employee) => employee.id));
+    const rowsByYear = new Map(
+      employeeChartYears.map((chartYear) => {
+        const rows = chartYear === employeeYear ? employeeFinanceRows : employeeFinanceByYear[chartYear] || [];
+        return [chartYear, new Map(rows.map((row) => [row.ansatt_id, row]))] as const;
+      }),
+    );
+
+    return MONTH_LABELS.map((month) => {
+      const point: Record<string, number | string | null> = { month };
+
+      employeeChartSeries.forEach((series) => {
+        const rowsForYear = rowsByYear.get(series.year);
+
+        if (series.employeeId) {
+          const financeMonth = rowsForYear?.get(series.employeeId)?.months.find((entry) => entry.month === month);
+          point[series.key] = financeMonth?.[employeeMetric] ?? null;
+          return;
+        }
+
+        const values = Array.from(rowsForYear?.values() || [])
+          .filter((row) => filteredEmployeeIds.has(row.ansatt_id))
+          .map((row) => row.months.find((entry) => entry.month === month)?.[employeeMetric] ?? null)
+          .filter((value): value is number => value !== null);
+
+        point[series.key] = values.length ? values.reduce((sum, value) => sum + value, 0) : null;
+      });
+
+      return point;
     });
-  }, [employeeTableRows]);
+  }, [employeeChartSeries, employeeChartYears, employeeFinanceByYear, employeeFinanceRows, employeeMetric, employeeYear, filteredEmployees]);
+  const hasEmployeeChartData = useMemo(() => {
+    return employeeChartData.some((point) => employeeChartSeries.some((series) => point[series.key] !== null));
+  }, [employeeChartData, employeeChartSeries]);
   const selectedMappingEmployee = useMemo(
     () => employees.find((employee) => employee.id === mappingEmployeeId) || null,
     [employees, mappingEmployeeId],
@@ -1089,6 +1194,23 @@ export default function Okonomi() {
 
     setEmployeeMappings((current) => current.filter((mapping) => mapping.id !== mappingId));
     toast.success("Tripletex-kobling slettet.");
+  };
+
+  const refreshAllEmployeeFinanceFromApi = async () => {
+    setForceRefreshingEmployeeFinance(true);
+    const results: boolean[] = [];
+    for (const chartYear of DEFAULT_CHART_YEARS) {
+      results.push(await loadEmployeeFinance(chartYear, undefined, true));
+    }
+    await loadEmployeeFinance(employeeYear);
+    setForceRefreshingEmployeeFinance(false);
+
+    if (results.every(Boolean)) {
+      toast.success("Ansatttimer oppdatert fra Tripletex.");
+      return;
+    }
+
+    toast.error("Noen ansatttimer kunne ikke oppdateres fra Tripletex.");
   };
 
   return (
@@ -1507,6 +1629,16 @@ export default function Okonomi() {
                           ) : null}
                         </div>
                         <div className="flex max-w-full flex-col items-start gap-2 sm:items-end">
+                          <button
+                            type="button"
+                            onClick={() => void refreshAllEmployeeFinanceFromApi()}
+                            disabled={forceRefreshingEmployeeFinance || employeeFinanceLoading}
+                            className="inline-flex h-8 items-center gap-1.5 rounded-md px-3 text-[12px] font-semibold transition-colors disabled:cursor-wait disabled:opacity-60"
+                            style={{ border: `1px solid ${C.accent}`, background: C.accentBg, color: C.accent }}
+                          >
+                            <RefreshCw className={cn("h-3.5 w-3.5", forceRefreshingEmployeeFinance ? "animate-spin" : "")} />
+                            Oppdater alt fra API-et
+                          </button>
                           <div className="flex flex-wrap gap-2 sm:justify-end">
                             {DEFAULT_CHART_YEARS.map((chartYear) => (
                               <ChartModeButton
@@ -1665,23 +1797,51 @@ export default function Okonomi() {
                               {selectedEmployeeMetric.chartLabel}
                             </h2>
                             <p className="mt-1" style={{ color: C.textFaint, fontSize: 12 }}>
-                              Sum for {getEmployeeFilterSummaryLabel(employeeStatusFilter)} ansatte
+                              {employeeChartMode === "samlet" ? "Sum" : "Per ansatt"} for {getEmployeeFilterSummaryLabel(employeeStatusFilter)} ansatte
                             </p>
                           </div>
                           <span
                             className="inline-flex h-7 items-center rounded-md px-2.5 text-[12px] font-semibold"
                             style={{
-                              border: `1px solid ${hasEmployeeMetricData ? C.success : C.borderLight}`,
-                              background: hasEmployeeMetricData ? C.successBg : C.surfaceAlt,
-                              color: hasEmployeeMetricData ? C.success : C.textMuted,
+                              border: `1px solid ${hasEmployeeChartData ? C.success : C.borderLight}`,
+                              background: hasEmployeeChartData ? C.successBg : C.surfaceAlt,
+                              color: hasEmployeeChartData ? C.success : C.textMuted,
                             }}
                           >
-                            {employeeFinanceLoading ? "Henter Tripletex" : hasEmployeeMetricData ? "Tripletex" : "Kobling venter"}
+                            {employeeFinanceLoading || forceRefreshingEmployeeFinance ? "Henter Tripletex" : hasEmployeeChartData ? "Cache/API" : "Kobling venter"}
                           </span>
                         </div>
 
+                        <div className="mt-4 flex flex-col gap-2">
+                          <div className="flex flex-wrap gap-2">
+                            {EMPLOYEE_CHART_YEAR_FILTERS.map((chartYearFilter) => (
+                              <ChartModeButton
+                                key={chartYearFilter}
+                                active={employeeChartYearFilter === chartYearFilter}
+                                onClick={() => setEmployeeChartYearFilter(chartYearFilter)}
+                              >
+                                {chartYearFilter}
+                              </ChartModeButton>
+                            ))}
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            <ChartModeButton active={employeeChartMode === "samlet"} onClick={() => setEmployeeChartMode("samlet")}>
+                              Samlet
+                            </ChartModeButton>
+                            <ChartModeButton active={employeeChartMode === "enkeltvis"} onClick={() => setEmployeeChartMode("enkeltvis")}>
+                              Hver enkelt
+                            </ChartModeButton>
+                            <ChartModeButton active={employeeChartKind === "graf"} onClick={() => setEmployeeChartKind("graf")}>
+                              Graf
+                            </ChartModeButton>
+                            <ChartModeButton active={employeeChartKind === "stolpe"} onClick={() => setEmployeeChartKind("stolpe")}>
+                              Stolpe
+                            </ChartModeButton>
+                          </div>
+                        </div>
+
                         <div className="relative mt-5 h-[340px] md:h-[380px] xl:h-[clamp(360px,42vh,520px)]">
-                          {!hasEmployeeMetricData ? (
+                          {!hasEmployeeChartData ? (
                             <div className="pointer-events-none absolute inset-x-4 top-4 z-10 flex items-start gap-2 rounded-md px-3 py-2" style={{ border: `1px solid ${C.borderLight}`, background: C.surface }}>
                               <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" style={{ color: C.textMuted }} />
                               <p style={{ color: C.textMuted, fontSize: 12, lineHeight: 1.4 }}>
@@ -1690,41 +1850,72 @@ export default function Okonomi() {
                             </div>
                           ) : null}
                           <ResponsiveContainer width="100%" height="100%">
-                            <LineChart data={employeeChartData} margin={{ top: hasEmployeeMetricData ? 10 : 58, right: 10, left: 0, bottom: 0 }}>
-                              <CartesianGrid strokeDasharray="3 3" stroke={C.borderLight} />
-                              <XAxis dataKey="month" tick={{ fontSize: 11, fill: C.textFaint }} stroke={C.border} />
-                              <YAxis
-                                tick={{ fontSize: 11, fill: C.textFaint }}
-                                stroke={C.border}
-                                tickFormatter={(value) => formatEmployeeAxisValue(selectedEmployeeMetric, Number(value))}
-                              />
-                              <ReTooltip
-                                contentStyle={{
-                                  background: C.surface,
-                                  border: `1px solid ${C.border}`,
-                                  borderRadius: 8,
-                                  color: C.text,
-                                  fontSize: 13,
-                                }}
-                                formatter={(value: number) => [formatEmployeeMetricValue(selectedEmployeeMetric, value), selectedEmployeeMetric.label]}
-                                labelFormatter={(label) => `${label} ${employeeYear}`}
-                              />
-                              <Line
-                                type="monotone"
-                                dataKey="value"
-                                name={selectedEmployeeMetric.label}
-                                stroke={C.accent}
-                                strokeWidth={2.25}
-                                connectNulls={false}
-                                dot={{ r: 2.25 }}
-                                activeDot={{ r: 4 }}
-                              />
-                            </LineChart>
+                            {employeeChartKind === "graf" ? (
+                              <LineChart data={employeeChartData} margin={{ top: hasEmployeeChartData ? 10 : 58, right: 10, left: 0, bottom: 0 }}>
+                                <CartesianGrid strokeDasharray="3 3" stroke={C.borderLight} />
+                                <XAxis dataKey="month" tick={{ fontSize: 11, fill: C.textFaint }} stroke={C.border} />
+                                <YAxis
+                                  tick={{ fontSize: 11, fill: C.textFaint }}
+                                  stroke={C.border}
+                                  tickFormatter={(value) => formatEmployeeAxisValue(selectedEmployeeMetric, Number(value))}
+                                />
+                                <ReTooltip
+                                  contentStyle={{
+                                    background: C.surface,
+                                    border: `1px solid ${C.border}`,
+                                    borderRadius: 8,
+                                    color: C.text,
+                                    fontSize: 13,
+                                  }}
+                                  formatter={(value: number, name: string) => [formatEmployeeMetricValue(selectedEmployeeMetric, value), name]}
+                                  labelFormatter={(label) => String(label)}
+                                />
+                                <Legend wrapperStyle={{ color: C.textMuted, fontSize: 11 }} />
+                                {employeeChartSeries.map((series) => (
+                                  <Line
+                                    key={series.key}
+                                    type="monotone"
+                                    dataKey={series.key}
+                                    name={series.label}
+                                    stroke={series.color}
+                                    strokeWidth={employeeChartMode === "samlet" ? 2.25 : 1.6}
+                                    connectNulls={false}
+                                    dot={employeeChartMode === "samlet" ? { r: 2.25 } : false}
+                                    activeDot={{ r: 4 }}
+                                  />
+                                ))}
+                              </LineChart>
+                            ) : (
+                              <BarChart data={employeeChartData} margin={{ top: hasEmployeeChartData ? 10 : 58, right: 10, left: 0, bottom: 0 }}>
+                                <CartesianGrid strokeDasharray="3 3" stroke={C.borderLight} />
+                                <XAxis dataKey="month" tick={{ fontSize: 11, fill: C.textFaint }} stroke={C.border} />
+                                <YAxis
+                                  tick={{ fontSize: 11, fill: C.textFaint }}
+                                  stroke={C.border}
+                                  tickFormatter={(value) => formatEmployeeAxisValue(selectedEmployeeMetric, Number(value))}
+                                />
+                                <ReTooltip
+                                  contentStyle={{
+                                    background: C.surface,
+                                    border: `1px solid ${C.border}`,
+                                    borderRadius: 8,
+                                    color: C.text,
+                                    fontSize: 13,
+                                  }}
+                                  formatter={(value: number, name: string) => [formatEmployeeMetricValue(selectedEmployeeMetric, value), name]}
+                                  labelFormatter={(label) => String(label)}
+                                />
+                                <Legend wrapperStyle={{ color: C.textMuted, fontSize: 11 }} />
+                                {employeeChartSeries.map((series) => (
+                                  <Bar key={series.key} dataKey={series.key} name={series.label} fill={series.color} radius={[3, 3, 0, 0]} />
+                                ))}
+                              </BarChart>
+                            )}
                           </ResponsiveContainer>
                         </div>
 
                         <p className="mt-3" style={{ color: C.textFaint, fontSize: 12, lineHeight: 1.45 }}>
-                          Koblingen bruker Tripletex employeeId og projectId per periode, slik at ansatte som har hatt flere prosjekter kan summeres korrekt.
+                          Lukkede måneder hentes fra Supabase-cache når de er minst 15 dager gamle. Knappen over tvinger ny henting fra Tripletex API-et.
                         </p>
                       </div>
                     </aside>

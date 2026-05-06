@@ -66,6 +66,20 @@ type EmployeeFinanceMonth = {
   sickPayCost: number | null;
 };
 
+type CachedEmployeeFinanceMonth = {
+  ansatt_id: number;
+  year: number;
+  month: number;
+  billable_hours: number | null;
+  coverage: number | null;
+  revenue: number | null;
+  costs: number | null;
+  result: number | null;
+  salary_cost: number | null;
+  sick_pay_cost: number | null;
+  is_final: boolean | null;
+};
+
 type EmployeeAccumulatorMonth = {
   touched: boolean;
   hasTimesheetHours: boolean;
@@ -172,6 +186,13 @@ function isMonthFetchable(year: number, monthIndex: number) {
   if (year < today.year) return true;
   if (year > today.year) return false;
   return monthIndex <= today.month - 1;
+}
+
+function isMonthCacheEligible(year: number, monthIndex: number) {
+  const now = getOsloDateParts(new Date());
+  const cacheReadyDate = new Date(Date.UTC(year, monthIndex + 1, 15));
+  const today = new Date(Date.UTC(now.year, now.month - 1, now.day));
+  return today >= cacheReadyDate;
 }
 
 function parseDateValue(value: string | null | undefined) {
@@ -335,7 +356,7 @@ async function fetchEmployeeTimesheetEntries(sessionToken: string, employeeId: n
 function getTimesheetEntryHours(entry: TripletexTimesheetEntry) {
   const hours = parseFiniteNumber(entry.hours);
   const chargeableHours = parseFiniteNumber(entry.chargeableHours);
-  return hours ?? chargeableHours ?? 0;
+  return chargeableHours ?? hours ?? 0;
 }
 
 function getProjectRefKeys(project: TripletexProjectRef | null | undefined) {
@@ -348,12 +369,15 @@ function sumTimesheetHours(entries: TripletexTimesheetEntry[], projectRefs: Set<
   const matchingEntries = projectRefs.size > 0
     ? entries.filter((entry) => getProjectRefKeys(entry.project).some((key) => projectRefs.has(key)))
     : entries;
-  const entriesToSum = matchingEntries.length > 0 ? matchingEntries : entries;
+  const matchingHours = matchingEntries.reduce((sum, entry) => sum + getTimesheetEntryHours(entry), 0);
+  const allHours = entries.reduce((sum, entry) => sum + getTimesheetEntryHours(entry), 0);
+  const shouldUseAllEntries = matchingEntries.length === 0 || (matchingHours === 0 && allHours > 0);
+  const entriesToSum = shouldUseAllEntries ? entries : matchingEntries;
 
   return {
-    hours: entriesToSum.reduce((sum, entry) => sum + getTimesheetEntryHours(entry), 0),
+    hours: shouldUseAllEntries ? allHours : matchingHours,
     entryCount: entriesToSum.length,
-    matchedProject: projectRefs.size === 0 || matchingEntries.length > 0,
+    matchedProject: projectRefs.size === 0 || !shouldUseAllEntries,
   };
 }
 
@@ -451,6 +475,18 @@ function createEmptyAccumulatorMonths(): EmployeeAccumulatorMonth[] {
   }));
 }
 
+function applyCachedMonth(month: EmployeeAccumulatorMonth, cachedMonth: CachedEmployeeFinanceMonth) {
+  month.touched = true;
+  month.hasTimesheetHours = cachedMonth.billable_hours !== null;
+  month.billableHours = Number(cachedMonth.billable_hours ?? 0);
+  month.coverage = cachedMonth.coverage;
+  month.revenue = Number(cachedMonth.revenue ?? 0);
+  month.costs = Number(cachedMonth.costs ?? 0);
+  month.result = Number(cachedMonth.result ?? 0);
+  month.salaryCost = Number(cachedMonth.salary_cost ?? 0);
+  month.sickPayCost = cachedMonth.sick_pay_cost;
+}
+
 function roundMetric(value: number) {
   return Math.round(value * 10) / 10;
 }
@@ -499,6 +535,7 @@ serve(async (req) => {
 
     const body = await req.json().catch(() => ({}));
     const year = Number(body?.year) || DEFAULT_YEAR;
+    const forceRefresh = body?.forceRefresh === true;
 
     const consumerToken = Deno.env.get("TRIPLETEX_CONSUMER_TOKEN");
     const employeeToken = Deno.env.get("TRIPLETEX_EMPLOYEE_TOKEN");
@@ -565,6 +602,22 @@ serve(async (req) => {
     if (assignmentsError) throw assignmentsError;
 
     const assignments = new Map(((assignmentsData || []) as AssignmentRow[]).map((assignment) => [assignment.id, assignment]));
+    const { data: cachedData, error: cacheLoadError } = await supabase
+      .from("okonomi_ansatt_timer_cache")
+      .select("ansatt_id, year, month, billable_hours, coverage, revenue, costs, result, salary_cost, sick_pay_cost, is_final")
+      .eq("year", year);
+
+    if (cacheLoadError) {
+      addWarning(warnings, "Kunne ikke lese cache for ansatttimer.");
+    }
+
+    const cacheByEmployeeMonth = new Map<string, CachedEmployeeFinanceMonth>();
+    for (const cachedMonth of (cachedData || []) as CachedEmployeeFinanceMonth[]) {
+      if (cachedMonth.is_final) {
+        cacheByEmployeeMonth.set(`${cachedMonth.ansatt_id}-${cachedMonth.month - 1}`, cachedMonth);
+      }
+    }
+
     const sessionToken = await createSessionToken(consumerToken, employeeToken);
     const employeeIdCache = new Map<number, Promise<number>>();
     const ledgerCache = new Map<string, Promise<TripletexPosting[]>>();
@@ -573,18 +626,23 @@ serve(async (req) => {
 
     for (const source of sources.values()) {
       const months = createEmptyAccumulatorMonths();
-      const tripletexEmployeeIds: number[] = [];
+      const tripletexEmployeeCandidateGroups: number[][] = [];
 
       for (const employeeNumber of source.tripletexEmployeeIds) {
+        const candidates = [employeeNumber];
         try {
           if (!employeeIdCache.has(employeeNumber)) {
             employeeIdCache.set(employeeNumber, resolveTripletexEmployeeId(sessionToken, employeeNumber));
           }
-          tripletexEmployeeIds.push(await employeeIdCache.get(employeeNumber)!);
+          const resolvedEmployeeId = await employeeIdCache.get(employeeNumber)!;
+          if (!candidates.includes(resolvedEmployeeId)) {
+            candidates.push(resolvedEmployeeId);
+          }
         } catch {
           // Some historical or draft CRM rows can carry stale Tripletex employee numbers.
-          // Skip them without turning the whole employee tab into a warning state.
+          // The stored value can still be a valid internal employeeId, so keep it as a fallback.
         }
+        tripletexEmployeeCandidateGroups.push(candidates);
       }
 
       for (let monthIndex = 0; monthIndex < MONTH_LABELS.length; monthIndex += 1) {
@@ -601,6 +659,12 @@ serve(async (req) => {
           );
         });
         const month = months[monthIndex];
+        const cachedMonth = cacheByEmployeeMonth.get(`${source.id}-${monthIndex}`);
+        if (!forceRefresh && cachedMonth && isMonthCacheEligible(year, monthIndex)) {
+          applyCachedMonth(month, cachedMonth);
+          continue;
+        }
+
         const activeProjectRefs = new Set(
           activeMappings
             .map((mapping) => getMappingProjectId(mapping, assignments))
@@ -608,25 +672,47 @@ serve(async (req) => {
             .map((projectId) => String(projectId)),
         );
 
-        if (sourceActive && tripletexEmployeeIds.length > 0) {
-          for (const employeeId of tripletexEmployeeIds) {
-            const cacheKey = `${employeeId}-${year}-${monthIndex}`;
-            try {
-              if (!timesheetEntryCache.has(cacheKey)) {
-                timesheetEntryCache.set(cacheKey, fetchEmployeeTimesheetEntries(sessionToken, employeeId, year, monthIndex));
-              }
-              const entries = await timesheetEntryCache.get(cacheKey)!;
-              const timesheetHours = sumTimesheetHours(entries, activeProjectRefs);
-              if (timesheetHours.entryCount > 0) {
-                month.billableHours += timesheetHours.hours;
-                month.hasTimesheetHours = true;
-                month.touched = true;
-                if (!timesheetHours.matchedProject) {
-                  addWarning(warnings, "Fant timer på ansatt, men ikke på koblet prosjekt for enkelte måneder.");
+        if (sourceActive && tripletexEmployeeCandidateGroups.length > 0) {
+          for (const candidateGroup of tripletexEmployeeCandidateGroups) {
+            let foundTimesheetCandidate = false;
+            let foundZeroHourCandidate = false;
+            let zeroHourCandidateMatchedProject = true;
+
+            for (const employeeId of candidateGroup) {
+              const cacheKey = `${employeeId}-${year}-${monthIndex}`;
+              try {
+                if (!timesheetEntryCache.has(cacheKey)) {
+                  timesheetEntryCache.set(cacheKey, fetchEmployeeTimesheetEntries(sessionToken, employeeId, year, monthIndex));
+                }
+                const entries = await timesheetEntryCache.get(cacheKey)!;
+                const timesheetHours = sumTimesheetHours(entries, activeProjectRefs);
+                if (timesheetHours.entryCount > 0 && timesheetHours.hours > 0) {
+                  month.billableHours += timesheetHours.hours;
+                  month.hasTimesheetHours = true;
+                  month.touched = true;
+                  foundTimesheetCandidate = true;
+                  if (!timesheetHours.matchedProject) {
+                    addWarning(warnings, "Fant timer på ansatt, men ikke på koblet prosjekt for enkelte måneder.");
+                  }
+                  break;
+                }
+                if (timesheetHours.entryCount > 0) {
+                  foundZeroHourCandidate = true;
+                  zeroHourCandidateMatchedProject = zeroHourCandidateMatchedProject && timesheetHours.matchedProject;
+                }
+              } catch {
+                if (candidateGroup.indexOf(employeeId) === candidateGroup.length - 1) {
+                  addWarning(warnings, "Kunne ikke hente timer fra Tripletex for enkelte ansatte.");
                 }
               }
-            } catch {
-              addWarning(warnings, "Kunne ikke hente timer fra Tripletex for enkelte ansatte.");
+            }
+
+            if (!foundTimesheetCandidate && foundZeroHourCandidate) {
+              month.hasTimesheetHours = true;
+              month.touched = true;
+              if (!zeroHourCandidateMatchedProject) {
+                addWarning(warnings, "Fant timer på ansatt, men ikke på koblet prosjekt for enkelte måneder.");
+              }
             }
           }
         }
@@ -662,6 +748,13 @@ serve(async (req) => {
         }
       }
 
+      months.forEach((month, monthIndex) => {
+        const cachedMonth = cacheByEmployeeMonth.get(`${source.id}-${monthIndex}`);
+        if (!month.touched && cachedMonth && isMonthCacheEligible(year, monthIndex)) {
+          applyCachedMonth(month, cachedMonth);
+        }
+      });
+
       employeeMonths.set(source.id, months);
     }
 
@@ -683,6 +776,36 @@ serve(async (req) => {
         };
       }),
     }));
+
+    const cacheRows = employeesResponse.flatMap((employee) =>
+      employee.months
+        .map((month, monthIndex) => ({ month, monthIndex }))
+        .filter(({ month, monthIndex }) => month.billableHours !== null && isMonthCacheEligible(year, monthIndex))
+        .map(({ month, monthIndex }) => ({
+          ansatt_id: employee.ansatt_id,
+          year,
+          month: monthIndex + 1,
+          billable_hours: month.billableHours,
+          coverage: month.coverage,
+          revenue: month.revenue,
+          costs: month.costs,
+          result: month.result,
+          salary_cost: month.salaryCost,
+          sick_pay_cost: month.sickPayCost,
+          is_final: true,
+          source: "tripletex",
+          refreshed_at: new Date().toISOString(),
+        })),
+    );
+
+    if (cacheRows.length > 0) {
+      const { error: cacheSaveError } = await supabase
+        .from("okonomi_ansatt_timer_cache")
+        .upsert(cacheRows, { onConflict: "ansatt_id,year,month" });
+      if (cacheSaveError) {
+        addWarning(warnings, "Kunne ikke lagre cache for ansatttimer.");
+      }
+    }
 
     return jsonResponse({ year, employees: employeesResponse, warnings });
   } catch (error) {
