@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { AlertCircle, Banknote, ChartNoAxesCombined, CircleSlash, Info, RefreshCw, TrendingUp } from "lucide-react";
+import { AlertCircle, Banknote, ChartNoAxesCombined, CircleSlash, Info, Link2, Plus, RefreshCw, Trash2, TrendingUp } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import {
   CartesianGrid,
@@ -15,6 +15,8 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { toast } from "@/components/ui/sonner";
 import { DesignLabMobileNavButton, DesignLabSidebar } from "@/components/designlab/DesignLabSidebar";
 import { DesignLabGhostAction } from "@/components/designlab/system";
 import { getDesignLabTextSizeStyle, type TextSize } from "@/components/designlab/TextSizeControl";
@@ -97,11 +99,36 @@ type EmployeePortraitRow = {
 };
 
 type EmployeeTripletexMapping = {
+  id: string;
   ansatt_id: number;
+  stacq_oppdrag_id: number | null;
   tripletex_employee_id: number | null;
   tripletex_project_id: number | null;
+  tripletex_project_number: string | null;
+  project_name: string | null;
   active_from: string | null;
   active_to: string | null;
+};
+
+type EmployeeAssignment = {
+  id: number;
+  ansatt_id: number | null;
+  kandidat: string;
+  kunde: string | null;
+  status: string | null;
+  oppdrag_id: number | null;
+  start_dato: string | null;
+  slutt_dato: string | null;
+};
+
+type MappingForm = {
+  stacqOppdragId: string;
+  tripletexEmployeeId: string;
+  tripletexProjectId: string;
+  tripletexProjectNumber: string;
+  projectName: string;
+  activeFrom: string;
+  activeTo: string;
 };
 
 type EmployeeMetricDefinition = {
@@ -145,8 +172,40 @@ const EMPLOYEE_METRICS: EmployeeMetricDefinition[] = [
 
 const EMPLOYEE_STATUS_FILTERS: EmployeeStatusFilter[] = ["Aktiv", "Sluttet"];
 
+const MANUAL_ASSIGNMENT_VALUE = "__manual__";
+
+const EMPTY_MAPPING_FORM: MappingForm = {
+  stacqOppdragId: MANUAL_ASSIGNMENT_VALUE,
+  tripletexEmployeeId: "",
+  tripletexProjectId: "",
+  tripletexProjectNumber: "",
+  projectName: "",
+  activeFrom: "",
+  activeTo: "",
+};
+
 function formatCurrency(value: number) {
   return `${currencyFormatter.format(Math.round(value)).replace(/\u00A0/g, " ")} kr`;
+}
+
+function formatDateShort(value: string | null | undefined) {
+  if (!value) return "-";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleDateString("nb-NO", { day: "2-digit", month: "2-digit", year: "2-digit" });
+}
+
+function parseOptionalInteger(value: string) {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  const parsed = Number(trimmed);
+  return Number.isInteger(parsed) ? parsed : null;
+}
+
+function getAssignmentLabel(assignment: EmployeeAssignment) {
+  const period = [formatDateShort(assignment.start_dato), formatDateShort(assignment.slutt_dato)].join(" - ");
+  const projectId = assignment.oppdrag_id ? `Tripletex ${assignment.oppdrag_id}` : "uten Tripletex-ID";
+  return `${assignment.kunde || assignment.kandidat || "Oppdrag"} · ${assignment.status || "Ukjent"} · ${period} · ${projectId}`;
 }
 
 function formatPercent(value: number) {
@@ -373,6 +432,11 @@ export default function Okonomi() {
   const [employees, setEmployees] = useState<EmployeeRow[]>([]);
   const [employeePortraits, setEmployeePortraits] = useState<Record<number, string>>({});
   const [employeeMappings, setEmployeeMappings] = useState<EmployeeTripletexMapping[]>([]);
+  const [employeeAssignments, setEmployeeAssignments] = useState<EmployeeAssignment[]>([]);
+  const [mappingEmployeeId, setMappingEmployeeId] = useState<number | null>(null);
+  const [mappingForm, setMappingForm] = useState<MappingForm>(EMPTY_MAPPING_FORM);
+  const [savingMapping, setSavingMapping] = useState(false);
+  const [deletingMappingId, setDeletingMappingId] = useState<string | null>(null);
   const [employeeMappingNotice, setEmployeeMappingNotice] = useState<string | null>(null);
   const [employeesLoading, setEmployeesLoading] = useState(false);
   const [employeesError, setEmployeesError] = useState<string | null>(null);
@@ -470,14 +534,19 @@ export default function Okonomi() {
         throw employeeLoadError;
       }
 
-      const [{ data: portraitData }, mappingResult] = await Promise.all([
+      const [{ data: portraitData }, { data: assignmentData }, mappingResult] = await Promise.all([
         supabase
           .from("cv_documents")
           .select("ansatt_id, portrait_url")
           .not("portrait_url", "is", null),
         supabase
+          .from("stacq_oppdrag")
+          .select("id, ansatt_id, kandidat, kunde, status, oppdrag_id, start_dato, slutt_dato")
+          .not("ansatt_id", "is", null)
+          .order("start_dato", { ascending: false }),
+        supabase
           .from("okonomi_ansatt_tripletex_mapping" as never)
-          .select("ansatt_id, tripletex_employee_id, tripletex_project_id, active_from, active_to"),
+          .select("id, ansatt_id, stacq_oppdrag_id, tripletex_employee_id, tripletex_project_id, tripletex_project_number, project_name, active_from, active_to"),
       ]);
 
       if (!cancelled?.()) {
@@ -488,6 +557,7 @@ export default function Okonomi() {
         );
 
         setEmployees((employeeData || []) as EmployeeRow[]);
+        setEmployeeAssignments((assignmentData || []) as EmployeeAssignment[]);
         setEmployeePortraits(nextPortraits);
 
         if (mappingResult.error) {
@@ -504,6 +574,7 @@ export default function Okonomi() {
         setEmployees([]);
         setEmployeePortraits({});
         setEmployeeMappings([]);
+        setEmployeeAssignments([]);
       }
     } finally {
       if (!cancelled?.()) {
@@ -773,6 +844,18 @@ export default function Okonomi() {
 
     return map;
   }, [employeeMappings, year]);
+  const employeeAssignmentsByEmployee = useMemo(() => {
+    const map = new Map<number, EmployeeAssignment[]>();
+
+    employeeAssignments.forEach((assignment) => {
+      if (!assignment.ansatt_id) return;
+      const current = map.get(assignment.ansatt_id) || [];
+      current.push(assignment);
+      map.set(assignment.ansatt_id, current);
+    });
+
+    return map;
+  }, [employeeAssignments]);
   const filteredEmployees = useMemo(() => {
     return employees.filter((employee) => {
       const status = getEmployeeLifecycleStatus(employee);
@@ -786,8 +869,9 @@ export default function Okonomi() {
       status: getEmployeeLifecycleStatus(employee),
       values: MONTH_LABELS.map(() => null as number | null),
       mappings: activeEmployeeMappingsByEmployee.get(employee.id) || [],
+      assignments: employeeAssignmentsByEmployee.get(employee.id) || [],
     }));
-  }, [activeEmployeeMappingsByEmployee, filteredEmployees]);
+  }, [activeEmployeeMappingsByEmployee, employeeAssignmentsByEmployee, filteredEmployees]);
   const hasEmployeeMetricData = useMemo(() => {
     return employeeTableRows.some((row) => row.values.some((value) => value !== null));
   }, [employeeTableRows]);
@@ -803,6 +887,111 @@ export default function Okonomi() {
       };
     });
   }, [employeeTableRows]);
+  const selectedMappingEmployee = useMemo(
+    () => employees.find((employee) => employee.id === mappingEmployeeId) || null,
+    [employees, mappingEmployeeId],
+  );
+  const selectedEmployeeAssignments = useMemo(
+    () => mappingEmployeeId ? employeeAssignmentsByEmployee.get(mappingEmployeeId) || [] : [],
+    [employeeAssignmentsByEmployee, mappingEmployeeId],
+  );
+  const selectedEmployeeMappings = useMemo(
+    () => mappingEmployeeId ? employeeMappings.filter((mapping) => mapping.ansatt_id === mappingEmployeeId) : [],
+    [employeeMappings, mappingEmployeeId],
+  );
+
+  const fillMappingFormFromAssignment = (assignment: EmployeeAssignment | undefined) => {
+    if (!assignment) {
+      setMappingForm((current) => ({ ...current, stacqOppdragId: MANUAL_ASSIGNMENT_VALUE }));
+      return;
+    }
+
+    setMappingForm((current) => ({
+      ...current,
+      stacqOppdragId: String(assignment.id),
+      tripletexProjectId: assignment.oppdrag_id ? String(assignment.oppdrag_id) : current.tripletexProjectId,
+      projectName: assignment.kunde || current.projectName,
+      activeFrom: assignment.start_dato || current.activeFrom,
+      activeTo: assignment.slutt_dato || current.activeTo,
+    }));
+  };
+
+  const openMappingDialog = (employee: EmployeeRow) => {
+    const assignments = employeeAssignmentsByEmployee.get(employee.id) || [];
+    const firstAssignment = assignments[0];
+
+    setMappingEmployeeId(employee.id);
+    setMappingForm({
+      ...EMPTY_MAPPING_FORM,
+      stacqOppdragId: firstAssignment ? String(firstAssignment.id) : MANUAL_ASSIGNMENT_VALUE,
+      tripletexProjectId: firstAssignment?.oppdrag_id ? String(firstAssignment.oppdrag_id) : "",
+      projectName: firstAssignment?.kunde || "",
+      activeFrom: firstAssignment?.start_dato || "",
+      activeTo: firstAssignment?.slutt_dato || "",
+    });
+  };
+
+  const saveEmployeeMapping = async () => {
+    if (!selectedMappingEmployee) return;
+
+    const selectedAssignment = selectedEmployeeAssignments.find((assignment) => String(assignment.id) === mappingForm.stacqOppdragId);
+    const tripletexEmployeeId = parseOptionalInteger(mappingForm.tripletexEmployeeId);
+    const tripletexProjectId = parseOptionalInteger(mappingForm.tripletexProjectId);
+    const tripletexProjectNumber = mappingForm.tripletexProjectNumber.trim();
+    const hasReference = tripletexEmployeeId !== null || tripletexProjectId !== null || tripletexProjectNumber.length > 0;
+
+    if (!hasReference) {
+      toast.error("Legg inn Tripletex ansatt-ID eller prosjekt-ID.");
+      return;
+    }
+
+    setSavingMapping(true);
+    const { data, error: saveError } = await supabase
+      .from("okonomi_ansatt_tripletex_mapping" as never)
+      .insert({
+        ansatt_id: selectedMappingEmployee.id,
+        stacq_oppdrag_id: selectedAssignment?.id ?? null,
+        tripletex_employee_id: tripletexEmployeeId,
+        tripletex_project_id: tripletexProjectId,
+        tripletex_project_number: tripletexProjectNumber || null,
+        project_name: mappingForm.projectName.trim() || selectedAssignment?.kunde || null,
+        active_from: mappingForm.activeFrom || selectedAssignment?.start_dato || null,
+        active_to: mappingForm.activeTo || selectedAssignment?.slutt_dato || null,
+        source: "crm",
+        created_by: user?.id ?? null,
+        updated_at: new Date().toISOString(),
+      })
+      .select("id, ansatt_id, stacq_oppdrag_id, tripletex_employee_id, tripletex_project_id, tripletex_project_number, project_name, active_from, active_to")
+      .single();
+
+    setSavingMapping(false);
+
+    if (saveError) {
+      toast.error(saveError.message || "Kunne ikke lagre Tripletex-kobling.");
+      return;
+    }
+
+    setEmployeeMappings((current) => [...current, data as EmployeeTripletexMapping]);
+    setMappingForm(EMPTY_MAPPING_FORM);
+    toast.success("Tripletex-kobling lagret.");
+  };
+
+  const deleteEmployeeMapping = async (mappingId: string) => {
+    setDeletingMappingId(mappingId);
+    const { error: deleteError } = await supabase
+      .from("okonomi_ansatt_tripletex_mapping" as never)
+      .delete()
+      .eq("id", mappingId);
+    setDeletingMappingId(null);
+
+    if (deleteError) {
+      toast.error(deleteError.message || "Kunne ikke slette Tripletex-kobling.");
+      return;
+    }
+
+    setEmployeeMappings((current) => current.filter((mapping) => mapping.id !== mappingId));
+    toast.success("Tripletex-kobling slettet.");
+  };
 
   return (
     <div
@@ -1255,27 +1444,40 @@ export default function Okonomi() {
                               const portrait = employeePortraits[row.employee.id] || row.employee.bilde_url || "";
                               const hasTripletexEmployee = row.mappings.some((mapping) => mapping.tripletex_employee_id);
                               const projectCount = new Set(row.mappings.map((mapping) => mapping.tripletex_project_id).filter(Boolean)).size;
+                              const assignmentCount = row.assignments.length;
 
                               return (
                                 <TableRow key={row.employee.id} className="transition-colors" style={{ borderColor: C.borderLight, background: C.panel }}>
                                   <TableCell className="sticky left-0 z-10" style={{ background: C.panel, color: C.text }}>
-                                    <div className="flex min-w-0 items-center gap-3">
-                                      <Avatar className="h-8 w-8" style={{ border: `1px solid ${C.borderLight}` }}>
-                                        <AvatarImage src={portrait} alt={row.employee.navn} />
-                                        <AvatarFallback style={{ background: C.surfaceAlt, color: C.textMuted, fontSize: 11, fontWeight: 700 }}>
-                                          {getInitials(row.employee.navn)}
-                                        </AvatarFallback>
-                                      </Avatar>
-                                      <div className="min-w-0">
-                                        <p className="truncate" style={{ color: C.text, fontSize: 13, fontWeight: 650 }}>
-                                          {row.employee.navn}
-                                        </p>
-                                        <p className="truncate" style={{ color: hasTripletexEmployee || projectCount > 0 ? C.success : C.textGhost, fontSize: 11 }}>
-                                          {hasTripletexEmployee || projectCount > 0
-                                            ? `${hasTripletexEmployee ? "Tripletex ansatt" : "Ansatt"} · ${projectCount} prosjekt`
-                                            : `${row.status} · mangler Tripletex-kobling`}
-                                        </p>
+                                    <div className="flex min-w-0 items-center justify-between gap-3">
+                                      <div className="flex min-w-0 items-center gap-3">
+                                        <Avatar className="h-8 w-8" style={{ border: `1px solid ${C.borderLight}` }}>
+                                          <AvatarImage src={portrait} alt={row.employee.navn} />
+                                          <AvatarFallback style={{ background: C.surfaceAlt, color: C.textMuted, fontSize: 11, fontWeight: 700 }}>
+                                            {getInitials(row.employee.navn)}
+                                          </AvatarFallback>
+                                        </Avatar>
+                                        <div className="min-w-0">
+                                          <p className="truncate" style={{ color: C.text, fontSize: 13, fontWeight: 650 }}>
+                                            {row.employee.navn}
+                                          </p>
+                                          <p className="truncate" style={{ color: hasTripletexEmployee || projectCount > 0 ? C.success : C.textGhost, fontSize: 11 }}>
+                                            {hasTripletexEmployee || projectCount > 0
+                                              ? `${hasTripletexEmployee ? "Tripletex ansatt" : "Ansatt"} · ${projectCount} prosjekt`
+                                              : `${row.status} · ${assignmentCount} CRM-oppdrag · mangler Tripletex-kobling`}
+                                          </p>
+                                        </div>
                                       </div>
+                                      <button
+                                        type="button"
+                                        onClick={() => openMappingDialog(row.employee)}
+                                        className="inline-flex h-7 shrink-0 items-center gap-1.5 rounded-md px-2 text-[12px] font-semibold transition-colors"
+                                        style={{ border: `1px solid ${C.borderLight}`, background: C.surfaceAlt, color: C.textMuted }}
+                                        title="Koble Tripletex"
+                                      >
+                                        <Link2 className="h-3.5 w-3.5" />
+                                        Koble
+                                      </button>
                                     </div>
                                   </TableCell>
                                   {row.values.map((value, index) => (
@@ -1384,6 +1586,186 @@ export default function Okonomi() {
             )}
           </div>
         </div>
+
+        <Dialog open={mappingEmployeeId !== null} onOpenChange={(open) => {
+          if (!open) setMappingEmployeeId(null);
+        }}>
+          <DialogContent className="max-h-[85vh] max-w-3xl overflow-y-auto" style={{ background: C.panel, borderColor: C.border }}>
+            <DialogHeader>
+              <DialogTitle style={{ color: C.text, fontSize: 16 }}>Tripletex-kobling</DialogTitle>
+            </DialogHeader>
+
+            {selectedMappingEmployee ? (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between gap-3 rounded-md px-3 py-2" style={{ border: `1px solid ${C.borderLight}`, background: C.surfaceAlt }}>
+                  <div className="min-w-0">
+                    <p className="truncate" style={{ color: C.text, fontSize: 13, fontWeight: 700 }}>
+                      {selectedMappingEmployee.navn}
+                    </p>
+                    <p style={{ color: C.textMuted, fontSize: 12 }}>
+                      {selectedEmployeeAssignments.length} CRM-oppdrag funnet
+                    </p>
+                  </div>
+                  <span className="shrink-0 rounded-md px-2 py-1 text-[12px] font-semibold" style={{ background: C.accentBg, color: C.accent }}>
+                    {selectedEmployeeMappings.length} koblinger
+                  </span>
+                </div>
+
+                <div className="space-y-2">
+                  <p style={{ color: C.textMuted, fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase" }}>
+                    Eksisterende koblinger
+                  </p>
+                  {selectedEmployeeMappings.length === 0 ? (
+                    <p className="rounded-md px-3 py-2" style={{ border: `1px solid ${C.borderLight}`, color: C.textMuted, fontSize: 12 }}>
+                      Ingen Tripletex-koblinger er lagt inn for denne ansatte.
+                    </p>
+                  ) : (
+                    <div className="space-y-2">
+                      {selectedEmployeeMappings.map((mapping) => {
+                        const assignment = employeeAssignments.find((entry) => entry.id === mapping.stacq_oppdrag_id);
+                        const projectLabel = mapping.project_name || assignment?.kunde || "Prosjekt";
+                        const tripletexProject = mapping.tripletex_project_id || mapping.tripletex_project_number || "-";
+
+                        return (
+                          <div
+                            key={mapping.id}
+                            className="flex flex-wrap items-center justify-between gap-3 rounded-md px-3 py-2"
+                            style={{ border: `1px solid ${C.borderLight}`, background: C.surface }}
+                          >
+                            <div className="min-w-0">
+                              <p className="truncate" style={{ color: C.text, fontSize: 13, fontWeight: 650 }}>{projectLabel}</p>
+                              <p className="truncate" style={{ color: C.textMuted, fontSize: 12 }}>
+                                Tripletex ansatt {mapping.tripletex_employee_id || "-"} · prosjekt {tripletexProject} · {formatDateShort(mapping.active_from)} - {formatDateShort(mapping.active_to)}
+                              </p>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => void deleteEmployeeMapping(mapping.id)}
+                              disabled={deletingMappingId === mapping.id}
+                              className="inline-flex h-8 items-center gap-1.5 rounded-md px-2.5 text-[12px] font-semibold disabled:cursor-wait disabled:opacity-60"
+                              style={{ border: `1px solid ${C.danger}`, background: C.dangerBg, color: C.danger }}
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                              Slett
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-3 rounded-md p-3" style={{ border: `1px solid ${C.borderLight}`, background: C.surface }}>
+                  <p style={{ color: C.textMuted, fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase" }}>
+                    Ny kobling
+                  </p>
+                  <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                    <label className="space-y-1 md:col-span-2">
+                      <span style={{ color: C.textMuted, fontSize: 12, fontWeight: 650 }}>CRM-oppdrag</span>
+                      <select
+                        value={mappingForm.stacqOppdragId}
+                        onChange={(event) => {
+                          const value = event.target.value;
+                          if (value === MANUAL_ASSIGNMENT_VALUE) {
+                            setMappingForm((current) => ({ ...current, stacqOppdragId: value }));
+                            return;
+                          }
+                          fillMappingFormFromAssignment(selectedEmployeeAssignments.find((assignment) => String(assignment.id) === value));
+                        }}
+                        className="h-9 w-full rounded-md border px-3 text-[13px]"
+                        style={{ borderColor: C.borderLight, background: C.panel, color: C.text }}
+                      >
+                        <option value={MANUAL_ASSIGNMENT_VALUE}>Manuell kobling uten CRM-oppdrag</option>
+                        {selectedEmployeeAssignments.map((assignment) => (
+                          <option key={assignment.id} value={assignment.id}>
+                            {getAssignmentLabel(assignment)}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+
+                    <label className="space-y-1">
+                      <span style={{ color: C.textMuted, fontSize: 12, fontWeight: 650 }}>Tripletex ansatt-ID</span>
+                      <input
+                        value={mappingForm.tripletexEmployeeId}
+                        onChange={(event) => setMappingForm((current) => ({ ...current, tripletexEmployeeId: event.target.value }))}
+                        inputMode="numeric"
+                        className="h-9 w-full rounded-md border px-3 text-[13px]"
+                        style={{ borderColor: C.borderLight, background: C.panel, color: C.text }}
+                      />
+                    </label>
+
+                    <label className="space-y-1">
+                      <span style={{ color: C.textMuted, fontSize: 12, fontWeight: 650 }}>Tripletex prosjekt-ID</span>
+                      <input
+                        value={mappingForm.tripletexProjectId}
+                        onChange={(event) => setMappingForm((current) => ({ ...current, tripletexProjectId: event.target.value }))}
+                        inputMode="numeric"
+                        className="h-9 w-full rounded-md border px-3 text-[13px]"
+                        style={{ borderColor: C.borderLight, background: C.panel, color: C.text }}
+                      />
+                    </label>
+
+                    <label className="space-y-1">
+                      <span style={{ color: C.textMuted, fontSize: 12, fontWeight: 650 }}>Prosjektnummer</span>
+                      <input
+                        value={mappingForm.tripletexProjectNumber}
+                        onChange={(event) => setMappingForm((current) => ({ ...current, tripletexProjectNumber: event.target.value }))}
+                        className="h-9 w-full rounded-md border px-3 text-[13px]"
+                        style={{ borderColor: C.borderLight, background: C.panel, color: C.text }}
+                      />
+                    </label>
+
+                    <label className="space-y-1">
+                      <span style={{ color: C.textMuted, fontSize: 12, fontWeight: 650 }}>Prosjektnavn</span>
+                      <input
+                        value={mappingForm.projectName}
+                        onChange={(event) => setMappingForm((current) => ({ ...current, projectName: event.target.value }))}
+                        className="h-9 w-full rounded-md border px-3 text-[13px]"
+                        style={{ borderColor: C.borderLight, background: C.panel, color: C.text }}
+                      />
+                    </label>
+
+                    <label className="space-y-1">
+                      <span style={{ color: C.textMuted, fontSize: 12, fontWeight: 650 }}>Aktiv fra</span>
+                      <input
+                        type="date"
+                        value={mappingForm.activeFrom}
+                        onChange={(event) => setMappingForm((current) => ({ ...current, activeFrom: event.target.value }))}
+                        className="h-9 w-full rounded-md border px-3 text-[13px]"
+                        style={{ borderColor: C.borderLight, background: C.panel, color: C.text }}
+                      />
+                    </label>
+
+                    <label className="space-y-1">
+                      <span style={{ color: C.textMuted, fontSize: 12, fontWeight: 650 }}>Aktiv til</span>
+                      <input
+                        type="date"
+                        value={mappingForm.activeTo}
+                        onChange={(event) => setMappingForm((current) => ({ ...current, activeTo: event.target.value }))}
+                        className="h-9 w-full rounded-md border px-3 text-[13px]"
+                        style={{ borderColor: C.borderLight, background: C.panel, color: C.text }}
+                      />
+                    </label>
+                  </div>
+
+                  <div className="flex justify-end">
+                    <button
+                      type="button"
+                      onClick={() => void saveEmployeeMapping()}
+                      disabled={savingMapping}
+                      className="inline-flex h-9 items-center gap-2 rounded-md px-3 text-[13px] font-semibold disabled:cursor-wait disabled:opacity-60"
+                      style={{ border: `1px solid ${C.accent}`, background: C.accentBg, color: C.accent }}
+                    >
+                      <Plus className="h-3.5 w-3.5" />
+                      {savingMapping ? "Lagrer..." : "Legg til kobling"}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ) : null}
+          </DialogContent>
+        </Dialog>
       </main>
     </div>
   );

@@ -70,6 +70,17 @@ type SentCvEntry = SentCvRow & {
   contact?: ContactRow | null;
   company?: CompanyRow | null;
 };
+type TripletexProjectMapping = {
+  id: string;
+  ansatt_id: number;
+  stacq_oppdrag_id: number | null;
+  tripletex_employee_id: number | null;
+  tripletex_project_id: number | null;
+  tripletex_project_number: string | null;
+  project_name: string | null;
+  active_from: string | null;
+  active_to: string | null;
+};
 
 const EMPLOYEE_DETAIL_TABS = ["aktive", "tidligere", "prosesser", "tidl-prosesser", "sent-cv"] as const;
 type EmployeeDetailTab = (typeof EMPLOYEE_DETAIL_TABS)[number];
@@ -156,6 +167,19 @@ const AnsattDetail = ({
         .order("start_dato", { ascending: false });
       if (error) throw error;
       return data;
+    },
+    enabled: !isNaN(ansattId),
+  });
+
+  const { data: tripletexMappings = [] } = useQuery({
+    queryKey: ["ansatt-tripletex-prosjektkoblinger", ansattId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("okonomi_ansatt_tripletex_mapping" as never)
+        .select("id, ansatt_id, stacq_oppdrag_id, tripletex_employee_id, tripletex_project_id, tripletex_project_number, project_name, active_from, active_to")
+        .eq("ansatt_id", ansattId);
+      if (error) throw error;
+      return (data || []) as TripletexProjectMapping[];
     },
     enabled: !isNaN(ansattId),
   });
@@ -405,6 +429,10 @@ const AnsattDetail = ({
 
   const activeOppdrag = oppdrag.filter((o: any) => o.status === "Aktiv" || o.status === "Oppstart");
   const previousOppdrag = oppdrag.filter((o: any) => o.status !== "Aktiv" && o.status !== "Oppstart");
+  const tripletexMappingByOppdragId = new Map<number, TripletexProjectMapping>();
+  tripletexMappings.forEach((mapping) => {
+    if (mapping.stacq_oppdrag_id) tripletexMappingByOppdragId.set(mapping.stacq_oppdrag_id, mapping);
+  });
 
   const selskapIdToKontakt: Record<string, string> = {};
   for (const vk of vunnetKontakter) {
@@ -528,7 +556,7 @@ const AnsattDetail = ({
               ) : (
                 <div className="space-y-3">
                   {activeOppdrag.map((o: any) => (
-                    <OppdragRow key={o.id} o={o} isActive kontaktNavn={selskapIdToKontakt[o.selskap_id]} />
+                    <OppdragRow key={o.id} o={o} isActive kontaktNavn={selskapIdToKontakt[o.selskap_id]} tripletexMapping={tripletexMappingByOppdragId.get(o.id)} />
                   ))}
                 </div>
               )}
@@ -539,7 +567,7 @@ const AnsattDetail = ({
               ) : (
                 <div className="space-y-3">
                   {previousOppdrag.map((o: any) => (
-                    <OppdragRow key={o.id} o={o} isActive={false} kontaktNavn={selskapIdToKontakt[o.selskap_id]} />
+                    <OppdragRow key={o.id} o={o} isActive={false} kontaktNavn={selskapIdToKontakt[o.selskap_id]} tripletexMapping={tripletexMappingByOppdragId.get(o.id)} />
                   ))}
                 </div>
               )}
@@ -811,7 +839,17 @@ function InfoRow({ icon: Icon, label, value }: { icon: any; label: string; value
   );
 }
 
-function OppdragRow({ o, isActive = false, kontaktNavn }: { o: any; isActive?: boolean; kontaktNavn?: string }) {
+function OppdragRow({
+  o,
+  isActive = false,
+  kontaktNavn,
+  tripletexMapping,
+}: {
+  o: any;
+  isActive?: boolean;
+  kontaktNavn?: string;
+  tripletexMapping?: TripletexProjectMapping;
+}) {
   const margin = o.utpris ? calcStacqPris({
     utpris: o.utpris,
     til_konsulent: o.til_konsulent,
@@ -856,6 +894,14 @@ function OppdragRow({ o, isActive = false, kontaktNavn }: { o: any; isActive?: b
           {o.utpris != null && <span className="text-muted-foreground">Utpris: <span className="font-medium text-foreground">{o.utpris} kr</span></span>}
           {o.til_konsulent != null && <span className="text-muted-foreground">Til kons: <span className="font-medium text-foreground">{o.til_konsulent_override ?? o.til_konsulent} kr</span></span>}
           {margin != null && <span className="text-muted-foreground">Margin: <span className="font-medium text-emerald-600">{margin != null && <span className="text-muted-foreground">Margin: <span className="font-medium text-emerald-600">{margin.toFixed(2)} kr</span></span>}</span></span>}
+          {tripletexMapping && (
+            <span className="text-muted-foreground">
+              Tripletex:{" "}
+              <span className="font-medium text-foreground">
+                {tripletexMapping.tripletex_project_id || tripletexMapping.tripletex_project_number || "prosjekt koblet"}
+              </span>
+            </span>
+          )}
         </div>
         <div className="self-start sm:self-auto">
           <OppdragStatusChip status={o.status || "–"} />
