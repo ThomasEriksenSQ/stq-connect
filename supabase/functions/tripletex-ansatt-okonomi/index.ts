@@ -38,9 +38,21 @@ type TripletexPosting = {
   };
 };
 
+type TripletexProjectRef = {
+  id?: number | string | null;
+  number?: number | string | null;
+  name?: string | null;
+};
+
+type TripletexEmployee = {
+  id?: number | string | null;
+  employeeNumber?: number | string | null;
+};
+
 type TripletexTimesheetEntry = {
   hours?: number | string | null;
   chargeableHours?: number | string | null;
+  project?: TripletexProjectRef | null;
 };
 
 type EmployeeFinanceMonth = {
@@ -245,41 +257,44 @@ async function createSessionToken(consumerToken: string, employeeToken: string) 
   return sessionToken;
 }
 
-async function fetchEmployeeTotalHours(sessionToken: string, employeeId: number, year: number, monthIndex: number) {
-  const { dateFrom, dateTo } = getMonthDateRange(year, monthIndex);
+async function resolveTripletexEmployeeId(sessionToken: string, employeeNumber: number) {
   const params = new URLSearchParams({
-    employeeId: String(employeeId),
-    startDate: dateFrom,
-    endDate: dateTo,
-    fields: "value",
+    employeeNumber: String(employeeNumber),
+    from: "0",
+    count: "10",
+    fields: "id,employeeNumber",
   });
 
-  const response = await fetch(`${TRIPLETEX_BASE_URL}/timesheet/entry/>totalHours?${params.toString()}`, {
+  const response = await fetch(`${TRIPLETEX_BASE_URL}/employee?${params.toString()}`, {
     headers: {
       Authorization: `Basic ${btoa(`0:${sessionToken}`)}`,
       Accept: "application/json",
     },
   });
-  const payload = await parseJsonResponse<{ value?: number | string; message?: string }>(response);
+  const payload = await parseJsonResponse<{ values?: TripletexEmployee[]; value?: TripletexEmployee[]; message?: string }>(
+    response,
+  );
 
   if (!response.ok) {
-    const message = payload?.message ?? `Kunne ikke hente timer for Tripletex-ansatt ${employeeId}.`;
+    const message = payload?.message ?? `Kunne ikke slå opp Tripletex-ansattnummer ${employeeNumber}.`;
     throw new Error(message);
   }
 
-  return parseAmount(payload?.value);
+  const employees = getPayloadValues(payload);
+  const exactEmployee = employees.find((employee) => Number(employee.employeeNumber) === employeeNumber) ?? employees[0];
+  const employeeId = Number(exactEmployee?.id);
+
+  if (!Number.isFinite(employeeId)) {
+    throw new Error(`Fant ikke Tripletex ansatt-ID for ansattnummer ${employeeNumber}.`);
+  }
+
+  return employeeId;
 }
 
-async function fetchProjectTimesheetHours(
-  sessionToken: string,
-  employeeId: number,
-  projectId: number,
-  year: number,
-  monthIndex: number,
-) {
+async function fetchEmployeeTimesheetEntries(sessionToken: string, employeeId: number, year: number, monthIndex: number) {
   const { dateFrom, dateTo } = getMonthDateRange(year, monthIndex);
   const pageSize = 1000;
-  let totalHours = 0;
+  const entries: TripletexTimesheetEntry[] = [];
   let from = 0;
 
   while (true) {
@@ -287,10 +302,9 @@ async function fetchProjectTimesheetHours(
       dateFrom,
       dateTo,
       employeeId: String(employeeId),
-      projectId: String(projectId),
       from: String(from),
       count: String(pageSize),
-      fields: "hours,chargeableHours",
+      fields: "project(id,number,name),hours,chargeableHours",
     });
 
     const response = await fetch(`${TRIPLETEX_BASE_URL}/timesheet/entry?${params.toString()}`, {
@@ -304,21 +318,43 @@ async function fetchProjectTimesheetHours(
     );
 
     if (!response.ok) {
-      const message = payload?.message ?? `Kunne ikke hente prosjekttimer for Tripletex-prosjekt ${projectId}.`;
+      const message = payload?.message ?? `Kunne ikke hente timer for Tripletex-ansatt ${employeeId}.`;
       throw new Error(message);
     }
 
-    const entries = getPayloadValues(payload);
-    for (const entry of entries) {
-      const chargeableHours = parseFiniteNumber(entry.chargeableHours);
-      totalHours += chargeableHours ?? parseAmount(entry.hours);
-    }
+    const pageEntries = getPayloadValues(payload);
+    entries.push(...pageEntries);
 
-    if (entries.length < pageSize) break;
-    from += entries.length;
+    if (pageEntries.length < pageSize) break;
+    from += pageEntries.length;
   }
 
-  return totalHours;
+  return entries;
+}
+
+function getTimesheetEntryHours(entry: TripletexTimesheetEntry) {
+  const hours = parseFiniteNumber(entry.hours);
+  const chargeableHours = parseFiniteNumber(entry.chargeableHours);
+  return hours ?? chargeableHours ?? 0;
+}
+
+function getProjectRefKeys(project: TripletexProjectRef | null | undefined) {
+  return [project?.id, project?.number]
+    .map((value) => value === null || value === undefined ? "" : String(value).trim())
+    .filter(Boolean);
+}
+
+function sumTimesheetHours(entries: TripletexTimesheetEntry[], projectRefs: Set<string>) {
+  const matchingEntries = projectRefs.size > 0
+    ? entries.filter((entry) => getProjectRefKeys(entry.project).some((key) => projectRefs.has(key)))
+    : entries;
+  const entriesToSum = matchingEntries.length > 0 ? matchingEntries : entries;
+
+  return {
+    hours: entriesToSum.reduce((sum, entry) => sum + getTimesheetEntryHours(entry), 0),
+    entryCount: entriesToSum.length,
+    matchedProject: projectRefs.size === 0 || matchingEntries.length > 0,
+  };
 }
 
 async function fetchProjectLedgerPostings(sessionToken: string, projectId: number, year: number, monthIndex: number) {
@@ -530,14 +566,26 @@ serve(async (req) => {
 
     const assignments = new Map(((assignmentsData || []) as AssignmentRow[]).map((assignment) => [assignment.id, assignment]));
     const sessionToken = await createSessionToken(consumerToken, employeeToken);
+    const employeeIdCache = new Map<number, Promise<number>>();
     const ledgerCache = new Map<string, Promise<TripletexPosting[]>>();
-    const employeeTotalHoursCache = new Map<string, Promise<number>>();
-    const projectTimesheetHoursCache = new Map<string, Promise<number>>();
+    const timesheetEntryCache = new Map<string, Promise<TripletexTimesheetEntry[]>>();
     const employeeMonths = new Map<number, EmployeeAccumulatorMonth[]>();
 
     for (const source of sources.values()) {
       const months = createEmptyAccumulatorMonths();
-      const tripletexEmployeeIds = Array.from(source.tripletexEmployeeIds);
+      const tripletexEmployeeIds: number[] = [];
+
+      for (const employeeNumber of source.tripletexEmployeeIds) {
+        try {
+          if (!employeeIdCache.has(employeeNumber)) {
+            employeeIdCache.set(employeeNumber, resolveTripletexEmployeeId(sessionToken, employeeNumber));
+          }
+          tripletexEmployeeIds.push(await employeeIdCache.get(employeeNumber)!);
+        } catch {
+          // Some historical or draft CRM rows can carry stale Tripletex employee numbers.
+          // Skip them without turning the whole employee tab into a warning state.
+        }
+      }
 
       for (let monthIndex = 0; monthIndex < MONTH_LABELS.length; monthIndex += 1) {
         if (!isMonthFetchable(year, monthIndex)) continue;
@@ -553,39 +601,30 @@ serve(async (req) => {
           );
         });
         const month = months[monthIndex];
-        const projectHourKeys = new Set<string>();
+        const activeProjectRefs = new Set(
+          activeMappings
+            .map((mapping) => getMappingProjectId(mapping, assignments))
+            .filter((projectId): projectId is number => projectId !== null)
+            .map((projectId) => String(projectId)),
+        );
 
-        for (const mapping of activeMappings) {
-          const projectId = getMappingProjectId(mapping, assignments);
-          const employeeId = mapping.tripletex_employee_id ?? tripletexEmployeeIds[0] ?? null;
-          if (!projectId || !employeeId) continue;
-
-          const cacheKey = `${employeeId}-${projectId}-${year}-${monthIndex}`;
-          if (projectHourKeys.has(cacheKey)) continue;
-          projectHourKeys.add(cacheKey);
-
-          try {
-            if (!projectTimesheetHoursCache.has(cacheKey)) {
-              projectTimesheetHoursCache.set(cacheKey, fetchProjectTimesheetHours(sessionToken, employeeId, projectId, year, monthIndex));
-            }
-            month.billableHours += await projectTimesheetHoursCache.get(cacheKey)!;
-            month.hasTimesheetHours = true;
-            month.touched = true;
-          } catch {
-            addWarning(warnings, "Kunne ikke hente prosjekttimer fra Tripletex for enkelte koblinger.");
-          }
-        }
-
-        if (!month.hasTimesheetHours && sourceActive && tripletexEmployeeIds.length > 0) {
+        if (sourceActive && tripletexEmployeeIds.length > 0) {
           for (const employeeId of tripletexEmployeeIds) {
             const cacheKey = `${employeeId}-${year}-${monthIndex}`;
             try {
-              if (!employeeTotalHoursCache.has(cacheKey)) {
-                employeeTotalHoursCache.set(cacheKey, fetchEmployeeTotalHours(sessionToken, employeeId, year, monthIndex));
+              if (!timesheetEntryCache.has(cacheKey)) {
+                timesheetEntryCache.set(cacheKey, fetchEmployeeTimesheetEntries(sessionToken, employeeId, year, monthIndex));
               }
-              month.billableHours += await employeeTotalHoursCache.get(cacheKey)!;
-              month.hasTimesheetHours = true;
-              month.touched = true;
+              const entries = await timesheetEntryCache.get(cacheKey)!;
+              const timesheetHours = sumTimesheetHours(entries, activeProjectRefs);
+              if (timesheetHours.entryCount > 0) {
+                month.billableHours += timesheetHours.hours;
+                month.hasTimesheetHours = true;
+                month.touched = true;
+                if (!timesheetHours.matchedProject) {
+                  addWarning(warnings, "Fant timer på ansatt, men ikke på koblet prosjekt for enkelte måneder.");
+                }
+              }
             } catch {
               addWarning(warnings, "Kunne ikke hente timer fra Tripletex for enkelte ansatte.");
             }
